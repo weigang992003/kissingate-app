@@ -1,0 +1,46 @@
+{
+    "name": "ripple-lib",
+    "version": "0.7.31",
+    "description": "Ripple JavaScript client library",
+    "files": [
+        "src/js/*",
+        "build/sjcl.js",
+        "bin/rsign.js"
+    ],
+    "main": "src/js/ripple",
+    "directories": {
+        "test": "test"
+    },
+    "dependencies": {
+        "async": "~0.2.9",
+        "ws": "~0.4.31",
+        "extend": "~1.2.1",
+        "jshint-loader": "~0.5.0",
+        "mathjs": "~0.25.0",
+        "mongoose": "~3.8.12"
+    },
+    "devDependencies": {
+        "grunt": "~0.4.1",
+        "grunt-cli": "~0.1.9",
+        "grunt-contrib-concat": "~0.3.0",
+        "grunt-contrib-watch": "~0.4.4",
+        "grunt-webpack": "~0.10.5",
+        "grunt-dox": "~0.5.0",
+        "mocha": "~1.14.0",
+        "sinon-chai": "~2.4.0",
+        "sinon": "~1.7.3"
+    },
+    "scripts": {
+        "pretest": "node_modules/.bin/grunt",
+        "test": "mocha test/*-test.js",
+        "build": "grunt"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/ripple/ripple-lib.git"
+    },
+    "readmeFilename": "README.md",
+    "engines": {
+        "node": ">=0.10.0"
+    }
+}
