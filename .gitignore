@@ -42,3 +42,6 @@ test/config.js
 /lib-cov
 /src-cov
 /coverage.html
+
+# Ignore log files
+log/*
