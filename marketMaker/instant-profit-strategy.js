@@ -60,7 +60,7 @@ Strategy.prototype.whenBuyPriceChange = function(market) {
     var sellMarket = _.max(this.sellMarkets, function(item) {
         return item.price;
     });
-    Logger.log(true, 'buyMarket:', buyMarket, 'sellMarket:', sellMarket);
+    Logger.log(false, 'buyMarket:', buyMarket, 'sellMarket:', sellMarket);
 
     if (sellMarket.price - buyMarket.price > this.profitRatioIWant * buyMarket.price) {
         self.emit(strategyEvents.deal, buyMarket, sellMarket, market.issuer + marketEvent.buy, self.whenBuyPriceChange);
@@ -86,7 +86,7 @@ Strategy.prototype.whenSellPriceChange = function(market) {
     var sellMarket = _.max(this.sellMarkets, function(item) {
         return item.price;
     });
-    Logger.log(true, 'sellMarket:', sellMarket, 'buyMarket:', buyMarket);
+    Logger.log(false, 'sellMarket:', sellMarket, 'buyMarket:', buyMarket);
 
     if (sellMarket.price - buyMarket.price > this.profitRatioIWant * buyMarket.price) {
         self.emit(strategyEvents.deal, buyMarket, sellMarket, market.issuer + marketEvent.sell, self.whenSellPriceChange);
@@ -99,22 +99,23 @@ Strategy.prototype.makeADeal = function(buyMarket, sellMarket, eventNeedAddBack,
     var self = this;
 
     self.removeListener(strategyEvents.deal, self.makeADeal);
-    var getsForBuy = maxAmountAllowed * drops;
-    var paysForBuy = {
+    var getsForBuy = {
         currency: buyMarket.currency,
         value: (buyMarket.price) * maxAmountAllowed + '', //even value should be string type
         issuer: buyMarket.issuer
     }
+    var paysForBuy = maxAmountAllowed * drops;
 
-    var paysForSell = maxAmountAllowed * drops;
-    var getsForSell = {
+    var paysForSell = {
         currency: sellMarket.currency,
         value: (sellMarket.price) * maxAmountAllowed + '',
         issuer: sellMarket.issuer
     }
+    var getsForSell = maxAmountAllowed * drops;
 
     self.remote.requestAccountOffers(account, function() {
         var offers = arguments[1].offers;
+        Logger.log(true, "we may have chance to make a deal", paysForBuy, getsForBuy, paysForSell, getsForSell);
 
         if (self.ifOfferExist(offers, paysForBuy, getsForBuy) || self.ifOfferExist(offers, paysForSell, getsForSell)) {
             self.addListener(strategyEvents.deal, self.makeADeal);

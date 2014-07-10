@@ -14,7 +14,7 @@ Logger.prototype.getNewLog = function() {
 
     var date = new Date().format('yyyy-MM-dd-hh-mm-ss.S');
     self.logger = bunyan.createLogger({
-        name: 'theFuture',
+        name: 'ripple-app',
         streams: [{
             level: 'info',
             path: './log/ripple-info-' + date + '.js'
