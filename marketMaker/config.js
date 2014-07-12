@@ -33,5 +33,13 @@ exports.remote_options = {
         host: 's1.ripple.com',
         port: 443,
         secure: true
+    }, {
+        host: 's-west.ripple.com',
+        port: 443,
+        secure: true
+    }, {
+        host: 's-east.ripple.com',
+        port: 443,
+        secure: true
     }]
 };

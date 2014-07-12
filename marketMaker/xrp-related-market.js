@@ -2,74 +2,117 @@ var util = require('util');
 var _ = require('underscore');
 var mathjs = require('mathjs');
 var EventEmitter = require('events').EventEmitter;
-var Logger = require('./the-future-logger.js').TFLogger;
 
+var Logger = require('./the-future-logger.js').TFLogger;
+var ripple = require('../src/js/ripple');
+var rpamount = require('./rpamount.js');
 var config = require('./config.js');
 var drops = config.drops;
 var secret = config.secret;
 var account = config.account;
 var marketEvent = config.marketEvent;
+var Amount = ripple.Amount;
 
 function Market(remote, issuer, currency, name, strategy) {
     EventEmitter.call(this);
 
     var self = this;
 
-    this._remote = remote;
+    this.asks = remote.book("XRP", "", currency, issuer);
+    this.bids = remote.book(currency, issuer, "XRP", "");
 
-    this._buyXrpBook = remote.book("XRP", "", currency, issuer); //means I can buy xro from this book
-    this._sellXrpBook = remote.book(currency, issuer, "XRP", ""); //means I can sell xrp in this book
+    this.asks.on('model', handleAsks);
+    this.bids.on('model', handleBids);
 
-    this._buyXrpBook.on('model', function(offers) {
-        var cheapestOne = offers[0];
+    function handleAsks(offers) {
+        self.emit('model-change', offers, "asks", issuer + marketEvent.buy);
+    }
 
-        var buyPrice;
-        if (cheapestOne.quality == undefined) {
-            buyPrice = (cheapestOne.TakerPays.value / cheapestOne.TakerGets) * drops;
-        } else {
-            buyPrice = cheapestOne.quality * drops;
-        }
-        buyPrice = mathjs.round(buyPrice, 5);
+    function handleBids(offers) {
+        self.emit('model-change', offers, "bids", issuer + marketEvent.sell);
+    }
 
-        if (cheapestOne.TakerPays.currency != currency) {
-            Logger.log(true, "we filter same buy price change:" + buyPrice);
-            return;
-        }
+    function emitFirstOrder(offers, action, eventName) {
+        var newOffers = filterOffers(offers, action);
 
         var market = {
             name: name,
             issuer: issuer,
             currency: currency,
-            price: buyPrice
+            price: newOffers[0].price.to_human().replace(',', '')
         }
 
-        Logger.log(false, market);
+        Logger.log(true, action, market);
 
-        strategy.emit(issuer + marketEvent.buy, market);
-    });
+        strategy.emit(eventName, market);
+    }
 
-    this._sellXrpBook.on('model', function(offers) {
-        var highestOffer = offers[0];
+    self.on('model-change', emitFirstOrder);
 
-        var sellPrice = (highestOffer.TakerGets.value / highestOffer.TakerPays) * drops;
-        sellPrice = mathjs.round(sellPrice, 5);
+    function filterOffers(offers, action) {
+        var lastprice;
+        var rowCount = 0;
+        var max_rows = 1;
+        newOffers = _.values(_.compact(_.map(offers, function(d, i) {
+            if (rowCount > max_rows) return false;
 
-        if (highestOffer.TakerGets.currency != currency) {
-            Logger.log(true, "we filter same sell price change:" + sellPrice);
-            return;
-        }
+            if (d.hasOwnProperty('taker_gets_funded')) {
+                d.TakerGets = d.taker_gets_funded;
+                d.TakerPays = d.taker_pays_funded;
+            }
 
-        var market = {
-            name: name,
-            issuer: issuer,
-            currency: currency,
-            price: sellPrice
-        }
+            d.TakerGets = Amount.from_json(d.TakerGets);
+            d.TakerPays = Amount.from_json(d.TakerPays);
 
-        Logger.log(false, market);
+            if (!d.TakerPays.is_native() && d.TakerPays.currency().to_human() != currency) {
+                Logger.log(true, "we filter the other currency order:" + d.TakerPays.currency().to_human());
+                return false;
+            }
+            if (!d.TakerGets.is_native() && d.TakerGets.currency().to_human() != currency) {
+                Logger.log(true, "we filter the other currency order:" + d.TakerGets.currency().to_human());
+                return false;
+            }
 
-        strategy.emit(issuer + marketEvent.sell, market);
-    });
+            d.price = Amount.from_quality(d.BookDirectory, "1", "1");
+
+            if (action !== "asks") d.price = Amount.from_json("1/1/1").divide(d.price);
+
+            // Adjust for drops: The result would be a million times too large.
+            if (d[action === "asks" ? "TakerPays" : "TakerGets"].is_native())
+                d.price = d.price.divide(Amount.from_json("1000000"));
+
+            // Adjust for drops: The result would be a million times too small.
+            if (d[action === "asks" ? "TakerGets" : "TakerPays"].is_native())
+                d.price = d.price.multiply(Amount.from_json("1000000"));
+
+            var price = rpamount(d.price, {
+                rel_precision: 4,
+                rel_min_precision: 2
+            });
+
+            if (d.Account == account) {
+                d.my = true;
+            }
+
+            if (lastprice === price && !d.my) {
+                offers[current].TakerPays = Amount.from_json(offers[current].TakerPays).add(d.TakerPays);
+                offers[current].TakerGets = Amount.from_json(offers[current].TakerGets).add(d.TakerGets);
+                d = false;
+            } else current = i;
+
+            if (!d.my)
+                lastprice = price;
+
+            if (d) rowCount++;
+
+            if (rowCount > max_rows) return false;
+
+            return d;
+        })));
+
+        return newOffers;
+    }
+
 
     strategy.on(issuer + marketEvent.buy, strategy.whenBuyPriceChange);
     strategy.on(issuer + marketEvent.sell, strategy.whenSellPriceChange);
