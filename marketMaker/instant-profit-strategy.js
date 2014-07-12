@@ -133,6 +133,8 @@ Strategy.prototype.makeADeal = function(buyMarket, sellMarket, eventNeedAddBack,
                     .secret(self.secret).on("success", function() {
                         self.addListener(strategyEvents.deal, self.makeADeal);
                         self.addListener(eventNeedAddBack, listenerNeedAddBack);
+                        self.buyMarkets = [];
+                        self.sellMarkets = [];
                     }).submit();
 
             }).submit();
