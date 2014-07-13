@@ -23,7 +23,7 @@ exports.mongodb_server = {
 
 exports.remote_options = {
     // see the API Reference for available options
-    // trace: true,
+//    trace: true,
     trusted: true,
     local_signing: true,
     local_fee: true,
