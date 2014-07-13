@@ -15,9 +15,9 @@ var remote = new ripple.Remote(remote_options);
 
 var account = config.account;
 
-remote.connect(function() {
-    remote.on('disconnect', throwDisconnectError);
+setTimeout(throwDisconnectError, 1000 * 60 * 15);
 
+remote.connect(function() {
     remote.requestAccountLines(account, function() {
         var lines = arguments[1].lines;
         lines = _.map(lines, function(line) {
@@ -43,6 +43,7 @@ remote.connect(function() {
     var ripplefox = new Market(remote, 'rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y', 'CNY', 'ripplefox', strategy);
     var ripplecn = new Market(remote, 'rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK', 'CNY', 'ripplecn', strategy);
     var xrpchina = new Market(remote, 'rM8199qFwspxiWNZRChZdZbGN5WrCepVP1', 'CNY', 'xrpchina', strategy);
+
 });
 
 function throwDisconnectError() {
