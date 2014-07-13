@@ -2,7 +2,7 @@ var http = require('http');
 var _ = require('underscore');
 
 var ripple = require('../src/js/ripple');
-var config = require('../future/config.js');
+var config = require('../marketMaker/config.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
 
 var Remote = ripple.Remote;

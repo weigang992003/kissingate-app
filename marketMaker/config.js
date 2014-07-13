@@ -23,7 +23,7 @@ exports.mongodb_server = {
 
 exports.remote_options = {
     // see the API Reference for available options
-//    trace: true,
+    // trace: true,
     trusted: true,
     local_signing: true,
     local_fee: true,
@@ -31,14 +31,6 @@ exports.remote_options = {
     max_fee: 100,
     servers: [{
         host: 's1.ripple.com',
-        port: 443,
-        secure: true
-    }, {
-        host: 's-west.ripple.com',
-        port: 443,
-        secure: true
-    }, {
-        host: 's-east.ripple.com',
         port: 443,
         secure: true
     }]
