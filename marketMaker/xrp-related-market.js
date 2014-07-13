@@ -42,7 +42,7 @@ function Market(remote, issuer, currency, name, strategy) {
             price: newOffers[0].price.to_human().replace(',', '')
         }
 
-        Logger.log(true, action, market);
+        Logger.log(false, action, market);
 
         strategy.emit(eventName, market);
     }
