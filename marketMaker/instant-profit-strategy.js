@@ -99,19 +99,20 @@ Strategy.prototype.makeADeal = function(buyMarket, sellMarket, eventNeedAddBack,
     var self = this;
 
     self.removeListener(strategyEvents.deal, self.makeADeal);
-    var getsForBuy = {
-        currency: buyMarket.currency,
-        value: (buyMarket.price) * maxAmountAllowed + '', //even value should be string type
-        issuer: buyMarket.issuer
-    }
-    var paysForBuy = maxAmountAllowed * drops;
-
     var paysForSell = {
         currency: sellMarket.currency,
         value: (sellMarket.price) * maxAmountAllowed + '',
         issuer: sellMarket.issuer
     }
     var getsForSell = maxAmountAllowed * drops;
+
+    var getsForBuy = {
+        currency: buyMarket.currency,
+        value: paysForSell.value + '', //even value should be string type
+        issuer: buyMarket.issuer
+    }
+    var paysForBuy = drops * paysForSell.value / buyMarket.price;
+
 
     self.remote.requestAccountOffers(account, function() {
         var offers = arguments[1].offers;
