@@ -6,9 +6,10 @@ var Remote = ripple.Remote;
 var Amount = ripple.Amount;
 var _ = require('underscore');
 
-var config = require('../future/config.js');
+var config = require('../marketMaker/config.js');
+var cryptoUtil = require('../marketMaker/crypto-util.js');
 var account = config.account;
-var secret = config.secret;
+var encryptedSecret = config.secret;
 
 var remote = new Remote({
     // see the API Reference for available options
@@ -26,6 +27,29 @@ var remote = new Remote({
 });
 
 remote.connect(function() {
+
+    cryptoUtil.decrypt(encryptedSecret, function(secret) {
+        remote.transaction().offerCreate({
+            "source": account,
+            "taker_pays": {
+                "currency": "CNY",
+                "value": "0.0001",
+                "issuer": "rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y",
+                "name": "ripplefox"
+            },
+            "taker_gets": {
+                "currency": "CNY",
+                "value": "0.0001",
+                "issuer": "razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA",
+                "name": "ripplechina"
+            }
+        }).secret(secret)
+            .once("success", function(data) {
+                remote.requestAccountOffers(account, function() {
+                    console.dir(arguments[1].offers);
+                });
+            }).submit();
+    })
     // remote.transaction().offerCreate({
     //     "source": account,
     //     "taker_gets": 1000000,
@@ -40,20 +64,7 @@ remote.connect(function() {
     //         console.dir(data.transaction);
     //     }).submit();
 
-    remote.transaction().offerCreate({
-        "source": account,
-        "taker_pays": 1000000,
-        "taker_gets": {
-            "currency": "CNY",
-            "value": "0.0001",
-            "issuer": "razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA"
-        }
-    }).secret(secret)
-        .once("success", function(data) {
-            remote.requestAccountOffers(account, function() {
-                console.dir(arguments[1].offers);
-            });
-        }).submit();
+
 
 
     //The Response
