@@ -9,7 +9,7 @@ var Strategy = require('./same-currency-strategy.js').SCStrategy;
 
 var remote_options = {
     // see the API Reference for available options
-    trace: true,
+    // trace: true,
     trusted: true,
     local_signing: true,
     local_fee: true,
@@ -25,7 +25,12 @@ var remote_options = {
 var remote = new ripple.Remote(remote_options);
 
 remote.connect(function() {
-    var strategy = new Strategy(remote);
-    var ripplechinaToRipplecn = new Market(remote, 'razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA', 'CNY', 'ripplechina',
-        'rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK', 'CNY', 'ripplecn', strategy);
+    new Market(remote, 'razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA', 'CNY', 'ripplechina',
+        'rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK', 'CNY', 'ripplecn', new Strategy(remote));
+
+    new Market(remote, 'rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK', 'CNY', 'ripplecn',
+        'rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y', 'CNY', 'ripplefox', new Strategy(remote));
+
+    new Market(remote, 'razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA', 'CNY', 'ripplechina',
+        'rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y', 'CNY', 'ripplefox', new Strategy(remote));
 });

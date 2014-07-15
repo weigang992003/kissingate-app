@@ -56,7 +56,7 @@ function Market(remote, issuer1, currency1, name_issuer1,
                     currency: currency1,
                     issuer: issuer1
                 },
-                "price": newOffers[0].price.to_human() - 0.00001
+                "price": parseFloat(newOffers[0].price)
             }
 
             Logger.log(true, action, sellCurrency1);
@@ -74,7 +74,7 @@ function Market(remote, issuer1, currency1, name_issuer1,
                     currency: currency2,
                     issuer: issuer2
                 },
-                "price": newOffers[0].price.to_human() - 0.00001
+                "price": parseFloat(newOffers[0].price)
             }
 
             Logger.log(true, action, sellCurrency2);
@@ -133,6 +133,8 @@ function Market(remote, issuer1, currency1, name_issuer1,
             if (d) rowCount++;
 
             if (rowCount > max_rows) return false;
+
+            d.price = price;
 
             return d;
         })));

@@ -1,6 +1,24 @@
+var LocalBlobBackend = {
+    name: "Local browser",
+
+    get: function(key, callback) {
+        console.log('local get', 'ripple_blob_' + key);
+        var blob = store.get('ripple_blob_' + key);
+        // We use a timeout to simulate this function being asynchronous
+        callback(null, blob);
+    },
+
+    set: function(key, value, callback) {
+        if (!store.disabled) {
+            store.set('ripple_blob_' + key, value);
+        }
+        callback();
+    }
+};
+
+
 var sjcl = require('../build/sjcl.js');
 var https = require('https');
-var atob = require('atob');
 
 var normalizeUsername = function(username) {
     username = "" + username;
@@ -81,11 +99,11 @@ BlobObj.prototype.decrypt = function(user, pass, data) {
 
 
 BlobObj.prototype.get = function(user, pass, callback) {
-    var backend = VaultBlobBackend;
+    var backend = LocalBlobBackend;
     var key = sjcl.codec.hex.fromBits(sjcl.hash.sha256.hash(user + pass));
 
     try {
-        VaultBlobBackend.get(key, function(err, data) {
+        LocalBlobBackend.get(key, function(err, data) {
             if (err) {
                 handleError(err, backend);
                 return;
@@ -106,49 +124,6 @@ BlobObj.prototype.get = function(user, pass, callback) {
     }
 };
 
-var VaultBlobBackend = {
-    name: "Payward",
-
-    get: function(key, callback) {
-        var url = Options.blobvault;
-
-        if (url.indexOf("://") === -1) url = "http://" + url;
-
-        console.log(url + '/' + key);
-
-        https.get(url + '/' + key, function(res) {
-            console.log("statusCode: ", res.statusCode);
-            console.log("headers: ", res.headers);
-
-            res.on('success', function(d) {
-                callback(null, d);
-            });
-
-        }).on('error', function(e) {
-            console.error(e);
-        });
-    },
-
-    set: function(key, value, callback) {
-        var url = Options.blobvault;
-
-        if (url.indexOf("://") === -1) url = "http://" + url;
-
-        $.post(url + '/' + key, {
-            blob: value
-        })
-            .success(function(data) {
-                callback(null, data);
-            })
-            .error(webutil.getAjaxErrorHandler(callback, "BlobVault SET"));
-    }
-};
-
-/**
- * Ripple Client Configuration
- *
- * Copy this file to config.js and edit to suit your preferences.
- */
 var Options = {
     blobvault: 'https://blobvault.payward.com',
 };

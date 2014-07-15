@@ -21,8 +21,6 @@ function Strategy(remote) {
     this.sellPlan;
     this.secret;
 
-    console.log("shs shsd dhs");
-
     crypto.decrypt(encryptedSecret, function(result) {
         self.secret = result;
         self.on(strategyEvents.deal, self.makeADeal);
@@ -54,10 +52,14 @@ Strategy.prototype.whenBuyPriceChange = function(buyPlan) {
     var buyPlan = self.buyPlan;
     var sellPlan = self.sellPlan;
 
-    if (buyPlan.price > 1.001 && sellPlan != undefined && sellPlan.price > 1.001) {
-        self.emit(strategyEvents.deal, buyPlan, sellPlan, marketEvent.buy, self.whenBuyPriceChange);
+    if (buyPlan == undefined || sellPlan == undefined) {
+        return;
+    }
 
-        Logger.log(false, 'buyPlan:', buyPlan, 'sellPlan:', sellPlan);
+    Logger.log(true, 'buyPlan:', buyPlan, 'sellPlan:', sellPlan);
+
+    if (buyPlan.price > 1.001 && sellPlan.price < 0.999) {
+        self.emit(strategyEvents.deal, buyPlan, sellPlan, marketEvent.buy, self.whenBuyPriceChange);
     } else {
         self.addListener(marketEvent.buy, self.whenBuyPriceChange);
     }
@@ -72,10 +74,13 @@ Strategy.prototype.whenSellPriceChange = function(sellPlan) {
     var buyPlan = self.buyPlan;
     var sellPlan = self.sellPlan;
 
-    if (buyPlan.price > 1.001 && sellPlan != undefined && sellPlan.price > 1.001) {
-        self.emit(strategyEvents.deal, buyPlan, sellPlan, marketEvent.sell, self.whenSellPriceChange);
+    if (buyPlan == undefined || sellPlan == undefined) {
+        return;
+    }
 
-        Logger.log(false, 'buyPlan:', buyPlan, 'sellPlan:', sellPlan);
+    Logger.log(true, 'sellPlan:', sellPlan, 'buyPlan:', buyPlan);
+    if (buyPlan.price > 1.001 && sellPlan.price < 0.999) {
+        self.emit(strategyEvents.deal, buyPlan, sellPlan, marketEvent.sell, self.whenSellPriceChange);
     } else {
         self.addListener(marketEvent.sell, self.whenSellPriceChange);
     }
@@ -88,14 +93,14 @@ Strategy.prototype.makeADeal = function(buyPlan, sellPlan, eventNeedAddBack, lis
     self.removeListener(strategyEvents.deal, self.makeADeal);
 
     var getsForBuy = buyPlan.taker_gets;
-    getsForBuy['value'] = 1;
+    getsForBuy['value'] = 1 + '';
     var paysForBuy = buyPlan.taker_pays;
-    paysForBuy['value'] = buyPlan.price;
+    paysForBuy['value'] = buyPlan.price + '';
 
     var paysForSell = sellPlan.taker_pays;
-    paysForSell['value'] = sellPlan.price;
+    paysForSell['value'] = 1 + '';
     var getsForSell = sellPlan.taker_gets;
-    paysForSell['value'] = 1;
+    getsForSell['value'] = sellPlan.price + '';
 
     self.remote.requestAccountOffers(account, function() {
         var offers = arguments[1].offers;
@@ -117,8 +122,8 @@ Strategy.prototype.makeADeal = function(buyPlan, sellPlan, eventNeedAddBack, lis
                     .secret(self.secret).on("success", function() {
                         self.addListener(strategyEvents.deal, self.makeADeal);
                         self.addListener(eventNeedAddBack, listenerNeedAddBack);
-                        self.buyPlans = [];
-                        self.sellPlans = [];
+                        self.buyPlan = undefined;
+                        self.sellPlan = undefined;
                     }).submit();
             }).submit();
     });
