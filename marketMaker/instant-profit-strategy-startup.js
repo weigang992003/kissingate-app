@@ -42,7 +42,7 @@ remote.connect(function() {
     var ripplechina = new Market(remote, 'razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA', 'CNY', 'ripplechina', strategy);
     var ripplefox = new Market(remote, 'rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y', 'CNY', 'ripplefox', strategy);
     var ripplecn = new Market(remote, 'rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK', 'CNY', 'ripplecn', strategy);
-    // var xrpchina = new Market(remote, 'rM8199qFwspxiWNZRChZdZbGN5WrCepVP1', 'CNY', 'xrpchina', strategy);
+    var xrpchina = new Market(remote, 'rM8199qFwspxiWNZRChZdZbGN5WrCepVP1', 'CNY', 'xrpchina', strategy);
 
 });
 

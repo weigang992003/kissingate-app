@@ -24,6 +24,8 @@ var remote_options = {
 
 var remote = new ripple.Remote(remote_options);
 
+setTimeout(throwDisconnectError, 1000 * 60 * 30);
+
 remote.connect(function() {
     new Market(remote, 'razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA', 'CNY', 'ripplechina',
         'rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK', 'CNY', 'ripplecn', new Strategy(remote));
@@ -34,3 +36,7 @@ remote.connect(function() {
     new Market(remote, 'razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA', 'CNY', 'ripplechina',
         'rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y', 'CNY', 'ripplefox', new Strategy(remote));
 });
+
+function throwDisconnectError() {
+    throw new Error('we are disconnect with ripple network!!!');
+}
