@@ -54,6 +54,11 @@ Strategy.prototype.whenBuyPriceChange = function(market) {
 
     this.buyPlans.push(market);
 
+    if (this.sellPlans.length == 0) {
+        self.addListener(market.issuer + marketEvent.buy, self.whenBuyPriceChange);
+        return;
+    }
+
     var buyPlan = _.min(this.buyPlans, function(item) {
         return item.price;
     });
@@ -79,6 +84,11 @@ Strategy.prototype.whenSellPriceChange = function(market) {
     });
 
     this.sellPlans.push(market);
+
+    if (this.buyPlans.length == 0) {
+        self.addListener(market.issuer + marketEvent.sell, self.whenSellPriceChange);
+        return;
+    }
 
     var buyPlan = _.min(this.buyPlans, function(item) {
         return item.price;
@@ -119,7 +129,7 @@ Strategy.prototype.makeADeal = function(buyPlan, sellPlan, eventNeedAddBack, lis
                 return;
             }
 
-            var volumn = _.min(buyPlan.sum, balance.balance / buyPlan.price, sellPlan.sum);
+            var volumn = _.min([buyPlan.sum, trustLine.balance / buyPlan.price, sellPlan.sum]);
             Logger.log(true, "the volumn we will make in this deal:" + volumn);
 
             var paysForSell = {

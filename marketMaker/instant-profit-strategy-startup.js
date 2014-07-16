@@ -18,24 +18,24 @@ var account = config.account;
 setTimeout(throwDisconnectError, 1000 * 60 * 15);
 
 remote.connect(function() {
-    remote.requestAccountLines(account, function() {
-        var lines = arguments[1].lines;
-        lines = _.map(lines, function(line) {
-            delete line.limit;
-            delete line.limit_peer;
-            delete line.no_ripple;
-            delete line.quality_in;
-            delete line.quality_out;
-            return line;
-        });
-        var accountLineRecord = {
-            'account': account,
-            'lines': lines,
-            'time': new Date()
-        }
+    // remote.requestAccountLines(account, function() {
+    //     var lines = arguments[1].lines;
+    //     lines = _.map(lines, function(line) {
+    //         delete line.limit;
+    //         delete line.limit_peer;
+    //         delete line.no_ripple;
+    //         delete line.quality_in;
+    //         delete line.quality_out;
+    //         return line;
+    //     });
+    //     var accountLineRecord = {
+    //         'account': account,
+    //         'lines': lines,
+    //         'time': new Date()
+    //     }
 
-        mongodbManager.saveAccountLines(accountLineRecord);
-    });
+    //     mongodbManager.saveAccountLines(accountLineRecord);
+    // });
 
     var strategy = new Strategy(remote);
 
