@@ -106,7 +106,7 @@ Strategy.prototype.makeADeal = function(buyPlan, sellPlan, eventNeedAddBack, lis
         var offers = arguments[1].offers;
 
 
-        remote.requestAccountLines(account, function() {
+        self.remote.requestAccountLines(account, function() {
             var lines = arguments[1].lines;
             var trsutLine = _.find(lines, function(line) {
                 return line.account == buyPlan.issuer && line.currency == buyPlan.currency;

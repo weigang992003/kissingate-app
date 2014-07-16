@@ -59,7 +59,7 @@ function Market(remote, issuer1, currency1, name_issuer1,
                 "price": parseFloat(newOffers[0].price)
             }
 
-            Logger.log(true, action, sellCurrency1);
+            Logger.log(false, action, sellCurrency1);
 
             strategy.emit(eventName, sellCurrency1);
         } else {
@@ -77,7 +77,7 @@ function Market(remote, issuer1, currency1, name_issuer1,
                 "price": parseFloat(newOffers[0].price)
             }
 
-            Logger.log(true, action, sellCurrency2);
+            Logger.log(false, action, sellCurrency2);
 
             strategy.emit(eventName, sellCurrency2);
         }
