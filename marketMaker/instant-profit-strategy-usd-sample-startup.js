@@ -19,8 +19,8 @@ setTimeout(throwDisconnectError, 1000 * 60 * 15);
 
 remote.connect(function() {
     var strategyus = new Strategy(remote);
-    new Market(remote, 'rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q', 'USD', 'snapswap', strategy);
-    new Market(remote, 'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B', 'USD', 'bitstamps', strategy);
+    new Market(remote, 'rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q', 'USD', 'snapswap', strategyus);
+    new Market(remote, 'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B', 'USD', 'bitstamps', strategyus);
 });
 
 function throwDisconnectError() {

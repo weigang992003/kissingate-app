@@ -163,8 +163,6 @@ Strategy.prototype.makeADeal = function(buyPlan, sellPlan, eventNeedAddBack, lis
 
 
     });
-
-    Logger.log(false, paysForBuy, getsForBuy, paysForSell, getsForSell);
 }
 
 exports.IPStrategy = Strategy;
