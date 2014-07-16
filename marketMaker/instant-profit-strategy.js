@@ -108,12 +108,12 @@ Strategy.prototype.makeADeal = function(buyPlan, sellPlan, eventNeedAddBack, lis
 
         self.remote.requestAccountLines(account, function() {
             var lines = arguments[1].lines;
-            var trsutLine = _.find(lines, function(line) {
+            var trustLine = _.find(lines, function(line) {
                 return line.account == buyPlan.issuer && line.currency == buyPlan.currency;
             });
 
             //if balance is too low, we don't make any deal.
-            if (trsutLine.balance < 0.001) {
+            if (trustLine.balance < 0.001) {
                 self.addListener(strategyEvents.deal, self.makeADeal);
                 self.addListener(eventNeedAddBack, listenerNeedAddBack);
                 return;
