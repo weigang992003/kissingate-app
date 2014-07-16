@@ -39,7 +39,8 @@ function Market(remote, issuer, currency, name, strategy) {
             name: name,
             issuer: issuer,
             currency: currency,
-            price: newOffers[0].price.to_human().replace(',', '')
+            price: newOffers[0].price.to_human().replace(',', ''),
+            sum: newOffers[0].sum.to_human().replace(',', '')
         }
 
         Logger.log(false, action, market);
@@ -109,6 +110,13 @@ function Market(remote, issuer, currency, name, strategy) {
 
             return d;
         })));
+
+        var key = action === "asks" ? "TakerGets" : "TakerPays";
+        var sum;
+        _.each(newOffers, function(order, i) {
+            if (sum) sum = order.sum = sum.add(order[key]);
+            else sum = order.sum = order[key];
+        });
 
         return newOffers;
     }
