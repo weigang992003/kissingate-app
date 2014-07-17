@@ -137,14 +137,14 @@ Strategy.prototype.makeADeal = function(buyPlan, sellPlan, eventNeedAddBack, lis
                 value: (sellPlan.price) * volumn + '',
                 issuer: sellPlan.issuer
             }
-            var getsForSell = volumn * drops;
+            var getsForSell = volumn;
 
             var getsForBuy = {
                 currency: buyPlan.currency,
                 value: paysForSell.value + '', //even value should be string type
                 issuer: buyPlan.issuer
             }
-            var paysForBuy = drops * paysForSell.value / buyPlan.price;
+            var paysForBuy = paysForSell.value / buyPlan.price;
 
             Logger.log(false, "we may have chance to make a deal", paysForBuy, getsForBuy, paysForSell, getsForSell);
 
