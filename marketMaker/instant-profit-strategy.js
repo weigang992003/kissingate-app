@@ -131,7 +131,7 @@ Strategy.prototype.makeADeal = function(buyPlan, sellPlan, eventNeedAddBack, lis
             }
 
             var volumn = _.min([buyPlan.sum, trustLine.balance / buyPlan.price, sellPlan.sum]);
-            volumn = math.round(volumn*drops,0);
+            volumn = math.round(volumn,0);
             Logger.log(true, "the volumn we will make in this deal:" + volumn);
 
             var paysForSell = {
@@ -139,14 +139,14 @@ Strategy.prototype.makeADeal = function(buyPlan, sellPlan, eventNeedAddBack, lis
                 value: (sellPlan.price) * volumn + '',
                 issuer: sellPlan.issuer
             }
-            var getsForSell = volumn;
+            var getsForSell = volumn*drops;
 
             var getsForBuy = {
                 currency: buyPlan.currency,
                 value: paysForSell.value + '', //even value should be string type
                 issuer: buyPlan.issuer
             }
-            var paysForBuy = paysForSell.value / buyPlan.price;
+            var paysForBuy = math.round(drops*paysForSell.value / buyPlan.price,0);
 
             Logger.log(true, "we may have chance to make a deal", paysForBuy, getsForBuy, paysForSell, getsForSell);
 
