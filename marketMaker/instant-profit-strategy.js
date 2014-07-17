@@ -1,4 +1,5 @@
 var util = require('util');
+var math = require('mathjs');
 var _ = require('underscore');
 var EventEmitter = require('events').EventEmitter;
 
@@ -130,6 +131,7 @@ Strategy.prototype.makeADeal = function(buyPlan, sellPlan, eventNeedAddBack, lis
             }
 
             var volumn = _.min([buyPlan.sum, trustLine.balance / buyPlan.price, sellPlan.sum]);
+            volumn = math.round(volumn*drops,0);
             Logger.log(true, "the volumn we will make in this deal:" + volumn);
 
             var paysForSell = {
