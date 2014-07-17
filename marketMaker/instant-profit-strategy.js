@@ -146,7 +146,7 @@ Strategy.prototype.makeADeal = function(buyPlan, sellPlan, eventNeedAddBack, lis
             }
             var paysForBuy = paysForSell.value / buyPlan.price;
 
-            Logger.log(false, "we may have chance to make a deal", paysForBuy, getsForBuy, paysForSell, getsForSell);
+            Logger.log(true, "we may have chance to make a deal", paysForBuy, getsForBuy, paysForSell, getsForSell);
 
             if (self.ifOfferExist(offers, paysForBuy, getsForBuy) || self.ifOfferExist(offers, paysForSell, getsForSell)) {
                 self.addListener(strategyEvents.deal, self.makeADeal);
@@ -154,15 +154,14 @@ Strategy.prototype.makeADeal = function(buyPlan, sellPlan, eventNeedAddBack, lis
                 return;
             }
 
-            Logger.log(true, "we make a deal here:", paysForBuy, getsForBuy, paysForSell, getsForSell);
-
             self.remote.transaction()
                 .offerCreate(account, paysForBuy, getsForBuy)
                 .secret(self.secret).on("success", function() {
-
+                    Logger.log(true, "we make a deal here:", paysForBuy, getsForBuy);
                     self.remote.transaction().offerCreate(account, paysForSell, getsForSell)
                         .secret(self.secret).on("success", function() {
-                            self.addListener(strategyEvents.deal, self.makeADeal);
+                            sLogger.log(true, "we make a deal here:", paysForSell, getsForSell);
+                            elf.addListener(strategyEvents.deal, self.makeADeal);
                             self.addListener(eventNeedAddBack, listenerNeedAddBack);
                             self.buyPlans = [];
                             self.sellPlans = [];
