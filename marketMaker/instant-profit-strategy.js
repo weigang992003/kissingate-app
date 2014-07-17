@@ -162,7 +162,7 @@ Strategy.prototype.makeADeal = function(buyPlan, sellPlan, eventNeedAddBack, lis
                     Logger.log(true, "we make a deal here:", paysForBuy, getsForBuy);
                     self.remote.transaction().offerCreate(account, paysForSell, getsForSell)
                         .secret(self.secret).on("success", function() {
-                            sLogger.log(true, "we make a deal here:", paysForSell, getsForSell);
+                            Logger.log(true, "we make a deal here:", paysForSell, getsForSell);
                             elf.addListener(strategyEvents.deal, self.makeADeal);
                             self.addListener(eventNeedAddBack, listenerNeedAddBack);
                             self.buyPlans = [];
