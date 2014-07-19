@@ -74,7 +74,7 @@ Strategy.prototype.whenSellPriceChange = function(sellPlan) {
     var buyPlan = self.buyPlan;
     var sellPlan = self.sellPlan;
 
-    if (buyPlan == undefined || sellPlan == undefined) {
+    if (!buyPlan || !sellPlan) {
         return;
     }
 

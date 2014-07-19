@@ -35,3 +35,13 @@ exports.remote_options = {
         secure: true
     }]
 };
+
+exports.currency_unit = {
+    "XRP": "1",
+    "BTC": "0.0000084",
+    "USD": "0.0053",
+    "JPY": "0.56",
+    "CNY": "0.035",
+    "FMM": "0.035",
+    "EUR": "0.004"
+};
