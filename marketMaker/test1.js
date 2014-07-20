@@ -44,6 +44,9 @@ console.log(dest_amount.to_human({
     precision: 2
 }));
 
-timer = setInterval(function() {
-    console.log('shdksdh');
-}, 1000);
+console.log(dest_amount.product_human(1.005).to_text_full());
+console.log(dest_amount.to_text_full());
+
+var a = Amount.from_json("0.00000893068385/BTC/rf9q1WE2Kdmv9AWtesCaANJyNxnFjp5T7z");
+var b = Amount.from_json("0.0000084/BTC/rf9q1WE2Kdmv9AWtesCaANJyNxnFjp5T7z");
+console.log(a.ratio_human(b).to_human());

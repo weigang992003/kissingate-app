@@ -61,9 +61,7 @@ remote.connect(function() {
         var alternatives = _.each(message.alternatives, function(raw) {
             var alt = {};
             alt.amount = Amount.from_json(raw.source_amount);
-            console.log(raw.source_amount);
             alt.rate = alt.amount.ratio_human(dest_amount).to_human();
-            console.log(alt.rate);
             alt.send_max = alt.amount.product_human(Amount.from_json('10.0001'));
             alt.paths = raw.paths_computed ? raw.paths_computed : raw.paths_canonical;
 
@@ -92,8 +90,6 @@ remote.connect(function() {
 
             // tx.submit();
 
-
-            // console.dir(alt);
         });
     })
 
