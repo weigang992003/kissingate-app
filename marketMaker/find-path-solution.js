@@ -83,7 +83,7 @@ function makeProfitIfCan(alt, type) {
         rate2 = alt2.rate;
         var profitRate = math.round(rate1 * rate2, 3);
 
-        if (profitRate < 0.998) {
+        if (profitRate < 0.995) {
             Logger.log(true, "profitRate:" + profitRate, elements[0] + "/" + elements[1], "rate:" + rate1,
                 elements[1] + "/" + elements[0], "rate:" + rate2,
                 "alt1_dest_amount", alt1.dest_amount.to_text_full(), "alt1_source_amount", alt1.source_amount.to_text_full(),
@@ -101,18 +101,18 @@ function payment(alt1, alt2, factor, type, oppositeType) {
     if (factorMap[type]) {
         factor = factorMap[type] + factor;
         factorMap[type] = factorMap[type] + weight;
-        factorMap[type] = _.min([100, factorMap[type]]);
+        factorMap[type] = _.min([20, factorMap[type]]);
     } else if (factorMap[oppositeType]) {
         factor = factorMap[oppositeType] + factor;
         factorMap[oppositeType] = factorMap[oppositeType] + weight;
-        factorMap[oppositeType] = _.min([100, factorMap[oppositeType]]);
+        factorMap[oppositeType] = _.min([20, factorMap[oppositeType]]);
     } else {
         factorMap = {};
         factorMap[type] = weight;
         factorMap[oppositeType] = weight;
     }
 
-    factor = math.round(_.min([factor, 100]), 0);
+    factor = math.round(_.min([factor, 20]), 0);
     if (factor == 0) {
         factor = 1;
     }
