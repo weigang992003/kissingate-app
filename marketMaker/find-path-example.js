@@ -45,16 +45,19 @@ decrypt();
 
 
 remote.connect(function() {
-    var dest_amount = Amount.from_json({
-        currency: 'EUR',
-        issuer: account,
-        value: '0.0001'
-    });
+    var xrp = {
+        "currency": "XRP",
+        "issuer": "rrrrrrrrrrrrrrrrrrrrrhoLvTp",
+        "value": "1000000"
+    };
+    var dest_amount = Amount.from_json("1000000");
 
     var pathFind = remote.pathFind(account, account, dest_amount, [{
-        currency: 'BTC',
+        currency: 'CNY',
         issuer: account
     }]);
+
+    trade = false;
 
     pathFind.on("update", function(message) {
 
@@ -62,14 +65,15 @@ remote.connect(function() {
             var alt = {};
             alt.amount = Amount.from_json(raw.source_amount);
             alt.rate = alt.amount.ratio_human(dest_amount).to_human();
-            alt.send_max = alt.amount.product_human(Amount.from_json('10.0001'));
+            alt.send_max = alt.amount.product_human(Amount.from_json('1.01'));
             alt.paths = raw.paths_computed ? raw.paths_computed : raw.paths_canonical;
 
             var tx = remote.transaction();
 
-            tx.payment(account, account, dest_amount.product_human(10));
+            tx.payment(account, account, dest_amount);
             tx.send_max(alt.send_max);
             tx.paths(alt.paths);
+            // tx.setFlags([0x00020000]);
 
             if (secret) {
                 tx.secret(secret);
@@ -87,9 +91,10 @@ remote.connect(function() {
                 console.dir(res);
             });
             console.log("submit");
-
-            // tx.submit();
-
+            if (!trade) {
+                trade = true;
+                tx.submit();
+            }
         });
     })
 

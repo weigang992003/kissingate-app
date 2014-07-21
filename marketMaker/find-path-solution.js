@@ -127,7 +127,7 @@ function payment(alt1, alt2, factor, type, oppositeType) {
 
     var tx2 = remote.transaction();
     var times = alt1.source_amount.ratio_human(alt2.dest_amount).to_human().replace(',', '');
-    var tx2_dest_amount = alt2.dest_amount.product_human(math.round((times * factor), 6));
+    var tx2_dest_amount = tx1_source_amount;
     var tx2_source_amount = alt2.source_amount.product_human(math.round((times * factor), 6));
 
     tx2.payment(account, account, tx2_dest_amount);

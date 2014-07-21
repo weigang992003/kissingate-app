@@ -39,11 +39,15 @@ exports.remote_options = {
 exports.currency_unit = {
     "XRP": "1",
     "BTC": "0.0000084",
-    "USD": "0.0053",
-    "JPY": "0.56",
+    "USD": "0.005",
+    "JPY": "0.560",
     "CNY": "0.035",
     "FMM": "0.035",
-    "EUR": "0.004"
+    "EUR": "0.004",
+    "CAD": "0.005",
+    "ILS": "0.060",
+    "CHF": "0.005",
+    "NZD": "0.005"
 };
 
 exports.factorWeight = 5;
