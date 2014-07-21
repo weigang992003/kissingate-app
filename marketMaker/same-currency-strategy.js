@@ -95,12 +95,12 @@ Strategy.prototype.makeADeal = function(buyPlan, sellPlan, eventNeedAddBack, lis
     var getsForBuy = buyPlan.taker_gets;
     getsForBuy['value'] = 10 + '';
     var paysForBuy = buyPlan.taker_pays;
-    paysForBuy['value'] = buyPlan.price + '';
+    paysForBuy['value'] = 10 * buyPlan.price + '';
 
     var paysForSell = sellPlan.taker_pays;
     paysForSell['value'] = 10 + '';
     var getsForSell = sellPlan.taker_gets;
-    getsForSell['value'] = sellPlan.price + '';
+    getsForSell['value'] = 10 * sellPlan.price + '';
 
     self.remote.requestAccountOffers(account, function() {
         var offers = arguments[1].offers;
