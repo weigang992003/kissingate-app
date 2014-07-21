@@ -38,6 +38,8 @@ var Amount = ripple.Amount;
 var account = config.account;
 var encryptedSecret = config.secret;
 var currency_unit = config.currency_unit;
+var weight = config.factorWeight;
+
 var secret;
 decrypt();
 
@@ -52,6 +54,8 @@ var tx1Success = false;
 var tx2Success = false;
 var tx1error = false;
 var tx2error = false;
+
+var factorMap = {};
 
 emitter.once('payment', payment);
 emitter.on('addPaymentBack', reAddPaymentListener);
@@ -73,27 +77,46 @@ function makeProfitIfCan(alt, type) {
     var elements = type.split(":");
     var oppositeType = elements[1] + ":" + elements[0];
 
+
     if (_.indexOf(_.keys(altMap), oppositeType) >= 0) {
         var alt2 = altMap[oppositeType];
         rate2 = alt2.rate;
         var profitRate = math.round(rate1 * rate2, 3);
 
-
-        if (profitRate < 0.995) {
+        if (profitRate < 0.998) {
             Logger.log(true, "profitRate:" + profitRate, elements[0] + "/" + elements[1], "rate:" + rate1,
                 elements[1] + "/" + elements[0], "rate:" + rate2,
                 "alt1_dest_amount", alt1.dest_amount.to_text_full(), "alt1_source_amount", alt1.source_amount.to_text_full(),
                 "alt2_dest_amount", alt2.dest_amount.to_text_full(), "alt2_source_amount", alt2.source_amount.to_text_full());
-            var factor = math.round(((1 / (rate1 * rate2)) - 1), 3) * 100;
+            var factor = math.round(((1 / (rate1 * rate2)) - 1), 3) * 1000;
+
             if (factor > 0) {
-                emitter.emit('payment', alt1, alt2, factor);
+                emitter.emit('payment', alt1, alt2, factor, type, oppositeType);
             }
         }
     }
 }
 
-function payment(alt1, alt2, factor) {
-    factor = math.round(_.min([factor, 100]), 3);
+function payment(alt1, alt2, factor, type, oppositeType) {
+    if (factorMap[type]) {
+        factor = factorMap[type] + factor;
+        factorMap[type] = factorMap[type] + weight;
+        factorMap[type] = _.min([100, factorMap[type]]);
+    } else if (factorMap[oppositeType]) {
+        factor = factorMap[oppositeType] + factor;
+        factorMap[oppositeType] = factorMap[oppositeType] + weight;
+        factorMap[oppositeType] = _.min([100, factorMap[oppositeType]]);
+    } else {
+        factorMap = {};
+        factorMap[type] = weight;
+        factorMap[oppositeType] = weight;
+    }
+
+    factor = math.round(_.min([factor, 100]), 0);
+    if (factor == 0) {
+        factor = 1;
+    }
+
     var tx1 = remote.transaction();
     var tx1_dest_amount = alt1.dest_amount.product_human(factor);
     var tx1_source_amount = alt1.source_amount.product_human(factor);
@@ -133,8 +156,8 @@ function payment(alt1, alt2, factor) {
     });
     tx1.on('success', function(res) {
         tx1Success = true;
-        emitter.emitter('addPaymentBack');
-        Logger.log(true, res);
+        emitter.emit('addPaymentBack');
+        // Logger.log(true, res);
     });
     tx1.on('error', function(res) {
         tx1error = true;
@@ -146,8 +169,8 @@ function payment(alt1, alt2, factor) {
     });
     tx2.on('success', function(res) {
         tx2Success = true;
-        emitter.emitter('addPaymentBack');
-        Logger.log(true, res);
+        emitter.emit('addPaymentBack');
+        // Logger.log(true, res);
     });
     tx2.on('error', function(res) {
         tx2error = true;
@@ -224,6 +247,8 @@ function queryFindPath(currencies) {
         });
     });
 }
+
+setTimeout(throwDisconnectError, 1000 * 60 * 15);
 
 remote.connect(function() {
     remote.requestAccountLines(account, function(err, result) {

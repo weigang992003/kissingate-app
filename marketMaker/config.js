@@ -45,3 +45,5 @@ exports.currency_unit = {
     "FMM": "0.035",
     "EUR": "0.004"
 };
+
+exports.factorWeight = 5;
