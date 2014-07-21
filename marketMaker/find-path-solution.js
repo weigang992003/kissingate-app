@@ -54,6 +54,8 @@ var tx1error = false;
 var tx2error = false;
 
 emitter.once('payment', payment);
+emitter.on('addPaymentBack', reAddPaymentListener);
+
 
 function decrypt() {
     crypto.decrypt(encryptedSecret, function(result) {
@@ -91,7 +93,6 @@ function makeProfitIfCan(alt, type) {
 }
 
 function payment(alt1, alt2, factor) {
-    emitter.once('addPaymentBack', reAddPaymentListener);
     factor = math.round(_.min([factor, 100]), 3);
     var tx1 = remote.transaction();
     var tx1_dest_amount = alt1.dest_amount.product_human(factor);
