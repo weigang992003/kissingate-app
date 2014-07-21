@@ -1,4 +1,3 @@
-var http = require('http');
 var math = require('mathjs');
 var _ = require('underscore');
 var events = require('events');
@@ -49,10 +48,12 @@ var xrp = {
     "value": "1000000"
 };
 
-var tx1Response = false;
-var tx2Response = false;
+var tx1Success = false;
+var tx2Success = false;
+var tx1error = false;
+var tx2error = false;
 
-emitter.on('payment', payment);
+emitter.once('payment', payment);
 
 function decrypt() {
     crypto.decrypt(encryptedSecret, function(result) {
@@ -90,7 +91,7 @@ function makeProfitIfCan(alt, type) {
 }
 
 function payment(alt1, alt2, factor) {
-    emitter.removeListener('payment', payment);
+    emitter.once('addPaymentBack', reAddPaymentListener);
     factor = math.round(_.min([factor, 100]), 3);
     var tx1 = remote.transaction();
     var tx1_dest_amount = alt1.dest_amount.product_human(factor);
@@ -121,47 +122,34 @@ function payment(alt1, alt2, factor) {
         return;
     }
 
+    tx1error = false;
+    tx2error = false;
+    tx1Success = false;
+    tx2Success = false;
+
     tx1.on('proposed', function(res) {
-        tx1Response = true;
-        // if (tx1Response && tx2Response) {
-        //     emitter.on('payment', payment);
-        // }
         Logger.log(true, res);
     });
     tx1.on('success', function(res) {
-        tx1Response = true;
-        // if (tx1Response && tx2Response) {
-        //     emitter.on('payment', payment);
-        // }
+        tx1Success = true;
+        emitter.emitter('addPaymentBack');
         Logger.log(true, res);
     });
     tx1.on('error', function(res) {
-        tx1Response = true;
-        // if (tx1Response && tx2Response) {
-        //     emitter.on('payment', payment);
-        // }
+        tx1error = true;
         Logger.log(true, res);
     });
 
     tx2.on('proposed', function(res) {
-        tx2Response = true;
-        // if (tx1Response && tx2Response) {
-        //     emitter.on('payment', payment);
-        // }
         Logger.log(true, res);
     });
     tx2.on('success', function(res) {
-        tx2Response = true;
-        // if (tx1Response && tx2Response) {
-        //     emitter.on('payment', payment);
-        // }
+        tx2Success = true;
+        emitter.emitter('addPaymentBack');
         Logger.log(true, res);
     });
     tx2.on('error', function(res) {
-        tx2Response = true;
-        // if (tx1Response && tx2Response) {
-        //     emitter.on('payment', payment);
-        // }
+        tx2error = true;
         Logger.log(true, res);
     });
 
@@ -169,8 +157,10 @@ function payment(alt1, alt2, factor) {
     tx2.submit();
 }
 
-function reAddListener(res) {
-
+function reAddPaymentListener() {
+    if (tx1Success && tx2Success) {
+        emitter.once('payment', payment);
+    }
 }
 
 function prepareCurrencies(lines) {
