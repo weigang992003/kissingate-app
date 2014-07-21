@@ -93,12 +93,12 @@ Strategy.prototype.makeADeal = function(buyPlan, sellPlan, eventNeedAddBack, lis
     self.removeListener(strategyEvents.deal, self.makeADeal);
 
     var getsForBuy = buyPlan.taker_gets;
-    getsForBuy['value'] = 1 + '';
+    getsForBuy['value'] = 10 + '';
     var paysForBuy = buyPlan.taker_pays;
     paysForBuy['value'] = buyPlan.price + '';
 
     var paysForSell = sellPlan.taker_pays;
-    paysForSell['value'] = 1 + '';
+    paysForSell['value'] = 10 + '';
     var getsForSell = sellPlan.taker_gets;
     getsForSell['value'] = sellPlan.price + '';
 
