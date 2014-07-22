@@ -52,4 +52,4 @@ exports.currency_unit = {
 
 exports.factorWeight = 5;
 exports.profitRate = 0.96;
-exports.sendMaxRate = 1.003;
+exports.sendMaxRate = 1.005;
