@@ -44,6 +44,8 @@ var secret;
 decrypt();
 
 var altMap = {};
+var factorMap = {};
+
 var xrp = {
     "currency": "XRP",
     "issuer": "rrrrrrrrrrrrrrrrrrrrrhoLvTp",
@@ -52,10 +54,6 @@ var xrp = {
 
 var tx1Success = false;
 var tx2Success = false;
-var tx1error = false;
-var tx2error = false;
-
-var factorMap = {};
 
 emitter.once('payment', payment);
 emitter.on('addPaymentBack', reAddPaymentListener);
@@ -69,6 +67,8 @@ function decrypt() {
 
 function makeProfitIfCan(alt, type) {
     var alt1 = alt;
+
+    alt1["time"] = new Date().getTime();;
     altMap[type] = alt1;
 
     var rate1 = alt1.rate;
@@ -76,7 +76,6 @@ function makeProfitIfCan(alt, type) {
 
     var elements = type.split(":");
     var oppositeType = elements[1] + ":" + elements[0];
-
 
     if (_.indexOf(_.keys(altMap), oppositeType) >= 0) {
         var alt2 = altMap[oppositeType];
@@ -88,8 +87,8 @@ function makeProfitIfCan(alt, type) {
                 elements[1] + "/" + elements[0], "rate:" + rate2,
                 "alt1_dest_amount", alt1.dest_amount.to_text_full(), "alt1_source_amount", alt1.source_amount.to_text_full(),
                 "alt2_dest_amount", alt2.dest_amount.to_text_full(), "alt2_source_amount", alt2.source_amount.to_text_full());
-            var factor = math.round(((1 / (rate1 * rate2)) - 1), 3) * 1000;
 
+            var factor = math.round(((1 / (rate1 * rate2)) - 1), 3) * 1000;
             if (factor > 0) {
                 emitter.emit('payment', alt1, alt2, factor, type, oppositeType);
             }
@@ -98,21 +97,21 @@ function makeProfitIfCan(alt, type) {
 }
 
 function payment(alt1, alt2, factor, type, oppositeType) {
-    if (factorMap[type]) {
-        factor = factorMap[type] + factor;
-        factorMap[type] = factorMap[type] + weight;
-        factorMap[type] = _.min([20, factorMap[type]]);
-    } else if (factorMap[oppositeType]) {
-        factor = factorMap[oppositeType] + factor;
-        factorMap[oppositeType] = factorMap[oppositeType] + weight;
-        factorMap[oppositeType] = _.min([20, factorMap[oppositeType]]);
-    } else {
-        factorMap = {};
-        factorMap[type] = weight;
-        factorMap[oppositeType] = weight;
-    }
+    // if (factorMap[type]) {
+    //     factor = factorMap[type] + factor;
+    //     factorMap[type] = factorMap[type] + weight;
+    //     factorMap[type] = _.min([20, factorMap[type]]);
+    // } else if (factorMap[oppositeType]) {
+    //     factor = factorMap[oppositeType] + factor;
+    //     factorMap[oppositeType] = factorMap[oppositeType] + weight;
+    //     factorMap[oppositeType] = _.min([20, factorMap[oppositeType]]);
+    // } else {
+    //     factorMap = {};
+    //     factorMap[type] = weight;
+    //     factorMap[oppositeType] = weight;
+    // }
 
-    factor = math.round(_.min([factor, 20]), 0);
+    factor = math.round(_.min([factor, 10]), 0);
     if (factor == 0) {
         factor = 1;
     }
@@ -146,8 +145,6 @@ function payment(alt1, alt2, factor, type, oppositeType) {
         return;
     }
 
-    tx1error = false;
-    tx2error = false;
     tx1Success = false;
     tx2Success = false;
 
@@ -157,11 +154,16 @@ function payment(alt1, alt2, factor, type, oppositeType) {
     tx1.on('success', function(res) {
         tx1Success = true;
         emitter.emit('addPaymentBack');
-        // Logger.log(true, res);
     });
     tx1.on('error', function(res) {
-        tx1error = true;
-        Logger.log(true, res);
+        if (res.engine_result == "tecPATH_PARTIAL" && altMap[type].rate <= alt1.rate && altMap[type].time >= alt1.time) {
+            handlePartialPathError(tx1_dest_amount, tx1_source_amount, altMap[type].paths, tx1Success);
+        } else if (res.engine_result == "tecPATH_PARTIAL") {
+            tx1Success = true;
+            emitter.emit('addPaymentBack');
+        } else {
+            Logger.log(true, res);
+        }
     });
 
     tx2.on('proposed', function(res) {
@@ -170,15 +172,48 @@ function payment(alt1, alt2, factor, type, oppositeType) {
     tx2.on('success', function(res) {
         tx2Success = true;
         emitter.emit('addPaymentBack');
-        // Logger.log(true, res);
     });
     tx2.on('error', function(res) {
-        tx2error = true;
-        Logger.log(true, res);
+        if (res.engine_result == "tecPATH_PARTIAL" && altMap[oppositeType].rate <= alt2.rate && altMap[oppositeType].time >= alt2.time) {
+            handlePartialPathError(tx1_dest_amount, tx2_source_amount, altMap[oppositeType].paths, tx2Success);
+        } else if (res.engine_result == "tecPATH_PARTIAL") {
+            tx2Success = true;
+            emitter.emit('addPaymentBack');
+        } else {
+            Logger.log(true, res);
+        }
     });
+
+    if (altMap[type].rate > alt1.rate && altMap[type].time > alt1.time) {
+        Logger.log(true, "alt1 rate updated from " + alt1.rate + "to " + altMap[type].rate);
+        emitter.once('payment', payment);
+        return;
+    }
+    if (altMap[oppositeType].rate > alt2.rate && altMap[oppositeType].time > alt2.time) {
+        Logger.log(true, "alt2 rate updated from " + alt2.rate + "to " + altMap[oppositeType].rate);
+        emitter.once('payment', payment);
+        return;
+    }
 
     tx1.submit();
     tx2.submit();
+}
+
+function handlePartialPathError(dest_amount, source_amount, paths, txSuccess) {
+    var tx = remote.transaction();
+    dest_amount = dest_amount.product_human(0.5);
+    source_amount = source_amount.product_human(0.5);
+
+    tx.payment(account, account, dest_amount);
+    tx.send_max(source_amount.product_human(1.01));
+    tx.paths(paths);
+
+    tx.on('success', function(res) {
+        txSuccess = true;
+        emitter.emit('addPaymentBack');
+    });
+
+    tx.submit();
 }
 
 function reAddPaymentListener() {
