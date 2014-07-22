@@ -37,17 +37,18 @@ exports.remote_options = {
 };
 
 exports.currency_unit = {
-    "XRP": "1",
-    "BTC": "0.0000084",
-    "USD": "0.005",
-    "JPY": "0.560",
-    "CNY": "0.035",
-    "FMM": "0.035",
-    "EUR": "0.004",
-    "CAD": "0.005",
-    "ILS": "0.060",
-    "CHF": "0.005",
-    "NZD": "0.005"
+    "XRP": "20",
+    "BTC": "0.00008",
+    "USD": "0.100",
+    "JPY": "10",
+    "CNY": "0.700",
+    "FMM": "0.700",
+    "EUR": "0.080",
+    "CAD": "0.100",
+    "ILS": "1.000",
+    "CHF": "0.100",
+    "NZD": "0.100"
 };
 
 exports.factorWeight = 5;
+exports.profitRate = 0.96;
