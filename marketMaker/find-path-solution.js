@@ -35,17 +35,16 @@ var remote_options = remote_options = {
 
 var remote = new ripple.Remote(remote_options);
 var Amount = ripple.Amount;
+
 var account = config.account;
+var weight = config.factorWeight;
+var profit_rate = config.profitRate;
 var encryptedSecret = config.secret;
 var currency_unit = config.currency_unit;
-var weight = config.factorWeight;
-
-var secret;
-decrypt();
+var send_max_rate = config.sendMaxRate;
 
 var altMap = {};
 var factorMap = {};
-
 var xrp = {
     "currency": "XRP",
     "issuer": "rrrrrrrrrrrrrrrrrrrrrhoLvTp",
@@ -55,15 +54,13 @@ var xrp = {
 var tx1Success = false;
 var tx2Success = false;
 
+var secret;
+crypto.decrypt(encryptedSecret, function(result) {
+    secret = result;
+});
+
 emitter.once('payment', payment);
 emitter.on('addPaymentBack', reAddPaymentListener);
-
-
-function decrypt() {
-    crypto.decrypt(encryptedSecret, function(result) {
-        secret = result;
-    });
-}
 
 function makeProfitIfCan(alt, type) {
     var alt1 = alt;
@@ -82,13 +79,17 @@ function makeProfitIfCan(alt, type) {
         rate2 = alt2.rate;
         var profitRate = math.round(rate1 * rate2, 3);
 
-        if (profitRate < 0.995) {
+        if (profitRate < profit_rate) {
             Logger.log(true, "profitRate:" + profitRate, elements[0] + "/" + elements[1], "rate:" + rate1,
                 elements[1] + "/" + elements[0], "rate:" + rate2,
                 "alt1_dest_amount", alt1.dest_amount.to_text_full(), "alt1_source_amount", alt1.source_amount.to_text_full(),
                 "alt2_dest_amount", alt2.dest_amount.to_text_full(), "alt2_source_amount", alt2.source_amount.to_text_full());
 
-            var factor = math.round(((1 / (rate1 * rate2)) - 1), 3) * 1000;
+            var factor = 1;
+            if (profitRate >= 0.9) {
+                factor = 0.5;
+            }
+
             if (factor > 0) {
                 emitter.emit('payment', alt1, alt2, factor, type, oppositeType);
             }
@@ -97,41 +98,23 @@ function makeProfitIfCan(alt, type) {
 }
 
 function payment(alt1, alt2, factor, type, oppositeType) {
-    // if (factorMap[type]) {
-    //     factor = factorMap[type] + factor;
-    //     factorMap[type] = factorMap[type] + weight;
-    //     factorMap[type] = _.min([20, factorMap[type]]);
-    // } else if (factorMap[oppositeType]) {
-    //     factor = factorMap[oppositeType] + factor;
-    //     factorMap[oppositeType] = factorMap[oppositeType] + weight;
-    //     factorMap[oppositeType] = _.min([20, factorMap[oppositeType]]);
-    // } else {
-    //     factorMap = {};
-    //     factorMap[type] = weight;
-    //     factorMap[oppositeType] = weight;
-    // }
-
-    factor = math.round(_.min([factor, 10]), 0);
-    if (factor == 0) {
-        factor = 1;
-    }
-
     var tx1 = remote.transaction();
     var tx1_dest_amount = alt1.dest_amount.product_human(factor);
     var tx1_source_amount = alt1.source_amount.product_human(factor);
 
-    tx1.payment(account, account, tx1_dest_amount);
-    tx1.send_max(tx1_source_amount.product_human(1.01));
     tx1.paths(alt1.paths);
+    tx1.payment(account, account, tx1_dest_amount);
+    tx1.send_max(tx1_source_amount.product_human(send_max_rate));
+
+    var times = alt1.source_amount.ratio_human(alt2.dest_amount).to_human().replace(',', '');
 
     var tx2 = remote.transaction();
-    var times = alt1.source_amount.ratio_human(alt2.dest_amount).to_human().replace(',', '');
     var tx2_dest_amount = tx1_source_amount;
     var tx2_source_amount = alt2.source_amount.product_human(math.round((times * factor), 6));
 
-    tx2.payment(account, account, tx2_dest_amount);
-    tx2.send_max(tx2_source_amount.product_human(1.01));
     tx2.paths(alt2.paths);
+    tx2.payment(account, account, tx2_dest_amount);
+    tx2.send_max(tx2_source_amount.product_human(send_max_rate));
 
     Logger.log(true, "we make a payment here", "tx1_dest_amount", tx1_dest_amount.to_text_full(),
         "tx1_source_amount", tx1_source_amount.to_text_full(),
