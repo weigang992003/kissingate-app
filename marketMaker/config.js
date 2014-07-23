@@ -37,7 +37,7 @@ exports.remote_options = {
 };
 
 exports.currency_unit = {
-    "XRP": "20",
+    "XRP": "20000000",
     "BTC": "0.00008",
     "USD": "0.100",
     "JPY": "10",
@@ -51,5 +51,5 @@ exports.currency_unit = {
 };
 
 exports.factorWeight = 5;
-exports.profitRate = 0.99;
-exports.sendMaxRate = 1.01;
+exports.profitRate = 1;
+exports.delayWhenFailure = 30000;

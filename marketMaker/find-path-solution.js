@@ -42,6 +42,7 @@ var weight = config.factorWeight;
 var profit_rate = config.profitRate;
 var encryptedSecret = config.secret;
 var currency_unit = config.currency_unit;
+var delay_time = config.delayWhenFailure;
 
 var altMap = {};
 var factorMap = {};
@@ -149,6 +150,8 @@ function payment(alt1, alt2, factor, send_max_rate) {
         emitter.emit('addPaymentBack');
     });
     tx1.on('error', function(res) {
+        alt1.time = new Date().getTime() + delay_time;
+        alt2.time = new Date().getTime() + delay_time;
         if (res.engine_result == "tecPATH_PARTIAL") {
             handlePartialPathError(tx1_dest_amount, tx1_source_amount);
             tx1Success = true;
@@ -166,7 +169,8 @@ function payment(alt1, alt2, factor, send_max_rate) {
         emitter.emit('addPaymentBack');
     });
     tx2.on('error', function(res) {
-        altMap = _.omit(altMap, alt2.type);
+        alt1.time = new Date().getTime() + delay_time;
+        alt2.time = new Date().getTime() + delay_time;
         if (res.engine_result == "tecPATH_PARTIAL") {
             handlePartialPathError(tx1_dest_amount, tx2_source_amount);
             tx2Success = true;
@@ -255,10 +259,9 @@ function queryFindPath(currencies) {
                     alt.dest_amount = Amount.from_json(dest_amount);
                     alt.source_amount = Amount.from_json(raw.source_amount);
                     alt.rate = alt.source_amount.ratio_human(dest_amount).to_human().replace(',', '');
-                    // alt.send_max = alt.source_amount.product_human(Amount.from_json('1.005'));
                     alt.paths = raw.paths_computed ? raw.paths_computed : raw.paths_canonical;
 
-                    var type = dest_amount.currency + ":" + (typeof raw.source_amount == "string" ? "XRP" : raw.source_amount.currency);
+                    var type = (typeof dest_amount == "string" ? "XRP" : dest_amount.currency) + ":" + (typeof raw.source_amount == "string" ? "XRP" : raw.source_amount.currency);
 
                     emitter.emit(type, alt, type);
                 });
