@@ -62,6 +62,8 @@ var tx2error = false;
 
 var factorMap = {};
 
+var issuerMap = {};
+
 emitter.once('payment', payment);
 emitter.on('addPaymentBack', reAddPaymentListener);
 
@@ -81,7 +83,6 @@ function makeProfitIfCan(alt, type) {
 
     var elements = type.split(":");
     var oppositeType = elements[1] + ":" + elements[0];
-
 
     if (_.indexOf(_.keys(altMap), oppositeType) >= 0) {
         var alt2 = altMap[oppositeType];
@@ -207,8 +208,6 @@ function prepareCurrencies(lines) {
         }
     })
 
-    console.log(currencies);
-
     var allIssuers = {};
     _.each(currencies, function(item) {
         if (!allIssuers[item.currency]) {
@@ -218,15 +217,40 @@ function prepareCurrencies(lines) {
         allIssuers[item.currency].push(item.issuer);
     });
 
-    var issuers = {};
     _.each(_.keys(allIssuers), function(currency) {
         if (allIssuers[currency].length > 1) {
-            issuers[currency] = allIssuers[currency];
+            issuerMap[currency] = allIssuers[currency];
         }
     })
+}
+
+function checkOrderBook() {
+    var keys = _.keys(issuerMap);
+    _.each(keys, function(currency) {
+        var issuers = issuerMap[currency];
+        _.each(issuers, function(issuer1) {
+            _.each(issuers, function(issuer2) {
+                if (issuer1 == issuer2) {
+                    continue;
+                }
+                var book1 = remote.book(currency, issuer1, currency, issuer2);
+                var book2 = remote.book(currency, issuer2, currency, issuer1);
+
+            })
+        })
 
 
-    console.log(issuers);
+        this.exchangeCurrency1.offers(function(offers) {
+            self.emit('model-change', offers, "asks", marketEvent.buy);
+        });
+
+        this.exchangeCurrency2.offers(function(offers) {
+            self.emit('model-change', offers, "bids", marketEvent.sell);
+        });
+
+        this.exchangeCurrency1.on('model', handleAsks);
+        this.exchangeCurrency2.on('model', handleBids);
+    });
 }
 
 

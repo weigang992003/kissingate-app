@@ -6,7 +6,6 @@ var config = require('./config.js');
 var ripple = require('../src/js/ripple');
 var crypto = require('./crypto-util.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
-var mongodbManager = require('./mongodb-manager.js');
 var Logger = require('./the-future-logger.js').TFLogger;
 
 var emitter = new events.EventEmitter();
@@ -42,6 +41,7 @@ var weight = config.factorWeight;
 var profit_rate = config.profitRate;
 var encryptedSecret = config.secret;
 var currency_unit = config.currency_unit;
+var send_max_rate = config.sendMaxRate;
 
 var altMap = {};
 var factorMap = {};
@@ -65,12 +65,7 @@ emitter.on('addPaymentBack', reAddPaymentListener);
 function makeProfitIfCan(alt, type) {
     var alt1 = alt;
 
-    alt1["type"] = type;
-    alt1["time"] = new Date().getTime();
-    if (altMap[type] && altMap[type].time > alt1.time) {
-        return;
-    }
-
+    alt1["time"] = new Date().getTime();;
     altMap[type] = alt1;
 
     var rate1 = alt1.rate;
@@ -85,7 +80,7 @@ function makeProfitIfCan(alt, type) {
         var profitRate = math.round(rate1 * rate2, 3);
 
         if (profitRate < profit_rate) {
-            var send_max_rate = math.round(math.sqrt(1 / profitRate), 6);
+            send_max_rate = math.round(math.sqrt(1 / profitRate), 6);
 
             Logger.log(true, "profitRate:" + profitRate, elements[0] + "/" + elements[1], "rate:" + rate1,
                 elements[1] + "/" + elements[0], "rate:" + rate2, "send_max_rate", send_max_rate,
@@ -98,16 +93,13 @@ function makeProfitIfCan(alt, type) {
             }
 
             if (factor > 0) {
-                emitter.emit('payment', alt1, alt2, factor, send_max_rate);
+                emitter.emit('payment', alt1, alt2, factor, type, oppositeType);
             }
         }
     }
 }
 
-function payment(alt1, alt2, factor, send_max_rate) {
-    var type = alt1.type;
-    var oppositeType = alt2.type;
-
+function payment(alt1, alt2, factor, type, oppositeType) {
     var tx1 = remote.transaction();
     var tx1_dest_amount = alt1.dest_amount.product_human(factor);
     var tx1_source_amount = alt1.source_amount.product_human(factor);
@@ -149,8 +141,9 @@ function payment(alt1, alt2, factor, send_max_rate) {
         emitter.emit('addPaymentBack');
     });
     tx1.on('error', function(res) {
-        if (res.engine_result == "tecPATH_PARTIAL") {
-            handlePartialPathError(tx1_dest_amount, tx1_source_amount);
+        if (res.engine_result == "tecPATH_PARTIAL" && altMap[type].rate <= alt1.rate && altMap[type].time >= alt1.time) {
+            handlePartialPathError(tx1_dest_amount, tx1_source_amount, altMap[type].paths, tx1Success);
+        } else if (res.engine_result == "tecPATH_PARTIAL") {
             tx1Success = true;
             emitter.emit('addPaymentBack');
         } else {
@@ -166,9 +159,9 @@ function payment(alt1, alt2, factor, send_max_rate) {
         emitter.emit('addPaymentBack');
     });
     tx2.on('error', function(res) {
-        altMap = _.omit(altMap, alt2.type);
-        if (res.engine_result == "tecPATH_PARTIAL") {
-            handlePartialPathError(tx1_dest_amount, tx2_source_amount);
+        if (res.engine_result == "tecPATH_PARTIAL" && altMap[oppositeType].rate <= alt2.rate && altMap[oppositeType].time >= alt2.time) {
+            handlePartialPathError(tx1_dest_amount, tx2_source_amount, altMap[oppositeType].paths, tx2Success);
+        } else if (res.engine_result == "tecPATH_PARTIAL") {
             tx2Success = true;
             emitter.emit('addPaymentBack');
         } else {
@@ -191,11 +184,21 @@ function payment(alt1, alt2, factor, send_max_rate) {
     tx2.submit();
 }
 
-function handlePartialPathError(dest_amount, source_amount) {
-    mongodbManager.saveFailedTransaction({
-        "dest_amount": dest_amount.to_text_full(),
-        "source_amount": source_amount.to_text_full()
+function handlePartialPathError(dest_amount, source_amount, paths, txSuccess) {
+    var tx = remote.transaction();
+    dest_amount = dest_amount.product_human(0.5);
+    source_amount = source_amount.product_human(0.5);
+
+    tx.payment(account, account, dest_amount);
+    tx.send_max(source_amount.product_human(1.01));
+    tx.paths(paths);
+
+    tx.on('success', function(res) {
+        txSuccess = true;
+        emitter.emit('addPaymentBack');
     });
+
+    tx.submit();
 }
 
 function reAddPaymentListener() {
@@ -229,24 +232,35 @@ function prepareCurrencies(lines) {
             }
         }
     });
-
-
-    currencies.push(xrp);
-
-    return currencies;
 }
 
 function queryFindPath(currencies) {
     var pathFinds = {};
 
-    _.each(currencies, function(dest_amount) {
-        if (dest_amount.currency == "XRP") {
-            dest_amount = dest_amount.value;
-        }
+    var dest_amount_xrp = Amount.from_json(currency_unit["XRP"]);
 
+    var xrpPF = remote.pathFind(account, account, dest_amount_xrp, currencies);
+    xrpPF.on("update", function(message) {
+        var alternatives = message.alternatives;
+
+        alternatives = _.each(alternatives, function(raw) {
+            var alt = {};
+            alt.source_amount = Amount.from_json(raw.source_amount);
+            alt.rate = alt.source_amount.ratio_human(dest_amount_xrp).to_human().replace(',', '');
+            // alt.send_max = alt.source_amount.product_human(Amount.from_json('1.005'));
+            alt.paths = raw.paths_computed ? raw.paths_computed : raw.paths_canonical;
+
+            console.log("XRP:" + raw.source_amount.currency, alt.rate);
+            console.log(raw.source_amount);
+
+            // emitter.emit(type, alt, type);
+        });
+    });
+
+    _.each(currencies, function(dest_amount) {
         var remo = new ripple.Remote(remote_options);
         remo.connect(function() {
-            var pf = remo.pathFind(account, account, Amount.from_json(dest_amount), typeof dest_amount == "string" ? _.without(currencies, xrp) : currencies)
+            var pf = remo.pathFind(account, account, Amount.from_json(dest_amount), [xrp])
             pf.on("update", function(message) {
                 var alternatives = message.alternatives;
 
@@ -258,23 +272,29 @@ function queryFindPath(currencies) {
                     // alt.send_max = alt.source_amount.product_human(Amount.from_json('1.005'));
                     alt.paths = raw.paths_computed ? raw.paths_computed : raw.paths_canonical;
 
-                    var type = dest_amount.currency + ":" + (typeof raw.source_amount == "string" ? "XRP" : raw.source_amount.currency);
+                    var type = dest_amount.currency + ":XRP";
 
-                    emitter.emit(type, alt, type);
+                    console.log(type, alt.rate);
+                    console.log(raw.source_amount);
+                    console.log(typeof raw.source_amount);
+
+                    // emitter.emit(type, alt, type);
                 });
             });
         });
     });
 }
 
-setTimeout(throwDisconnectError, 1000 * 60 * 30);
+setTimeout(throwDisconnectError, 1000 * 60 * 15);
 
 remote.connect(function() {
     remote.requestAccountLines(account, function(err, result) {
         if (err) console.log(err);
 
-        var currencies = prepareCurrencies(result.lines);
-        queryFindPath(currencies);
+        prepareCurrencies(result.lines);
+
+        emitter.on('queryFindPath', queryFindPath);
+        emitter.emit('queryFindPath', currencies);
     });
 });
 

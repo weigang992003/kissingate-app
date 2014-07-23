@@ -73,7 +73,7 @@ remote.connect(function() {
             tx.payment(account, account, dest_amount);
             tx.send_max(alt.send_max);
             tx.paths(alt.paths);
-            // tx.setFlags([0x00020000]);
+            tx.setFlags([0x00020000]);
 
             if (secret) {
                 tx.secret(secret);

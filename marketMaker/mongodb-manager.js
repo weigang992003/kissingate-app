@@ -50,12 +50,20 @@ var gatewayInfoSchema = mongoose.Schema({
     collection: 'gatewayInfo'
 });
 
+var failedTransactionSchema = mongoose.Schema({
+    dest_amount: String,
+    source_amount: String
+}, {
+    collection: 'failedTransaction'
+});
+
 
 var crypto = mongoose.model('crypto', cryptoSchema);
 var counters = mongoose.model('counters', countersSchema);
 var accountLinesHistory = mongoose.model('accountLinesHistory', accountLinesHistorySchema);
 var gatewayInfo = mongoose.model('gatewayInfo', gatewayInfoSchema);
 var orderToXrp = mongoose.model('orderToXrp', orderToXrpSchema);
+var failedTransaction = mongoose.model('failedTransaction', failedTransactionSchema);
 
 function getCryptoOption(callback) {
     crypto.findOne({
@@ -93,7 +101,7 @@ function findAllGatewayInfo(callback) {
     gatewayInfo.find({}, function(err, result) {
         if (err) console.log(err);
         callback(result);
-    })
+    });
 }
 
 function updateOrderCurrencies(orderCurrenciesMap) {
@@ -105,7 +113,22 @@ function updateOrderCurrencies(orderCurrenciesMap) {
         }, {}, function(err, numberAffected, raw) {
             if (err) console.log(err);
         });
-    })
+    });
+}
+
+function saveFailedTransaction(record) {
+    var row = new failedTransaction(record);
+    row.save(function(err) {
+        if (err) return handleError(err);
+    });
+}
+
+function deleteFailedTransaction(record) {
+    failedTransaction.findOne(record, function(err, doc) {
+        if (doc) {
+            doc.remove();
+        }
+    });
 }
 
 exports.getCryptoOption = getCryptoOption;
@@ -113,3 +136,5 @@ exports.getNextSequence = getNextSequence;
 exports.saveAccountLines = saveAccountLines;
 exports.findAllGatewayInfo = findAllGatewayInfo;
 exports.updateOrderCurrencies = updateOrderCurrencies;
+exports.saveFailedTransaction = saveFailedTransaction;
+exports.deleteFailedTransaction = deleteFailedTransaction;
