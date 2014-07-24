@@ -41,7 +41,6 @@ var drops = config.drops;
 var account = config.account;
 var secret;
 crypto.decrypt(config.secret, function(result) {
-    console.log(result);
     secret = result;
 });
 
@@ -51,7 +50,7 @@ var xrp = {
     "value": "1000000"
 };
 
-emitter.on('submit', submitTX);
+emitter.once('submit', submitTX);
 
 String.prototype.endsWith = function(suffix) {
     return this.indexOf(suffix, this.length - suffix.length) !== -1;
@@ -74,7 +73,7 @@ function removeAccountZero(s) {
 
 function justKeepNumberForXRP(s) {
     if (s.indexOf("/XRP/") > -1) {
-        return s.replace("/XRP/rrrrrrrrrrrrrrrrrrrrrhoLvTp", "") * drops;
+        return math.round(s.replace("/XRP/rrrrrrrrrrrrrrrrrrrrrhoLvTp", "") * drops, 0);
     }
     return s;
 }
@@ -108,7 +107,6 @@ function queryFindPath(pathFindMap, transactionMap) {
                     });
 
                     _.each(transactionMap[type], function(tx) {
-                        console.log("type:" + type + "tx.rate: " + tx.rate + " alt.rate:" + alt.rate);
                         if (!tx.trade && tx.rate >= alt.rate) {
                             tx.paths = alt.paths;
                             emitter.emit('submit', type, tx, alt.rate);
@@ -121,10 +119,9 @@ function queryFindPath(pathFindMap, transactionMap) {
 }
 
 function submitTX(type, transaction, currentRate) {
-    // emitter.removeListener('submit', submitTX);
-
     Logger.log(true, "we will submit a failed transaction here.",
         "type", type, "tx.rate", transaction.rate, "currentRate", currentRate,
+        "send_max_rate", transaction.send_max_rate,
         "dest_amount", transaction.dest_amount,
         "source_amount", transaction.source_amount);
 
@@ -135,7 +132,7 @@ function submitTX(type, transaction, currentRate) {
 
     tx.paths(transaction.paths);
     tx.payment(account, account, dest_amount);
-    tx.send_max(source_amount.product_human(transaction.send_max_rate));
+    tx.send_max(source_amount.product_human(transaction.send_max_rate == undefined ? "1.000001" : transaction.send_max_rate));
 
     if (secret) {
         tx.secret(secret);
@@ -148,11 +145,12 @@ function submitTX(type, transaction, currentRate) {
         var record = {
             dest_amount: removeAccountZero(transaction.dest_amount),
             source_amount: removeAccountZero(transaction.source_amount),
-            send_max_rate: transaction.send_max_rate
+            send_max_rate: transaction.send_max_rate == undefined ? null : transaction.send_max_rate
         };
         Logger.log(true, "record to remove", record);
         mongoManager.deleteFailedTransaction(record);
         transaction.trade = true;
+        emitter.once('submit', submitTX);
     });
 
     tx.on('proposed', function(res) {
@@ -160,17 +158,23 @@ function submitTX(type, transaction, currentRate) {
     });
 
     tx.on('error', function(res) {
-        Logger.log(true, res);
+        if (res.engine_result == "tecPATH_PARTIAL" || res.engine_result == "telINSUF_FEE_P") {
+            transaction.trade = true;
+        } else {
+            Logger.log(true, res);
+        }
+        emitter.once('submit', submitTX);
     });
 
     tx.submit();
 }
 
-setTimeout(throwDisconnectError, 1000 * 60 * 30);
+setTimeout(throwDisconnectError, 1000 * 60 * 10);
 
 function throwDisconnectError() {
     throw new Error('we are disconnect with ripple network!!!');
 }
+
 
 remote.connect(function() {
     mongoManager.getAllFailedTransactions(function(docs) {
