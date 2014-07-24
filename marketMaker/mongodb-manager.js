@@ -52,7 +52,8 @@ var gatewayInfoSchema = mongoose.Schema({
 
 var failedTransactionSchema = mongoose.Schema({
     dest_amount: String,
-    source_amount: String
+    source_amount: String,
+    send_max_rate: String
 }, {
     collection: 'failedTransaction'
 });

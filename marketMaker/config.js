@@ -52,4 +52,4 @@ exports.currency_unit = {
 
 exports.factorWeight = 5;
 exports.profitRate = 1;
-exports.delayWhenFailure = 30000;
+exports.delayWhenFailure = 60000;

@@ -87,11 +87,9 @@ mongoManager.getAllFailedTransactions(function(docs) {
             item['src_currencies'] = src_currencies;
             pathFindMap.push(item);
         } else {
-            console.log(item);
             var src_currencies = _.compact(item['src_currencies']);
 
             var src_currency = _.find(src_currencies, function(src_currency) {
-                console.log(src_currency)
                 return src_currency.currency == source_amount_json.currency;
             });
             if (!src_currency) {

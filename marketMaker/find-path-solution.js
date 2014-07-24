@@ -130,7 +130,8 @@ function payment(alt1, alt2, factor, send_max_rate) {
     Logger.log(true, "we make a payment here", "tx1_dest_amount", tx1_dest_amount.to_text_full(),
         "tx1_source_amount", tx1_source_amount.to_text_full(),
         "tx2_dest_amount", tx2_dest_amount.to_text_full(),
-        "tx2_source_amount", tx2_source_amount.to_text_full(), "factor", factor, "times", times);
+        "tx2_source_amount", tx2_source_amount.to_text_full(),
+        "factor", factor, "times", times, "send_max_rate", send_max_rate);
 
     if (secret) {
         tx1.secret(secret);
@@ -153,7 +154,7 @@ function payment(alt1, alt2, factor, send_max_rate) {
         alt1.time = new Date().getTime() + delay_time;
         alt2.time = new Date().getTime() + delay_time;
         if (res.engine_result == "tecPATH_PARTIAL") {
-            handlePartialPathError(tx1_dest_amount, tx1_source_amount);
+            handlePartialPathError(tx1_dest_amount, tx1_source_amount, send_max_rate);
             tx1Success = true;
             emitter.emit('addPaymentBack');
         } else {
@@ -172,7 +173,7 @@ function payment(alt1, alt2, factor, send_max_rate) {
         alt1.time = new Date().getTime() + delay_time;
         alt2.time = new Date().getTime() + delay_time;
         if (res.engine_result == "tecPATH_PARTIAL") {
-            handlePartialPathError(tx2_dest_amount, tx2_source_amount);
+            handlePartialPathError(tx2_dest_amount, tx2_source_amount, send_max_rate);
             tx2Success = true;
             emitter.emit('addPaymentBack');
         } else {
@@ -195,10 +196,11 @@ function payment(alt1, alt2, factor, send_max_rate) {
     tx2.submit();
 }
 
-function handlePartialPathError(dest_amount, source_amount) {
+function handlePartialPathError(dest_amount, source_amount, send_max_rate) {
     mongodbManager.saveFailedTransaction({
         "dest_amount": dest_amount.to_text_full(),
-        "source_amount": source_amount.to_text_full()
+        "source_amount": source_amount.to_text_full(),
+        "send_max_rate": send_max_rate
     });
 }
 
