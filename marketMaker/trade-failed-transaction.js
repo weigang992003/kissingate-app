@@ -59,10 +59,25 @@ crypto.decrypt(encryptedSecret, function(result) {
     secret = result;
 });
 
+emitter.once('submit', submitTX);
+
+String.prototype.endsWith = function(suffix) {
+    return this.indexOf(suffix, this.length - suffix.length) !== -1;
+};
+
+var pathFindMap = [];
+var transactionMap = {};
+
 mongoManager.getAllFailedTransactions(function(docs) {
-    var pathFindMap = [];
-    _.each(docs, function(doc) {
-        console.log(doc);
+    var newDocs = _.map(docs, function(doc) {
+        if (doc.dest_amount.endsWith("XRP")) {
+            doc.dest_amount = doc.dest_amount + "/rrrrrrrrrrrrrrrrrrrrrhoLvTp";
+        }
+
+        if (doc.source_amount.endsWith("XRP")) {
+            doc.source_amount = doc.source_amount + "/rrrrrrrrrrrrrrrrrrrrrhoLvTp";
+        }
+
         var dest_amount = Amount.from_json(doc.dest_amount);
         var dest_amount_json = dest_amount.to_json();
         var source_amount = Amount.from_json(doc.source_amount);
@@ -93,14 +108,93 @@ mongoManager.getAllFailedTransactions(function(docs) {
                 return src_currency.currency == source_amount_json.currency;
             });
             if (!src_currency) {
-                src_currencies.push(src_currency);
+                src_currencies.push({
+                    'currency': source_amount_json.currency,
+                    'issuer': source_amount_json.issuer
+                });
             }
 
             item['src_currencies'] = src_currencies;
         }
+
+        return {
+            'dest_amount': doc.dest_amount,
+            'source_amount': doc.source_amount,
+            'send_max_rate': doc.send_max_rate,
+            'type': dest_amount_json.currency + ":" + source_amount_json.currency,
+            'rate': rate
+        };
     });
 
-    console.dir(pathFindMap);
+    transactionMap = _.groupBy(newDocs, function(doc) {
+        return doc.type;
+    });
 
-
+    queryFindPath(pathFindMap, transactionMap);
 });
+
+function queryFindPath(pathFindMap, transactionMap) {
+    var pathFinds = {};
+
+    _.each(pathFindMap, function(pathFind) {
+        var dest_amount = pathFind.dest_amount;
+        if (pathFind.dest_currency == "XRP") {
+            dest_amount = Amount.from_json(dest_amount.to_human().replace(",", ""));
+        }
+
+        var remo = new ripple.Remote(remote_options);
+        remo.connect(function() {
+            var pf = remo.pathFind(account, account, dest_amount, pathFind.src_currencies)
+            pf.on("update", function(message) {
+                var alternatives = message.alternatives;
+
+                alternatives = _.each(alternatives, function(raw) {
+                    var alt = {};
+                    alt.dest_amount = dest_amount;
+                    alt.source_amount = Amount.from_json(raw.source_amount);
+                    alt.rate = alt.source_amount.ratio_human(dest_amount).to_human().replace(',', '');
+                    alt.paths = raw.paths_computed ? raw.paths_computed : raw.paths_canonical;
+
+                    var type = pathFind.dest_currency + ":" + (typeof raw.source_amount == "string" ? "XRP" : raw.source_amount.currency);
+
+                    txs = _.filter(transactionMap[type], function(tx) {
+                        if (!tx['trade'] && tx.rate >= alt.rate) {
+                            tx['paths'] = alt.paths;
+                            emitter.emit('submit', type, tx);
+                        }
+                    });
+                });
+            });
+        });
+    });
+}
+
+function submitTX(type, transaction) {
+    var tx = remote.transaction();
+
+    var dest_amount = Amount.from_json(transaction.dest_amount);
+    var source_amount = Amount.from_json(transaction.source_amount);
+
+    tx.paths(transaction.paths);
+    tx.payment(account, account, dest_amount);
+    tx.send_max(source_amount.product_human(transaction.send_max_rate));
+
+    tx.on('success', function(res) {
+        mongoManager.deleteFailedTransaction({
+            dest_amount: transaction.dest_amount,
+            source_amount: transaction.source_amount,
+            send_max_rate: transaction.send_max_rate
+        })
+        transaction['trade'] = true;
+        emitter.once('submit', submitTX);
+    });
+
+    tx.on('proposed', function(res) {
+        emitter.once('submit', submitTX);
+    });
+
+    tx.on('error', function(res) {
+        emitter.once('submit', submitTX);
+    });
+
+}

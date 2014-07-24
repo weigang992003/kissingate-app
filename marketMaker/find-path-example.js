@@ -50,9 +50,9 @@ remote.connect(function() {
         "issuer": "rrrrrrrrrrrrrrrrrrrrrhoLvTp",
         "value": "1000000"
     };
-    var dest_amount = Amount.from_json("1000000");
+    var dest_amount = Amount.from_json("1000/XRP/rrrrrrrrrrrrrrrrrrrrrhoLvTp");
 
-    var pathFind = remote.pathFind(account, account, dest_amount, [{
+    var pathFind = remote.pathFind(account, account, Amount.from_json(dest_amount.to_human().replace(",", "")), [{
         currency: 'CNY',
         issuer: account
     }]);
@@ -91,10 +91,10 @@ remote.connect(function() {
                 console.dir(res);
             });
             console.log("submit");
-            if (!trade) {
-                trade = true;
-                tx.submit();
-            }
+            // if (!trade) {
+            //     trade = true;
+            //     tx.submit();
+            // }
         });
     })
 

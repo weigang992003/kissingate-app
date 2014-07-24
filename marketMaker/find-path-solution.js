@@ -49,7 +49,7 @@ var factorMap = {};
 var xrp = {
     "currency": "XRP",
     "issuer": "rrrrrrrrrrrrrrrrrrrrrhoLvTp",
-    "value": "1000000"
+    "value": "20000000"
 };
 
 var tx1Success = false;

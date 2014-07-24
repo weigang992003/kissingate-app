@@ -132,8 +132,16 @@ function deleteFailedTransaction(record) {
     });
 }
 
+function deleteFailedTransactionById(id) {
+    failedTransaction.findOne({
+        "id": id
+    }, function(err, doc) {
+        doc.remove();
+    })
+}
+
 function getAllFailedTransactions(callback) {
-    failedTransaction.find({}, null, {
+    failedTransaction.find({}, "dest_amount source_amount send_max_rate", {
         limit: 500
     }, function(err, result) {
         if (err) return handleError(err);
@@ -149,3 +157,4 @@ exports.updateOrderCurrencies = updateOrderCurrencies;
 exports.saveFailedTransaction = saveFailedTransaction;
 exports.deleteFailedTransaction = deleteFailedTransaction;
 exports.getAllFailedTransactions = getAllFailedTransactions;
+exports.deleteFailedTransactionById = deleteFailedTransactionById;

@@ -51,3 +51,4 @@ var a = Amount.from_json("0.00000893068385/BTC/rf9q1WE2Kdmv9AWtesCaANJyNxnFjp5T7
 var b = Amount.from_json("0.0000084/BTC/rf9q1WE2Kdmv9AWtesCaANJyNxnFjp5T7z");
 console.log(a.to_json());
 console.log(a.ratio_human(b).to_human());
+console.log(Amount.from_json("1000/XRP/rrrrrrrrrrrrrrrrrrrrrhoLvTp").to_human())
