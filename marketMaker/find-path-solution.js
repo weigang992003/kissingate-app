@@ -9,6 +9,8 @@ var jsbn = require('../src/js/jsbn/jsbn.js');
 var mongodbManager = require('./mongodb-manager.js');
 var Logger = require('./the-future-logger.js').TFLogger;
 
+Logger.getNewLog('find-path-solution');
+
 var emitter = new events.EventEmitter();
 
 var remote_options = remote_options = {
@@ -40,9 +42,13 @@ var Amount = ripple.Amount;
 var account = config.account;
 var weight = config.factorWeight;
 var profit_rate = config.profitRate;
-var encryptedSecret = config.secret;
 var currency_unit = config.currency_unit;
 var delay_time = config.delayWhenFailure;
+
+var secret;
+crypto.decrypt(config.secret, function(result) {
+    secret = result;
+});
 
 var altMap = {};
 var factorMap = {};
@@ -54,11 +60,6 @@ var xrp = {
 
 var tx1Success = false;
 var tx2Success = false;
-
-var secret;
-crypto.decrypt(encryptedSecret, function(result) {
-    secret = result;
-});
 
 emitter.once('payment', payment);
 emitter.on('addPaymentBack', reAddPaymentListener);

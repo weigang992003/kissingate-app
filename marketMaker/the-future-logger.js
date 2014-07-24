@@ -5,11 +5,9 @@ var mongoManager = require('./mongodb-manager.js');
 
 function Logger() {
     this.logger;
-    this.getNewLog();
-    setInterval(this.getNewLog, 86400000); //we will get new log each day.
 };
 
-Logger.prototype.getNewLog = function() {
+Logger.prototype.getNewLog = function(action) {
     var self = this;
 
     var date = new Date().format('yyyy-MM-dd-hh-mm-ss.S');
@@ -17,10 +15,10 @@ Logger.prototype.getNewLog = function() {
         name: 'ripple-app',
         streams: [{
             level: 'info',
-            path: './log/ripple-info-' + date + '.js'
+            path: './log/' + action + '-info-' + date + '.js'
         }, {
             level: 'error',
-            path: './log/ripple-error-' + date + '.js' // log ERROR and above to a file
+            path: './log/' + action + '-error-' + date + '.js' // log ERROR and above to a file
         }]
     });
     process.on('uncaughtException', function(err) {
