@@ -131,6 +131,15 @@ function deleteFailedTransaction(record) {
     });
 }
 
+function getAllFailedTransactions(callback) {
+    failedTransaction.find({}, null, {
+        limit: 500
+    }, function(err, result) {
+        if (err) return handleError(err);
+        return callback(result);
+    })
+}
+
 exports.getCryptoOption = getCryptoOption;
 exports.getNextSequence = getNextSequence;
 exports.saveAccountLines = saveAccountLines;
@@ -138,3 +147,4 @@ exports.findAllGatewayInfo = findAllGatewayInfo;
 exports.updateOrderCurrencies = updateOrderCurrencies;
 exports.saveFailedTransaction = saveFailedTransaction;
 exports.deleteFailedTransaction = deleteFailedTransaction;
+exports.getAllFailedTransactions = getAllFailedTransactions;

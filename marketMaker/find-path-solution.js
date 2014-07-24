@@ -172,7 +172,7 @@ function payment(alt1, alt2, factor, send_max_rate) {
         alt1.time = new Date().getTime() + delay_time;
         alt2.time = new Date().getTime() + delay_time;
         if (res.engine_result == "tecPATH_PARTIAL") {
-            handlePartialPathError(tx1_dest_amount, tx2_source_amount);
+            handlePartialPathError(tx2_dest_amount, tx2_source_amount);
             tx2Success = true;
             emitter.emit('addPaymentBack');
         } else {
