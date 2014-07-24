@@ -166,6 +166,12 @@ function submitTX(type, transaction, currentRate) {
     tx.submit();
 }
 
+setTimeout(throwDisconnectError, 1000 * 60 * 30);
+
+function throwDisconnectError() {
+    throw new Error('we are disconnect with ripple network!!!');
+}
+
 remote.connect(function() {
     mongoManager.getAllFailedTransactions(function(docs) {
         var newDocs = _.map(docs, function(doc) {
