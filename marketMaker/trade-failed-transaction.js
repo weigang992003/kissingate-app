@@ -141,7 +141,6 @@ function submitTX(type, transaction, currentRate) {
     }
 
     tx.on('success', function(res) {
-        Logger.log(true, res);
         var record = {
             dest_amount: removeAccountZero(transaction.dest_amount),
             source_amount: removeAccountZero(transaction.source_amount),
@@ -159,10 +158,10 @@ function submitTX(type, transaction, currentRate) {
 
     tx.on('error', function(res) {
         if (res.engine_result == "tecPATH_PARTIAL" || res.engine_result == "telINSUF_FEE_P") {
-            transaction.trade = true;
         } else {
             Logger.log(true, res);
         }
+        transaction.trade = true;
         emitter.once('submit', submitTX);
     });
 
