@@ -1,5 +1,6 @@
 var _ = require('underscore');
 var mongoose = require('mongoose');
+
 mongoose.connect('mongodb://localhost/the-future');
 
 var cryptoSchema = mongoose.Schema({
@@ -58,6 +59,14 @@ var failedTransactionSchema = mongoose.Schema({
     collection: 'failedTransaction'
 });
 
+var raccountsSchema = mongoose.Schema({
+    account: String,
+    secret: String,
+    status: Number
+}, {
+    collection: 'raccounts'
+})
+
 
 var crypto = mongoose.model('crypto', cryptoSchema);
 var counters = mongoose.model('counters', countersSchema);
@@ -65,6 +74,7 @@ var accountLinesHistory = mongoose.model('accountLinesHistory', accountLinesHist
 var gatewayInfo = mongoose.model('gatewayInfo', gatewayInfoSchema);
 var orderToXrp = mongoose.model('orderToXrp', orderToXrpSchema);
 var failedTransaction = mongoose.model('failedTransaction', failedTransactionSchema);
+var raccounts = mongoose.model('raccounts', raccountsSchema);
 
 function getCryptoOption(callback) {
     crypto.findOne({
@@ -149,6 +159,17 @@ function getAllFailedTransactions(callback) {
     })
 }
 
+function getAccount(status, callback) {
+    raccounts.findOne({
+        status: status
+    }, function(err, result) {
+        if (err) return handleError(err);
+        callback(result);
+    });
+}
+
+
+exports.getAccount = getAccount;
 exports.getCryptoOption = getCryptoOption;
 exports.getNextSequence = getNextSequence;
 exports.saveAccountLines = saveAccountLines;

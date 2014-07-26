@@ -12,6 +12,10 @@ var Logger = require('./the-future-logger.js').TFLogger;
 Logger.getNewLog('find-path-solution');
 
 var emitter = new events.EventEmitter();
+emitter.once('decrypt', decrypt);
+emitter.once('remoteConnect', remoteConnect);
+emitter.once('payment', payment);
+emitter.on('addPaymentBack', reAddPaymentListener);
 
 var remote_options = remote_options = {
     // see the API Reference for available options
@@ -39,16 +43,25 @@ var remote_options = remote_options = {
 var remote = new ripple.Remote(remote_options);
 var Amount = ripple.Amount;
 
-var account = config.account;
+var account;
+var secret;
+mongodbManager.getAccount(config.marketMaker, function(result) {
+    account = result.account;
+    secret = result.secret;
+    emitter.emit('decrypt', secret);
+});
+
+function decrypt(encrypted) {
+    crypto.decrypt(encrypted, function(result) {
+        secret = result;
+        emitter.emit('remoteConnect');
+    });
+}
+
 var weight = config.factorWeight;
 var profit_rate = config.profitRate;
 var currency_unit = config.currency_unit;
 var delay_time = config.delayWhenFailure;
-
-var secret;
-crypto.decrypt(config.secret, function(result) {
-    secret = result;
-});
 
 var altMap = {};
 var factorMap = {};
@@ -60,9 +73,6 @@ var xrp = {
 
 var tx1Success = false;
 var tx2Success = false;
-
-emitter.once('payment', payment);
-emitter.on('addPaymentBack', reAddPaymentListener);
 
 function makeProfitIfCan(alt, type) {
     var alt1 = alt;
@@ -275,14 +285,16 @@ function queryFindPath(currencies) {
 
 setTimeout(throwDisconnectError, 1000 * 60 * 30);
 
-remote.connect(function() {
-    remote.requestAccountLines(account, function(err, result) {
-        if (err) console.log(err);
+function remoteConnect() {
+    remote.connect(function() {
+        remote.requestAccountLines(account, function(err, result) {
+            if (err) console.log(err);
 
-        var currencies = prepareCurrencies(result.lines);
-        queryFindPath(currencies);
+            var currencies = prepareCurrencies(result.lines);
+            queryFindPath(currencies);
+        });
     });
-});
+}
 
 
 function throwDisconnectError() {

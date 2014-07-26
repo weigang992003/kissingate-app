@@ -1,7 +1,6 @@
 exports.drops = 1000000;
-exports.maxAmountAllowed = 1;
-exports.account = "rf9q1WE2Kdmv9AWtesCaANJyNxnFjp5T7z";
-exports.secret = "23060c730623340e67ed484d775c00112a66be4474cb967890da872cb95a0da0";
+
+exports.motherAccount = "rf9q1WE2Kdmv9AWtesCaANJyNxnFjp5T7z";
 
 exports.marketEvent = {
     buy: '-buy-price-change',
@@ -49,6 +48,11 @@ exports.currency_unit = {
     "CHF": "0.100",
     "NZD": "0.100"
 };
+
+exports.mother = -1;
+exports.newAccount = 0;
+exports.tradeFailed = 1;
+exports.marketMaker = 2;
 
 exports.factorWeight = 5;
 exports.profitRate = 1;

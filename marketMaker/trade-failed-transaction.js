@@ -38,19 +38,32 @@ var remote = new ripple.Remote(remote_options);
 var Amount = ripple.Amount;
 
 var drops = config.drops;
-var account = config.account;
+var mother = config.motherAccount;
+
+var account;
 var secret;
-crypto.decrypt(config.secret, function(result) {
-    secret = result;
+emitter.once('decrypt', decrypt);
+emitter.once('submit', submitTX);
+emitter.once('remoteConnect', remoteConnect);
+
+mongoManager.getAccount(1, function(result) {
+    account = result.account;
+    secret = result.secret;
+    emitter.emit('decrypt', secret);
 });
+
+function decrypt(encrypted) {
+    crypto.decrypt(encrypted, function(result) {
+        secret = result;
+        emitter.emit('remoteConnect');
+    });
+}
 
 var xrp = {
     "currency": "XRP",
     "issuer": "rrrrrrrrrrrrrrrrrrrrrhoLvTp",
     "value": "1000000"
 };
-
-emitter.once('submit', submitTX);
 
 String.prototype.endsWith = function(suffix) {
     return this.indexOf(suffix, this.length - suffix.length) !== -1;
@@ -76,6 +89,14 @@ function justKeepNumberForXRP(s) {
         return math.round(s.replace("/XRP/rrrrrrrrrrrrrrrrrrrrrhoLvTp", "") * drops, 0);
     }
     return s;
+}
+
+function replaceMarketMaker(s) {
+    return s.replace(mother, account);
+}
+
+function replaceMarketMakerBack(s) {
+    return s.replace(account, mother);
 }
 
 function queryFindPath(pathFindMap, transactionMap) {
@@ -143,8 +164,8 @@ function submitTX(type, transaction, currentRate) {
     tx.on('success', function(res) {
         Logger.log(true, res);
         var record = {
-            dest_amount: removeAccountZero(transaction.dest_amount),
-            source_amount: removeAccountZero(transaction.source_amount),
+            dest_amount: replaceMarketMakerBack(removeAccountZero(transaction.dest_amount)),
+            source_amount: replaceMarketMakerBack(removeAccountZero(transaction.source_amount)),
             send_max_rate: transaction.send_max_rate == undefined ? null : transaction.send_max_rate
         };
         Logger.log(true, "record to remove", record);
@@ -175,70 +196,74 @@ function throwDisconnectError() {
     throw new Error('we are disconnect with ripple network!!!');
 }
 
+function remoteConnect() {
+    remote.connect(function() {
+        mongoManager.getAllFailedTransactions(function(docs) {
+            var newDocs = _.map(docs, function(doc) {
+                doc.dest_amount = replaceMarketMaker(doc.dest_amount);
+                doc.source_amount = replaceMarketMaker(doc.source_amount);
 
-remote.connect(function() {
-    mongoManager.getAllFailedTransactions(function(docs) {
-        var newDocs = _.map(docs, function(doc) {
-            if (doc.dest_amount.endsWith("XRP")) {
-                doc.dest_amount = addAccountZero(doc.dest_amount);
-            }
+                if (doc.dest_amount.endsWith("XRP")) {
+                    doc.dest_amount = addAccountZero(doc.dest_amount);
+                }
 
-            if (doc.source_amount.endsWith("XRP")) {
-                doc.source_amount = addAccountZero(doc.source_amount);
-            }
+                if (doc.source_amount.endsWith("XRP")) {
+                    doc.source_amount = addAccountZero(doc.source_amount);
+                }
 
-            var dest_amount = Amount.from_json(doc.dest_amount);
-            var dest_amount_json = dest_amount.to_json();
-            var source_amount = Amount.from_json(doc.source_amount);
-            var source_amount_json = source_amount.to_json();
-            var rate = source_amount.ratio_human(dest_amount).to_human().replace(',', '');
+                var dest_amount = Amount.from_json(doc.dest_amount);
+                var dest_amount_json = dest_amount.to_json();
+                var source_amount = Amount.from_json(doc.source_amount);
+                var source_amount_json = source_amount.to_json();
+                var rate = source_amount.ratio_human(dest_amount).to_human().replace(',', '');
 
-            var item = _.find(pathFindMap, function(pathFind) {
-                return pathFind.dest_currency == dest_amount_json.currency;
-            })
+                var item = _.find(pathFindMap, function(pathFind) {
+                    return pathFind.dest_currency == dest_amount_json.currency;
+                })
 
-            if (!item) {
-                item = {};
-                item['dest_currency'] = dest_amount_json.currency;
-                item['dest_amount'] = dest_amount;
+                if (!item) {
+                    item = {};
+                    item['dest_currency'] = dest_amount_json.currency;
+                    item['dest_amount'] = dest_amount;
 
-                var src_currencies = [];
-                src_currencies.push({
-                    'currency': source_amount_json.currency,
-                    'issuer': source_amount_json.issuer
-                });
-
-                item['src_currencies'] = src_currencies;
-                pathFindMap.push(item);
-            } else {
-                var src_currencies = _.compact(item['src_currencies']);
-
-                var src_currency = _.find(src_currencies, function(src_currency) {
-                    return src_currency.currency == source_amount_json.currency;
-                });
-                if (!src_currency) {
+                    var src_currencies = [];
                     src_currencies.push({
                         'currency': source_amount_json.currency,
                         'issuer': source_amount_json.issuer
                     });
+
+                    item['src_currencies'] = src_currencies;
+                    pathFindMap.push(item);
+                } else {
+                    var src_currencies = _.compact(item['src_currencies']);
+
+                    var src_currency = _.find(src_currencies, function(src_currency) {
+                        return src_currency.currency == source_amount_json.currency;
+                    });
+                    if (!src_currency) {
+                        src_currencies.push({
+                            'currency': source_amount_json.currency,
+                            'issuer': source_amount_json.issuer
+                        });
+                    }
+
+                    item['src_currencies'] = src_currencies;
                 }
 
-                item['src_currencies'] = src_currencies;
-            }
+                return {
+                    'dest_amount': doc.dest_amount,
+                    'source_amount': doc.source_amount,
+                    'send_max_rate': doc.send_max_rate,
+                    'type': dest_amount_json.currency + ":" + source_amount_json.currency,
+                    'rate': rate
+                };
+            });
 
-            return {
-                'dest_amount': doc.dest_amount,
-                'source_amount': doc.source_amount,
-                'send_max_rate': doc.send_max_rate,
-                'type': dest_amount_json.currency + ":" + source_amount_json.currency,
-                'rate': rate
-            };
+            transactionMap = _.groupBy(newDocs, function(doc) {
+                return doc.type;
+            });
+
+            queryFindPath(pathFindMap, transactionMap);
         });
-
-        transactionMap = _.groupBy(newDocs, function(doc) {
-            return doc.type;
-        });
-
-        queryFindPath(pathFindMap, transactionMap);
     });
-});
+}
