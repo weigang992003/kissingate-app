@@ -112,7 +112,6 @@ function queryFindPath(pathFindMap, transactionMap) {
         remo.connect(function() {
             var pf = remo.pathFind(account, account, dest_amount, pathFind.src_currencies)
             pf.on("update", function(message) {
-                console.log("hsjdhsjhds");
                 var alternatives = message.alternatives;
 
                 alternatives = _.each(alternatives, function(raw) {
