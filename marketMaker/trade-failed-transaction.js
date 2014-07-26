@@ -112,6 +112,7 @@ function queryFindPath(pathFindMap, transactionMap) {
         remo.connect(function() {
             var pf = remo.pathFind(account, account, dest_amount, pathFind.src_currencies)
             pf.on("update", function(message) {
+                console.log("hsjdhsjhds");
                 var alternatives = message.alternatives;
 
                 alternatives = _.each(alternatives, function(raw) {
@@ -162,7 +163,6 @@ function submitTX(type, transaction, currentRate) {
     }
 
     tx.on('success', function(res) {
-        Logger.log(true, res);
         var record = {
             dest_amount: replaceMarketMakerBack(removeAccountZero(transaction.dest_amount)),
             source_amount: replaceMarketMakerBack(removeAccountZero(transaction.source_amount)),
@@ -179,11 +179,10 @@ function submitTX(type, transaction, currentRate) {
     });
 
     tx.on('error', function(res) {
-        if (res.engine_result == "tecPATH_PARTIAL" || res.engine_result == "telINSUF_FEE_P") {
-            transaction.trade = true;
-        } else {
+        if (res.engine_result == "tecPATH_PARTIAL" || res.engine_result == "telINSUF_FEE_P") {} else {
             Logger.log(true, res);
         }
+        transaction.trade = true;
         emitter.once('submit', submitTX);
     });
 
