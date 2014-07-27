@@ -152,11 +152,13 @@ function payment(alt1, alt2, factor, send_max_rate) {
     tx2Success = false;
 
     tx1.on('proposed', function(res) {
-        Logger.log(true, res);
+        if (res.engine_result == "tesSUCCESS") {
+            tx1Success = true;
+            emitter.emit('addPaymentBack', type);
+        }
     });
     tx1.on('success', function(res) {
-        tx1Success = true;
-        emitter.emit('addPaymentBack', type);
+        Logger.log(true, getEventIndex(type) + ":" + type + ":tx1 is success!");
     });
     tx1.on('error', function(res) {
         alt1.time = new Date().getTime() + delay_time;
@@ -171,11 +173,13 @@ function payment(alt1, alt2, factor, send_max_rate) {
     });
 
     tx2.on('proposed', function(res) {
-        Logger.log(true, res);
+        if (res.engine_result == "tesSUCCESS") {
+            tx1Success = true;
+            emitter.emit('addPaymentBack', type);
+        }
     });
     tx2.on('success', function(res) {
-        tx2Success = true;
-        emitter.emit('addPaymentBack', type);
+        Logger.log(true, getEventIndex(type) + ":" + type + ":tx2 is success!");
     });
     tx2.on('error', function(res) {
         alt1.time = new Date().getTime() + delay_time;
