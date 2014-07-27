@@ -11,7 +11,7 @@ var Logger = require('./the-future-logger.js').TFLogger;
 var getEventIndex = require('./event-index-manager.js').getEventIndex;
 var setEventIndex = require('./event-index-manager.js').setEventIndex;
 
-Logger.getNewLog('find-path-solution');
+Logger.getNewLog('find-path-solution-new-try');
 
 var emitter = new events.EventEmitter();
 emitter.once('decrypt', decrypt);
