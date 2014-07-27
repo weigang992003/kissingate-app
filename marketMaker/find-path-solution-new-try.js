@@ -8,10 +8,15 @@ var crypto = require('./crypto-util.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
 var mongodbManager = require('./mongodb-manager.js');
 var Logger = require('./the-future-logger.js').TFLogger;
+var getEventIndex = require('./event-index-manager.js').getEventIndex;
+var setEventIndex = require('./event-index-manager.js').setEventIndex;
 
 Logger.getNewLog('find-path-solution');
 
 var emitter = new events.EventEmitter();
+emitter.once('decrypt', decrypt);
+emitter.once('remoteConnect', remoteConnect);
+emitter.on('addPaymentBack', addPaymentBack);
 
 var remote_options = remote_options = {
     // see the API Reference for available options
@@ -39,16 +44,25 @@ var remote_options = remote_options = {
 var remote = new ripple.Remote(remote_options);
 var Amount = ripple.Amount;
 
-var account = config.account;
+var account;
+var secret;
+mongodbManager.getAccount(config.marketMaker, function(result) {
+    account = result.account;
+    secret = result.secret;
+    emitter.emit('decrypt', secret);
+});
+
+function decrypt(encrypted) {
+    crypto.decrypt(encrypted, function(result) {
+        secret = result;
+        emitter.emit('remoteConnect');
+    });
+}
+
 var weight = config.factorWeight;
 var profit_rate = config.profitRate;
 var currency_unit = config.currency_unit;
 var delay_time = config.delayWhenFailure;
-
-var secret;
-crypto.decrypt(config.secret, function(result) {
-    secret = result;
-});
 
 var altMap = {};
 var factorMap = {};
@@ -58,16 +72,11 @@ var xrp = {
     "value": "20000000"
 };
 
-var tx1Error = false;
-var tx2Error = false;
 var tx1Success = false;
 var tx2Success = false;
 
-emitter.setMaxListeners(1000);
-emitter.once('payment', payment);
-emitter.on('addPaymentBack', reAddPaymentListener);
-
 function makeProfitIfCan(alt, type) {
+    console.log(type);
     var alt1 = alt;
 
     alt1["type"] = type;
@@ -88,22 +97,19 @@ function makeProfitIfCan(alt, type) {
         var alt2 = altMap[oppositeType];
         rate2 = alt2.rate;
         var profitRate = math.round(rate1 * rate2, 3);
-
+        console.log("profitRate:" + profitRate);
         if (profitRate < profit_rate) {
             var send_max_rate = math.round(math.sqrt(1 / profitRate), 6);
 
-            Logger.log(true, "profitRate:" + profitRate, elements[0] + "/" + elements[1], "rate:" + rate1,
-                elements[1] + "/" + elements[0], "rate:" + rate2, "send_max_rate", send_max_rate,
-                "alt1_dest_amount", alt1.dest_amount.to_text_full(), "alt1_source_amount", alt1.source_amount.to_text_full(),
-                "alt2_dest_amount", alt2.dest_amount.to_text_full(), "alt2_source_amount", alt2.source_amount.to_text_full());
+            Logger.log(true, "profitRate:" + profitRate, "type:" + type);
 
             var factor = 1;
             if (profitRate >= 0.9) {
-                factor = 0.5;
+                factor = 0.4;
             }
 
             if (factor > 0) {
-                emitter.emit('payment', alt1, alt2, factor, send_max_rate);
+                emitter.emit(getEventIndex(type), alt1, alt2, factor, send_max_rate);
             }
         }
     }
@@ -144,95 +150,63 @@ function payment(alt1, alt2, factor, send_max_rate) {
         return;
     }
 
-    tx1Error = false;
-    tx2Error = false;
     tx1Success = false;
     tx2Success = false;
 
     tx1.on('proposed', function(res) {
-        tx1Error = true;
         Logger.log(true, res);
     });
     tx1.on('success', function(res) {
         tx1Success = true;
-        emitter.emit('addPaymentBack');
+        emitter.emit('addPaymentBack', type);
     });
     tx1.on('error', function(res) {
-        tx1Error = true;
         alt1.time = new Date().getTime() + delay_time;
         alt2.time = new Date().getTime() + delay_time;
         if (res.engine_result == "tecPATH_PARTIAL") {
             handlePartialPathError(tx1_dest_amount, tx1_source_amount, send_max_rate);
-            emitter.emit('addPaymentBack');
+            tx1Success = true;
+            emitter.emit('addPaymentBack', type);
         } else {
             Logger.log(true, res);
         }
     });
 
     tx2.on('proposed', function(res) {
-        tx2Error = true;
         Logger.log(true, res);
     });
     tx2.on('success', function(res) {
         tx2Success = true;
-        emitter.emit('addPaymentBack');
+        emitter.emit('addPaymentBack', type);
     });
     tx2.on('error', function(res) {
-        tx2Error = true;
         alt1.time = new Date().getTime() + delay_time;
         alt2.time = new Date().getTime() + delay_time;
         if (res.engine_result == "tecPATH_PARTIAL") {
             handlePartialPathError(tx2_dest_amount, tx2_source_amount, send_max_rate);
-            emitter.emit('addPaymentBack');
+            tx2Success = true;
+            emitter.emit('addPaymentBack', type);
         } else {
             Logger.log(true, res);
         }
     });
 
-    if (altMap[type].rate > alt1.rate && altMap[type].time > alt1.time) {
-        Logger.log(true, "alt1 rate updated from " + alt1.rate + "to " + altMap[type].rate);
-        emitter.once('payment', payment);
-        return;
-    }
-    if (altMap[oppositeType].rate > alt2.rate && altMap[oppositeType].time > alt2.time) {
-        Logger.log(true, "alt2 rate updated from " + alt2.rate + "to " + altMap[oppositeType].rate);
-        emitter.once('payment', payment);
-        return;
-    }
-
     tx1.submit();
     tx2.submit();
 }
 
-var failedPayments = [];
-
 function handlePartialPathError(dest_amount, source_amount, send_max_rate) {
-    failedPayments.push({
+    mongodbManager.saveFailedTransaction({
         "dest_amount": dest_amount.to_text_full(),
         "source_amount": source_amount.to_text_full(),
         "send_max_rate": send_max_rate
     });
 }
 
-function reAddPaymentListener() {
+function addPaymentBack(type) {
     if (tx1Success && tx2Success) {
-        emitter.once('payment', payment);
-        return;
+        emitter.once(getEventIndex(type), payment);
     }
-
-    if ((tx1Error && tx2Success) || (tx2Error && tx1Success)) {
-        mongodbManager.saveFailedTransaction(failedPayments[0]);
-        failedPayments = [];
-        emitter.once('payment', payment);
-        return;
-    }
-
-    if (tx1Error && tx2Error) {
-        failedPayments = [];
-        emitter.once('payment', payment);
-        return;
-    }
-
 }
 
 function prepareCurrencies(lines) {
@@ -242,13 +216,20 @@ function prepareCurrencies(lines) {
 
     _.each(currencies, function(currency1) {
         _.each(currencies, function(currency2) {
-            emitter.on(currency1 + ":" + currency2, makeProfitIfCan);
-        })
+            var type = currency1 + ":" + currency2;
+            emitter.on(type, makeProfitIfCan);
+
+            setEventIndex(type);
+            emitter.once(getEventIndex(type), payment);
+        });
     });
 
     _.each(currencies, function(currency) {
-        emitter.on("XRP" + ":" + currency, makeProfitIfCan);
-        emitter.on(currency + ":" + "XRP", makeProfitIfCan);
+        emitter.on("XRP:" + currency, makeProfitIfCan);
+        emitter.on(currency + ":XRP", makeProfitIfCan);
+
+        setEventIndex("XRP:" + currency);
+        emitter.once(getEventIndex("XRP:" + currency), payment);
     });
 
     currencies = _.map(currencies, function(currency) {
@@ -299,14 +280,16 @@ function queryFindPath(currencies) {
 
 setTimeout(throwDisconnectError, 1000 * 60 * 30);
 
-remote.connect(function() {
-    remote.requestAccountLines(account, function(err, result) {
-        if (err) console.log(err);
+function remoteConnect() {
+    remote.connect(function() {
+        remote.requestAccountLines(account, function(err, result) {
+            if (err) console.log(err);
 
-        var currencies = prepareCurrencies(result.lines);
-        queryFindPath(currencies);
+            var currencies = prepareCurrencies(result.lines);
+            queryFindPath(currencies);
+        });
     });
-});
+}
 
 
 function throwDisconnectError() {
