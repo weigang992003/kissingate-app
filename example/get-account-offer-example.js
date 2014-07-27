@@ -1,13 +1,12 @@
 var _ = require('underscore');
 
 var ripple = require('../src/js/ripple');
-var config = require('../future/config.js');
+var config = require('../marketMaker/config.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
 
 
 var Remote = ripple.Remote;
-var account = config.account;
-var secret = config.secret;
+var account = config.motherAccount;
 
 var remote = new Remote({
     // see the API Reference for available options
@@ -29,6 +28,47 @@ remote.connect(function() {
         console.log(false, "right now the offers this account have:", arguments[1].offers);
     });
 });
+
+// [{
+//     flags: 131072,
+//     seq: 14471,
+//     taker_gets: {
+//         currency: 'CNY',
+//         issuer: 'rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y',
+//         value: '17.5657917386088'
+//     },
+//     taker_pays: {
+//         currency: 'USD',
+//         issuer: 'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B',
+//         value: '2.828092469916046'
+//     }
+// }, {
+//     flags: 0,
+//     seq: 14535,
+//     taker_gets: {
+//         currency: 'CNY',
+//         issuer: 'rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y',
+//         value: '199.8'
+//     },
+//     taker_pays: {
+//         currency: 'CNY',
+//         issuer: 'razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA',
+//         value: '200'
+//     }
+// }, {
+//     flags: 131072,
+//     seq: 14536,
+//     taker_gets: {
+//         currency: 'CNY',
+//         issuer: 'rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y',
+//         value: '67.1332691218781'
+//     },
+//     taker_pays: {
+//         currency: 'CNY',
+//         issuer: 'rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK',
+//         value: '67.200402391'
+//     }
+// }]
 
 
 
