@@ -102,8 +102,8 @@ function makeProfitIfCan(alt, type) {
             Logger.log(true, "profitRate:" + profitRate, "type:" + type);
 
             var factor = 1;
-            if (profitRate >= 0.9) {
-                factor = 0.4;
+            if (profitRate >= 0.95) {
+                factor = 0.6;
             }
 
             if (factor > 0) {
@@ -174,7 +174,7 @@ function payment(alt1, alt2, factor, send_max_rate) {
 
     tx2.on('proposed', function(res) {
         if (res.engine_result == "tesSUCCESS") {
-            tx1Success = true;
+            tx2Success = true;
             emitter.emit('addPaymentBack', type);
         }
     });
@@ -207,6 +207,7 @@ function handlePartialPathError(dest_amount, source_amount, send_max_rate) {
 
 function addPaymentBack(type) {
     if (tx1Success && tx2Success) {
+        console.log(getEventIndex + " add back!");
         emitter.once(getEventIndex(type), payment);
     }
 }
@@ -218,11 +219,14 @@ function prepareCurrencies(lines) {
 
     _.each(currencies, function(currency1) {
         _.each(currencies, function(currency2) {
-            var type = currency1 + ":" + currency2;
-            emitter.on(type, makeProfitIfCan);
+            if (currency1 != currency2) {
+                var type = currency1 + ":" + currency2;
+                emitter.on(type, makeProfitIfCan);
 
-            setEventIndex(type);
-            emitter.once(getEventIndex(type), payment);
+                setEventIndex(type);
+                emitter.once(getEventIndex(type), payment);
+            }
+
         });
     });
 
