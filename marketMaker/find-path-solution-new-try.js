@@ -128,7 +128,6 @@ function payment(alt1, alt2, factor, send_max_rate) {
 
     tx1.paths(alt1.paths);
     tx1.payment(account, account, tx1_dest_amount);
-    tx1.setFlags(["PartialPayment", "LimitQuality"]);
     tx1.send_max(tx1_source_amount.product_human(send_max_rate));
 
     var times = alt1.source_amount.ratio_human(alt2.dest_amount).to_human().replace(',', '');
@@ -138,7 +137,6 @@ function payment(alt1, alt2, factor, send_max_rate) {
     var tx2_source_amount = alt2.source_amount.product_human(math.round((times * factor), 6));
 
     tx2.paths(alt2.paths);
-    tx2.setFlags(["PartialPayment", "LimitQuality"]);
     tx2.payment(account, account, tx2_dest_amount);
     tx2.send_max(tx2_source_amount.product_human(send_max_rate));
 
@@ -159,7 +157,6 @@ function payment(alt1, alt2, factor, send_max_rate) {
         }
     });
     tx1.on('success', function(res) {
-        Logger.log(true, res);
         Logger.log(true, type + "(" + getEventIndex(type) + ")" + " tx1 is success!");
     });
     tx1.on('error', function(res) {
@@ -176,7 +173,6 @@ function payment(alt1, alt2, factor, send_max_rate) {
         }
     });
     tx2.on('success', function(res) {
-        Logger.log(true, res);
         Logger.log(true, type + "(" + getEventIndex(type) + ")" + " tx2 is success!");
     });
     tx2.on('error', function(res) {
