@@ -16,9 +16,6 @@ Logger.prototype.getNewLog = function(action) {
         streams: [{
             level: 'info',
             path: './log/' + action + '-info-' + date + '.js'
-        }, {
-            level: 'error',
-            path: './log/' + action + '-error-' + date + '.js' // log ERROR and above to a file
         }]
     });
     process.on('uncaughtException', function(err) {

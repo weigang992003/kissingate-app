@@ -1,3 +1,5 @@
+var _ = require('underscore');
+
 var eventIndex = 0;
 var eventIndexMap = {};
 
@@ -11,14 +13,11 @@ function getEventIndex(type) {
     if (eventIndexMap[oppositeType]) {
         return eventIndexMap[oppositeType];
     }
-}
-
-function setEventIndex(type) {
-    var oppositeType = getOppsiteType(type);
 
     eventIndex = eventIndex + 1;
     eventIndexMap[type] = eventIndex + "";
     eventIndexMap[oppositeType] = eventIndex + "";
+    return eventIndex + "";
 }
 
 function getOppsiteType(type) {
@@ -26,5 +25,10 @@ function getOppsiteType(type) {
     return elements[1] + ":" + elements[0];
 }
 
+function getAllEvents() {
+    return _.values(eventIndexMap);
+}
+
+exports.getAllEvents = getAllEvents;
 exports.getEventIndex = getEventIndex;
-exports.setEventIndex = setEventIndex;
+exports.getOppsiteType = getOppsiteType;

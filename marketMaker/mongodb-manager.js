@@ -151,11 +151,15 @@ function deleteFailedTransactionById(id) {
 }
 
 function getAllFailedTransactions(callback) {
-    failedTransaction.find({}, "dest_amount source_amount send_max_rate", {
-        limit: 500
-    }, function(err, result) {
-        if (err) return handleError(err);
-        return callback(result);
+    failedTransaction.count({}, function(err, c) {
+        var skip = c > 500 ? c - 500 : 0
+        failedTransaction.find({}, "dest_amount source_amount send_max_rate", {
+            limit: 500,
+            skip: skip
+        }, function(err, result) {
+            if (err) return handleError(err);
+            return callback(result);
+        })
     })
 }
 

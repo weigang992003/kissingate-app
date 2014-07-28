@@ -45,3 +45,4 @@ test/config.js
 
 # Ignore log files
 log/*
+*.sh
