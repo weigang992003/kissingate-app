@@ -266,7 +266,7 @@ function remoteConnect() {
     });
 }
 
-setTimeout(prepareRestart, 1000 * 60 * 60);
+setTimeout(prepareRestart, 1000 * 60 * 30);
 
 function prepareRestart() {
     emitter.removeAllListeners('payment');
