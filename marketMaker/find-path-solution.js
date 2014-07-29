@@ -65,11 +65,6 @@ var delay_time = config.delayWhenFailure;
 
 var altMap = {};
 var factorMap = {};
-var xrp = {
-    "currency": "XRP",
-    "issuer": "rrrrrrrrrrrrrrrrrrrrrhoLvTp",
-    "value": "40000000"
-};
 
 var tx1Success = false;
 var tx2Success = false;
@@ -150,13 +145,11 @@ function payment(alt1, alt2, factor, send_max_rate) {
     tx2Success = false;
 
     tx1.on('proposed', function(res) {
-        Logger.log(true, "(" + type + ")" + " tx1 is success!");
-
-    });
-    tx1.on('success', function(res) {
         tx1Success = true;
         emitter.emit('addPaymentBack');
+        Logger.log(true, "(" + type + ")" + " tx1 is success!");
     });
+
     tx1.on('error', function(res) {
         alt1.time = new Date().getTime() + delay_time;
         alt2.time = new Date().getTime() + delay_time;
@@ -170,12 +163,11 @@ function payment(alt1, alt2, factor, send_max_rate) {
     });
 
     tx2.on('proposed', function(res) {
-        Logger.log(true, "(" + type + ")" + " tx2 is success!");
-    });
-    tx2.on('success', function(res) {
         tx2Success = true;
         emitter.emit('addPaymentBack');
+        Logger.log(true, "(" + type + ")" + " tx2 is success!");
     });
+
     tx2.on('error', function(res) {
         alt1.time = new Date().getTime() + delay_time;
         alt2.time = new Date().getTime() + delay_time;
@@ -187,17 +179,6 @@ function payment(alt1, alt2, factor, send_max_rate) {
             Logger.log(true, res);
         }
     });
-
-    if (altMap[type].rate > alt1.rate && altMap[type].time > alt1.time) {
-        Logger.log(true, "alt1 rate updated from " + alt1.rate + "to " + altMap[type].rate);
-        emitter.once('payment', payment);
-        return;
-    }
-    if (altMap[oppositeType].rate > alt2.rate && altMap[oppositeType].time > alt2.time) {
-        Logger.log(true, "alt2 rate updated from " + alt2.rate + "to " + altMap[oppositeType].rate);
-        emitter.once('payment', payment);
-        return;
-    }
 
     tx1.submit();
     tx2.submit();
