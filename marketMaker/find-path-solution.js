@@ -91,7 +91,6 @@ function makeProfitIfCan(alt, type) {
         var alt2 = altMap[oppositeType];
         rate2 = alt2.rate;
         var profitRate = math.round(rate1 * rate2, 3);
-        console.log(type + ":" + profitRate);
 
         if (profitRate < profit_rate) {
             var send_max_rate = math.round(math.sqrt(1 / profitRate), 6);
