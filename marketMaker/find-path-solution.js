@@ -203,6 +203,8 @@ function payment(alt1, alt2, factor, send_max_rate) {
     tx2.submit();
 }
 
+function addFailedTrancsa
+
 function handlePartialPathError(dest_amount, source_amount, send_max_rate) {
     mongodbManager.saveFailedTransaction({
         "dest_amount": dest_amount.to_text_full(),
@@ -222,29 +224,22 @@ function prepareCurrencies(lines) {
 
     currencies = _.uniq(currencies);
 
+    currencies.push("XRP");
     _.each(currencies, function(currency1) {
         _.each(currencies, function(currency2) {
-            emitter.on(currency1 + ":" + currency2, makeProfitIfCan);
+            if (currency1 != currency2) {
+                emitter.on(currency1 + ":" + currency2, makeProfitIfCan);
+            }
         })
     });
 
-    _.each(currencies, function(currency) {
-        emitter.on("XRP" + ":" + currency, makeProfitIfCan);
-        emitter.on(currency + ":" + "XRP", makeProfitIfCan);
-    });
-
     currencies = _.map(currencies, function(currency) {
-        if (currency.balance != '0') {
-            return {
-                "currency": currency,
-                "issuer": account,
-                "value": currency_unit[currency] ? currency_unit[currency] : '1'
-            }
+        return {
+            "currency": currency,
+            "issuer": currency == "XRP" ? "rrrrrrrrrrrrrrrrrrrrrhoLvTp" : account,
+            "value": currency_unit[currency] ? currency_unit[currency] : '1'
         }
     });
-
-
-    currencies.push(xrp);
 
     return currencies;
 }
@@ -259,7 +254,7 @@ function queryFindPath(currencies) {
 
         var remo = new ripple.Remote(remote_options);
         remo.connect(function() {
-            var pf = remo.pathFind(account, account, Amount.from_json(dest_amount), typeof dest_amount == "string" ? _.without(currencies, xrp) : currencies)
+            var pf = remo.pathFind(account, account, Amount.from_json(dest_amount));
             pf.on("update", function(message) {
                 var alternatives = message.alternatives;
 
