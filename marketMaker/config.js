@@ -57,3 +57,4 @@ exports.marketMaker = 2;
 exports.factorWeight = 5;
 exports.profitRate = 1;
 exports.delayWhenFailure = 60000;
+exports.ratio = 2;
