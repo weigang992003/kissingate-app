@@ -217,7 +217,7 @@ function prepareCurrencies(lines) {
         return {
             "currency": currency,
             "issuer": currency == "XRP" ? "rrrrrrrrrrrrrrrrrrrrrhoLvTp" : account,
-            "value": currency_unit[currency] ? currency_unit[currency] * ratio : '1'
+            "value": currency_unit[currency] ? currency_unit[currency] * ratio+"" : '1'
         }
     });
 
