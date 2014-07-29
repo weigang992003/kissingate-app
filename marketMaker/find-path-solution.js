@@ -68,7 +68,7 @@ var factorMap = {};
 var xrp = {
     "currency": "XRP",
     "issuer": "rrrrrrrrrrrrrrrrrrrrrhoLvTp",
-    "value": "20000000"
+    "value": "40000000"
 };
 
 var tx1Success = false;
@@ -102,8 +102,8 @@ function makeProfitIfCan(alt, type) {
             Logger.log(true, "(" + type + ")" + "profitRate:" + profitRate);
 
             var factor = 1;
-            if (profitRate >= 0.9) {
-                factor = 0.5;
+            if (profitRate >= 0.95) {
+                factor = 0.6;
             }
 
             if (factor > 0) {
