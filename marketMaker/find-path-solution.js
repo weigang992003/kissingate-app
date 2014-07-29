@@ -99,10 +99,7 @@ function makeProfitIfCan(alt, type) {
         if (profitRate < profit_rate) {
             var send_max_rate = math.round(math.sqrt(1 / profitRate), 6);
 
-            Logger.log(true, "profitRate:" + profitRate, elements[0] + "/" + elements[1], "rate:" + rate1,
-                elements[1] + "/" + elements[0], "rate:" + rate2, "send_max_rate", send_max_rate,
-                "alt1_dest_amount", alt1.dest_amount.to_text_full(), "alt1_source_amount", alt1.source_amount.to_text_full(),
-                "alt2_dest_amount", alt2.dest_amount.to_text_full(), "alt2_source_amount", alt2.source_amount.to_text_full());
+            Logger.log(true, "(" + type + ")" + "profitRate:" + profitRate);
 
             var factor = 1;
             if (profitRate >= 0.9) {
@@ -138,11 +135,9 @@ function payment(alt1, alt2, factor, send_max_rate) {
     tx2.payment(account, account, tx2_dest_amount);
     tx2.send_max(tx2_source_amount.product_human(send_max_rate));
 
-    Logger.log(true, "we make a payment here", "tx1_dest_amount", tx1_dest_amount.to_text_full(),
-        "tx1_source_amount", tx1_source_amount.to_text_full(),
-        "tx2_dest_amount", tx2_dest_amount.to_text_full(),
-        "tx2_source_amount", tx2_source_amount.to_text_full(),
-        "factor", factor, "times", times, "send_max_rate", send_max_rate);
+    Logger.log(true, "make a payment(" + type + ")!",
+        "tx1", tx1_dest_amount.to_human_full() + "/" + tx1_source_amount.to_human_full(),
+        "tx2", tx2_dest_amount.to_human_full() + "/" + tx2_source_amount.to_human_full());
 
     if (secret) {
         tx1.secret(secret);
@@ -155,7 +150,8 @@ function payment(alt1, alt2, factor, send_max_rate) {
     tx2Success = false;
 
     tx1.on('proposed', function(res) {
-        Logger.log(true, res);
+        Logger.log(true, "(" + type + ")" + " tx1 is success!");
+
     });
     tx1.on('success', function(res) {
         tx1Success = true;
@@ -174,7 +170,7 @@ function payment(alt1, alt2, factor, send_max_rate) {
     });
 
     tx2.on('proposed', function(res) {
-        Logger.log(true, res);
+        Logger.log(true, "(" + type + ")" + " tx2 is success!");
     });
     tx2.on('success', function(res) {
         tx2Success = true;
@@ -283,8 +279,6 @@ function queryFindPath(currencies) {
     });
 }
 
-setTimeout(throwDisconnectError, 1000 * 60 * 30);
-
 function remoteConnect() {
     remote.connect(function() {
         remote.requestAccountLines(account, function(err, result) {
@@ -294,6 +288,13 @@ function remoteConnect() {
             queryFindPath(currencies);
         });
     });
+}
+
+setTimeout(prepareRestart, 1000 * 60 * 60);
+
+function prepareRestart() {
+    emitter.removeAllListeners('payment');
+    setTimeout(throwDisconnectError, 1000 * 60);
 }
 
 
