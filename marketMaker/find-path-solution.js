@@ -184,8 +184,6 @@ function payment(alt1, alt2, factor, send_max_rate) {
     tx2.submit();
 }
 
-function addFailedTrancsa
-
 function handlePartialPathError(dest_amount, source_amount, send_max_rate) {
     mongodbManager.saveFailedTransaction({
         "dest_amount": dest_amount.to_text_full(),
