@@ -61,12 +61,12 @@ function decrypt(encrypted) {
 
 function remoteConnect() {
     remote.connect(function() {
-        remote.requestAccountLines(account, function(err, result) {
-            if (err) console.log(err);
-            averageBalance(result.lines);
-        });
         remote.requestAccountOffers(account, function() {
             offers = arguments[1].offers;
+            remote.requestAccountLines(account, function(err, result) {
+                if (err) console.log(err);
+                averageBalance(result.lines);
+            });
         });
     });
 }
@@ -109,7 +109,6 @@ function averageBalance(lines) {
         _.each(list, function(e) {
             total = total + math.round(parseFloat(e.balance), 6);
         });
-        console.log(currency + ":" + total);
         balanceMap[currency] = total;
         var average = math.round((total / list.length), 6);
 
@@ -176,18 +175,18 @@ function averageBalance(lines) {
                 }
             })
         });
+    });
 
-        emitter.emit('goNext');
-
-    })
+    emitter.emit('goNext');
 }
 
 var next = 0;
 
 function goNext() {
-    console.log(orders);
     if (orders.length > next) {
         emitter.emit('createOffer', orders[next].taker_pays, orders[next].taker_gets);
+    } else {
+        throw new Error('we are done!!!!');
     }
 }
 
@@ -209,10 +208,10 @@ function createOffer(taker_pays, taker_gets) {
     })
     tx.on("error", function(res) {
         console.log(res);
+        throw new Error('something wrong!!!!');
     })
 
-    tx.emit('success');
-    // tx.submit();
+    tx.submit();
 }
 
 function ifOfferExist(offers, pays, gets) {
