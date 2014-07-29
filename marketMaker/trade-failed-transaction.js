@@ -173,10 +173,6 @@ function submitTX(type, transaction, currentRate) {
         emitter.once('submit', submitTX);
     });
 
-    tx.on('proposed', function(res) {
-        Logger.log(true, res);
-    });
-
     tx.on('error', function(res) {
         if (res.engine_result == "tecPATH_PARTIAL" || res.engine_result == "telINSUF_FEE_P") {} else {
             Logger.log(true, res);
@@ -186,12 +182,6 @@ function submitTX(type, transaction, currentRate) {
     });
 
     tx.submit();
-}
-
-setTimeout(throwDisconnectError, 1000 * 60 * 10);
-
-function throwDisconnectError() {
-    throw new Error('we are disconnect with ripple network!!!');
 }
 
 function remoteConnect() {
@@ -264,4 +254,15 @@ function remoteConnect() {
             queryFindPath(pathFindMap, transactionMap);
         });
     });
+}
+
+setTimeout(prepareRestart, 1000 * 60 * 10);
+
+function prepareRestart() {
+    emitter.removeAllListeners('submit');
+    setTimeout(throwDisconnectError, 1000 * 60);
+}
+
+function throwDisconnectError() {
+    throw new Error('we are disconnect with ripple network!!!');
 }
