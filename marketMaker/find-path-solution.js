@@ -45,6 +45,7 @@ var Amount = ripple.Amount;
 
 var account;
 var secret;
+console.log("step1:getAccount!")
 mongodbManager.getAccount(config.marketMaker, function(result) {
     account = result.account;
     secret = result.secret;
@@ -52,6 +53,7 @@ mongodbManager.getAccount(config.marketMaker, function(result) {
 });
 
 function decrypt(encrypted) {
+    console.log("step2:decrypt secret!")
     crypto.decrypt(encrypted, function(result) {
         secret = result;
         emitter.emit('remoteConnect');
@@ -121,12 +123,20 @@ function payment(alt1, alt2, factor, send_max_rate) {
     tx1.payment(account, account, tx1_dest_amount);
     tx1.send_max(tx1_source_amount.product_human(send_max_rate));
 
-    var times = alt1.source_amount.ratio_human(alt2.dest_amount).to_human().replace(',', '');
+    var times;
+    var tx2_dest_amount;
+    var tx2_source_amount;
+    if (tx1_source_amount.is_native()) {
+        times = alt1.dest_amount.ratio_human(alt2.source_amount).to_human().replace(',', '');
+        tx2_dest_amount = alt2.dest_amount.product_human(math.round((times * factor), 6));
+        tx2_source_amount = tx1_dest_amount;
+    } else {
+        times = alt1.source_amount.ratio_human(alt2.dest_amount).to_human().replace(',', '');
+        tx2_dest_amount = tx1_source_amount;
+        tx2_source_amount = alt2.source_amount.product_human(math.round((times * factor), 6));
+    }
 
     var tx2 = remote.transaction();
-    var tx2_dest_amount = tx1_source_amount;
-    var tx2_source_amount = alt2.source_amount.product_human(math.round((times * factor), 6));
-
     tx2.paths(alt2.paths);
     tx2.payment(account, account, tx2_dest_amount);
     tx2.send_max(tx2_source_amount.product_human(send_max_rate));
@@ -255,11 +265,16 @@ function queryFindPath(currencies) {
 }
 
 function remoteConnect() {
+    console.log("step3:connect to remote!")
+
     remote.connect(function() {
         remote.requestAccountLines(account, function(err, result) {
             if (err) console.log(err);
+            console.log("step4:prepare currencies!")
 
             var currencies = prepareCurrencies(result.lines);
+
+            console.log("step5:query find path!")
             queryFindPath(currencies);
         });
     });
