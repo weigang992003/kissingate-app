@@ -8,11 +8,14 @@
  var ripple = require('../src/js/ripple');
  var jsbn = require('../src/js/jsbn/jsbn.js');
  var mongodbManager = require('./mongodb-manager.js');
- var PathFind = require('../src/js/ripple/pathfind.js').PathFind;
+
+ var Logger = require('./the-future-logger.js').TFLogger;
+
+ Logger.getNewLog('set-trust-line-to-account');
 
  var emitter = new events.EventEmitter();
  emitter.on('getNext', getNext);
- emitter.on('sendMoney', sendMoney);
+ emitter.on('setTrustLine', setTrustLine);
 
  var remote_options = remote_options = {
      // see the API Reference for available options
@@ -33,23 +36,21 @@
  var Amount = ripple.Amount;
 
  var mother = config.motherAccount;
- var secret;
- crypto.decrypt(config.secret, function(result) {
-     secret = result;
- });
 
  var newa;
- mongodbManager.getAccount(function(newAccount) {
-     newa = newAccount.account;
+ var secret;
+ mongodbManager.getAccount(config.trustLine, function(account) {
+     newa = account.account;
+     crypto.decrypt(account.secret, function(decryptText) {
+         secret = decryptText;
+     });
  })
 
  remote.connect(function() {
      if (newa) {
          remote.requestAccountLines(newa, function(err, result) {
              if (err) console.log(err);
-             newaLines = _.filter(result.lines, function(line) {
-                 return line.balance == 0;
-             });
+             newaLines = result.lines;
              remote.requestAccountLines(mother, function(err, result) {
                  if (err) console.log(err);
                  lines = result.lines;
@@ -67,16 +68,9 @@
      if (lines.length > next) {
          var line = lines[next];
          next = next + 1;
-
-         var limit = line.limit + '/' + line.currency + '/' + line.account;
-         var needSent = _.find(newaLines, function(nline) {
-             return nline.limit + '/' + nline.currency + '/' + nline.account == limit;
-         })
-
-         if (line.limit != 0 && line.balance != 0 && needSent) {
-             var balance = math.round((line.balance / 3), 6);
-             var amount = balance + '/' + line.currency + '/' + line.account;
-             emitter.emit('sendMoney', amount);
+         if (line.limit != 0) {
+             var amount = line.limit + '/' + line.currency + '/' + line.account;
+             emitter.emit('setTrustLine', amount);
          } else {
              emitter.emit('getNext', getNext);
          }
@@ -85,20 +79,26 @@
      }
  }
 
- function sendMoney(amount) {
-     var tx = remote.transaction();
-     tx.payment(mother, newa, amount);
-     tx.setFlags('PartialPayment');
-
-     tx.on('proposed', function(res) {
-         console.log('proposed');
+ function setTrustLine(amount) {
+     var created = _.find(newaLines, function(line) {
+         return amount == line.limit + '/' + line.currency + '/' + line.account;
      });
+     if (created) {
+         emitter.emit('getNext', getNext);
+         return;
+     }
+
+     Logger.log(true, "we set a trust line:" + amount);
+
+     var tx = remote.transaction();
+
+     tx.rippleLineSet(newa, amount);
+     tx.setFlags('NoRipple');
      tx.on('success', function(res) {
-         console.log('success');
          emitter.emit('getNext', getNext);
      });
      tx.on('error', function(res) {
-         console.log(res);
+         Logger.log(true, res);
      });
 
      if (secret) {
@@ -106,7 +106,6 @@
      } else {
          return;
      }
-
      tx.submit();
  }
 
