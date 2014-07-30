@@ -9,6 +9,10 @@
  var jsbn = require('../src/js/jsbn/jsbn.js');
  var mongodbManager = require('./mongodb-manager.js');
 
+ var Logger = require('./the-future-logger.js').TFLogger;
+
+ Logger.getNewLog('set-trust-line-to-account');
+
  var emitter = new events.EventEmitter();
  emitter.on('getNext', getNext);
  emitter.on('setTrustLine', setTrustLine);
@@ -35,8 +39,7 @@
 
  var newa;
  var secret;
-
- mongodbManager.getAccount(function(account) {
+ mongodbManager.getAccount(config.trustLine, function(account) {
      newa = account.account;
      crypto.decrypt(account.secret, function(decryptText) {
          secret = decryptText;
@@ -85,19 +88,17 @@
          return;
      }
 
+     Logger.log(true, "we set a trust line:" + amount);
+
      var tx = remote.transaction();
 
      tx.rippleLineSet(newa, amount);
      tx.setFlags('NoRipple');
-     tx.on('proposed', function(res) {
-         console.log('proposed');
-     });
      tx.on('success', function(res) {
-         console.log('success');
          emitter.emit('getNext', getNext);
      });
      tx.on('error', function(res) {
-         console.log(res);
+         Logger.log(true, res);
      });
 
      if (secret) {
