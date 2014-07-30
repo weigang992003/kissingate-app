@@ -53,6 +53,7 @@ exports.mother = -1;
 exports.newAccount = 0;
 exports.tradeFailed = 1;
 exports.marketMaker = 2;
+exports.trustLine = 3;
 
 exports.factorWeight = 5;
 exports.profitRate = 1;
