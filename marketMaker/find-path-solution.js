@@ -17,7 +17,7 @@ emitter.once('remoteConnect', remoteConnect);
 emitter.once('payment', payment);
 emitter.on('addPaymentBack', reAddPaymentListener);
 
-var remote_options = remote_options = {
+var remote_options = {
     // see the API Reference for available options
     // trace: true,
     trusted: true,
