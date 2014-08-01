@@ -150,16 +150,26 @@ function deleteFailedTransactionById(id) {
     })
 }
 
+// function getAllFailedTransactions(callback) {
+//     failedTransaction.count({}, function(err, c) {
+//         var skip = c > 500 ? c - 500 : 0
+//         failedTransaction.find({}, "dest_amount source_amount send_max_rate", {
+//             limit: 500,
+//             skip: skip
+//         }, function(err, result) {
+//             if (err) return handleError(err);
+//             return callback(result);
+//         })
+//     })
+// }
+
 function getAllFailedTransactions(callback) {
-    failedTransaction.count({}, function(err, c) {
-        var skip = c > 500 ? c - 500 : 0
-        failedTransaction.find({}, "dest_amount source_amount send_max_rate", {
-            limit: 500,
-            skip: skip
-        }, function(err, result) {
-            if (err) return handleError(err);
-            return callback(result);
-        })
+    failedTransaction.find({}, "dest_amount source_amount send_max_rate", {
+        limit: 1000,
+        skip: skip
+    }, function(err, result) {
+        if (err) return handleError(err);
+        return callback(result);
     })
 }
 
