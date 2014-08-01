@@ -21,8 +21,8 @@
         "bunyan": "~0.23.1",
         "underscore": "~1.6.0",
         "forever": "~0.11.1",
-        "socket.io": "~@1.0.6",
-        "socket.io-client": "~@1.0.6"
+        "socket.io": "~1.0.6",
+        "socket.io-client": "~1.0.6"
     },
     "devDependencies": {
         "grunt": "~0.4.1",
