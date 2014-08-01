@@ -128,7 +128,9 @@ function queryFindPath(pathFindMap, transactionMap) {
                     });
 
                     _.each(transactionMap[type], function(tx) {
-                        if (!tx.trade && tx.rate >= alt.rate) {
+                        var txrate = parseFloat(tx.rate);
+                        var currentRate = parseFloat(alt.rate);
+                        if (!tx.trade && txrate > currentRate) {
                             tx.paths = alt.paths;
                             emitter.emit('submit', type, tx, alt.rate);
                         }
@@ -140,11 +142,9 @@ function queryFindPath(pathFindMap, transactionMap) {
 }
 
 function submitTX(type, transaction, currentRate) {
-    Logger.log(true, "we will submit a failed transaction here.",
-        "type", type, "tx.rate", transaction.rate, "currentRate", currentRate,
-        "send_max_rate", transaction.send_max_rate,
-        "dest_amount", transaction.dest_amount,
-        "source_amount", transaction.source_amount);
+    Logger.log(true, "we submit a transaction here.",
+        "tx.rate", transaction.rate, "currentRate", currentRate,
+        "dest_amount", transaction.dest_amount, "source_amount", transaction.source_amount);
 
     var tx = remote.transaction();
 
