@@ -15,6 +15,7 @@ var Logger = require('./the-future-logger.js').TFLogger;
 Logger.getNewLog('find-path-make-deal');
 
 var emitter = new events.EventEmitter();
+emitter.on('txComplete', txComplete);
 
 var servers = [{
     host: 's-east.ripple.com',
@@ -51,6 +52,27 @@ function decrypt(encrypted) {
         secret = result;
         remoteConnect();
     });
+}
+
+var tradeFailedTypeMap = {};
+
+function getFailedCount(type) {
+    return tradeFailedTypeMap[type];
+}
+
+function setFailedCount(type) {
+    var count = getFailedCount(type);
+    if (!count) {
+        count = 0;
+    }
+    count++;
+    tradeFailedTypeMap[type] = count;
+    tradeFailedTypeMap[getOppsiteType] = count;
+}
+
+function getOppsiteType(type) {
+    var elements = type.split(":");
+    return elements[1] + ":" + elements[0];
 }
 
 
@@ -100,37 +122,36 @@ function payment(type, alt1, alt2, factor, send_max_rate) {
         return;
     }
 
+    var failedTx = [];
     var tx1Complete = false;
     var tx2Complete = false;
 
     tx1.on('proposed', function(res) {
         tx1Complete = true;
-        emitter.emit('addPaymentBack', tx1Complete, tx2Complete, type);
+        emitter.emit('txComplete', tx1Complete, tx2Complete, type, failedTx);
         Logger.log(true, "(" + type + ")" + " tx1 is success!");
     });
 
     tx1.on('error', function(res) {
-        if (res.engine_result == "tecPATH_PARTIAL") {
-            handlePartialPathError(tx1_dest_amount, tx1_source_amount, send_max_rate, alt1.rate);
-            tx1Complete = true;
-            emitter.emit('addPaymentBack', tx1Complete, tx2Complete, type);
-        } else {
+        failedTx.push(buildErrorRecord(tx1_dest_amount, tx1_source_amount, send_max_rate));
+        tx1Complete = true;
+        emitter.emit('txComplete', tx1Complete, tx2Complete, type, failedTx);
+        if (res.engine_result != "tecPATH_PARTIAL") {
             Logger.log(true, res);
         }
     });
 
     tx2.on('proposed', function(res) {
         tx2Complete = true;
-        emitter.emit('addPaymentBack', tx1Complete, tx2Complete, type);
+        emitter.emit('txComplete', tx1Complete, tx2Complete, type, failedTx);
         Logger.log(true, "(" + type + ")" + " tx2 is success!");
     });
 
     tx2.on('error', function(res) {
-        if (res.engine_result == "tecPATH_PARTIAL") {
-            handlePartialPathError(tx2_dest_amount, tx2_source_amount, send_max_rate, alt2.rate);
-            tx2Complete = true;
-            emitter.emit('addPaymentBack', tx1Complete, tx2Complete, type);
-        } else {
+        failedTx.push(buildErrorRecord(tx2_dest_amount, tx2_source_amount, send_max_rate));
+        tx2Complete = true;
+        emitter.emit('txComplete', tx1Complete, tx2Complete, type, failedTx);
+        if (res.engine_result != "tecPATH_PARTIAL") {
             Logger.log(true, res);
         }
     });
@@ -142,17 +163,20 @@ function payment(type, alt1, alt2, factor, send_max_rate) {
     // tx2.submit();
 }
 
-function handlePartialPathError(dest_amount, source_amount, send_max_rate, rate) {
-    mongodbManager.saveFailedTransaction({
+function buildErrorRecord(dest_amount, source_amount, send_max_rate) {
+    return {
         "dest_amount": dest_amount.to_text_full(),
         "source_amount": source_amount.to_text_full(),
-        "send_max_rate": send_max_rate,
-        "rate": rate
-    });
+        "send_max_rate": send_max_rate
+    };
 }
 
-function reAddPaymentListener(tx1Complete, tx2Complete, type) {
+function txComplete(tx1Complete, tx2Complete, type, failedTx) {
     if (tx1Complete && tx2Complete) {
+        if (failedTx.length == 1) {
+            mongodbManager.saveFailedTransaction(failedTx[0]);
+        }
+        setFailedCount(type);
         var currencyPair = type.split(":");
         currencies = _.union(currencies, currencyPair);
     }
@@ -206,7 +230,7 @@ txio.on('connect', function() {
             emitter.once('payment', payment);
             emitter.emit('payment', type, alt1, alt2, factor, send_max_rate);
         }
-    })
+    });
 });
 
 remote.on('disconnect', function() {

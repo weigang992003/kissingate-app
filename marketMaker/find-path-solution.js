@@ -165,7 +165,7 @@ function payment(alt1, alt2, factor, send_max_rate) {
         alt1.time = new Date().getTime() + delay_time;
         alt2.time = new Date().getTime() + delay_time;
         if (res.engine_result == "tecPATH_PARTIAL") {
-            handlePartialPathError(tx1_dest_amount, tx1_source_amount, send_max_rate);
+            handlePartialPathError(tx1_dest_amount, tx1_source_amount, send_max_rate, alt1.rate);
             tx1Success = true;
             emitter.emit('addPaymentBack');
         } else {
@@ -183,7 +183,7 @@ function payment(alt1, alt2, factor, send_max_rate) {
         alt1.time = new Date().getTime() + delay_time;
         alt2.time = new Date().getTime() + delay_time;
         if (res.engine_result == "tecPATH_PARTIAL") {
-            handlePartialPathError(tx2_dest_amount, tx2_source_amount, send_max_rate);
+            handlePartialPathError(tx2_dest_amount, tx2_source_amount, send_max_rate), alt2.rate;
             tx2Success = true;
             emitter.emit('addPaymentBack');
         } else {
@@ -195,11 +195,12 @@ function payment(alt1, alt2, factor, send_max_rate) {
     tx2.submit();
 }
 
-function handlePartialPathError(dest_amount, source_amount, send_max_rate) {
+function handlePartialPathError(dest_amount, source_amount, send_max_rate, rate) {
     mongodbManager.saveFailedTransaction({
         "dest_amount": dest_amount.to_text_full(),
         "source_amount": source_amount.to_text_full(),
-        "send_max_rate": send_max_rate
+        "send_max_rate": send_max_rate,
+        "rate": rate
     });
 }
 

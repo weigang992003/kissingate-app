@@ -66,7 +66,7 @@ function getServer() {
     return servers[(serverIndex++) % servers.length];
 }
 
-function makeProfitIfCan(alt, type) {
+function checkIfHaveProfit(alt, type) {
     var alt1 = alt;
 
     altMap[type] = alt1;
@@ -83,16 +83,24 @@ function makeProfitIfCan(alt, type) {
         var profitRate = math.round(rate1 * rate2, 3);
 
         if (profitRate < profit_rate) {
-            var send_max_rate = math.round(math.sqrt(1 / profitRate), 6);
-
             Logger.log(true, "(" + type + ")" + "profitRate:" + profitRate);
+
+            var send_max_rate = math.round(math.sqrt(1 / profitRate), 6);
 
             var factor = 1;
             if (profitRate >= 0.95) {
                 factor = 0.6;
             }
 
-            fpio.emit('profit', type, alt1, alt2, factor, send_max_rate);
+            fpio.emit('profit', type, {
+                'dest_amount': alt1.dest_amount.to_json(),
+                'source_amount': alt1.source_amount.to_json(),
+                'paths': alt1.paths
+            }, {
+                'dest_amount': alt2.dest_amount.to_json(),
+                'source_amount': alt2.source_amount.to_json(),
+                'paths': alt2.paths
+            }, factor, send_max_rate);
 
             _.omit(altMap, [type, oppositeType]);
         }
@@ -151,7 +159,7 @@ function createFindPath(remo, currency) {
 
                 var type = (typeof dest_amount == "string" ? "XRP" : dest_amount.currency) + ":" + (typeof raw.source_amount == "string" ? "XRP" : raw.source_amount.currency);
 
-                makeProfitIfCan(alt, type);
+                checkIfHaveProfit(alt, type);
             });
         });
     });
