@@ -165,8 +165,7 @@ function deleteFailedTransactionById(id) {
 
 function getAllFailedTransactions(callback) {
     failedTransaction.find({}, "dest_amount source_amount send_max_rate", {
-        limit: 1000,
-        skip: skip
+        limit: 1000
     }, function(err, result) {
         if (err) return handleError(err);
         return callback(result);
