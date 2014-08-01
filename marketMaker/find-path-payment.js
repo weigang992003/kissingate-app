@@ -15,6 +15,7 @@ var Logger = require('./the-future-logger.js').TFLogger;
 Logger.getNewLog('find-path-make-deal');
 
 var emitter = new events.EventEmitter();
+emitter.on('addPaymentBack', reAddPaymentListener);
 
 var servers = [{
     host: 's-east.ripple.com',
@@ -110,11 +111,10 @@ function payment(type, alt1, alt2, factor, send_max_rate) {
     });
 
     tx1.on('error', function(res) {
-        if (res.engine_result == "tecPATH_PARTIAL") {
-            handlePartialPathError(tx1_dest_amount, tx1_source_amount, send_max_rate, alt1.rate);
-            tx1Complete = true;
-            emitter.emit('addPaymentBack', tx1Complete, tx2Complete, type);
-        } else {
+        handlePartialPathError(tx1_dest_amount, tx1_source_amount, send_max_rate, alt1.rate);
+        tx1Complete = true;
+        emitter.emit('addPaymentBack', tx1Complete, tx2Complete, type);
+        if (res.engine_result != "tecPATH_PARTIAL") {
             Logger.log(true, res);
         }
     });
@@ -126,11 +126,10 @@ function payment(type, alt1, alt2, factor, send_max_rate) {
     });
 
     tx2.on('error', function(res) {
-        if (res.engine_result == "tecPATH_PARTIAL") {
-            handlePartialPathError(tx2_dest_amount, tx2_source_amount, send_max_rate, alt2.rate);
-            tx2Complete = true;
-            emitter.emit('addPaymentBack', tx1Complete, tx2Complete, type);
-        } else {
+        handlePartialPathError(tx2_dest_amount, tx2_source_amount, send_max_rate, alt2.rate);
+        tx2Complete = true;
+        emitter.emit('addPaymentBack', tx1Complete, tx2Complete, type);
+        if (res.engine_result != "tecPATH_PARTIAL") {
             Logger.log(true, res);
         }
     });

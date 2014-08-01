@@ -33,7 +33,6 @@ var serverIndex = 0;
 
 var fpRemotes = {};
 
-console.log(getRemoteOption());
 var remote = new ripple.Remote(getRemoteOption());
 var Amount = ripple.Amount;
 
@@ -109,11 +108,8 @@ function checkIfHaveProfit(alt, type) {
 
 function prepareCurrencies(lines) {
     currencies = _.pluck(lines, 'currency');
-
     currencies = _.uniq(currencies);
-
     currencies.push("XRP");
-
     return currencies;
 }
 
