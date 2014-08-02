@@ -1,8 +1,8 @@
 var Logger = require('./the-future-logger.js').TFLogger;
 Logger.getNewLog('find-path-payment');
 
-var socketIO = require('socket.io-client');
-var fpio = new socketIO('http://localhost:3000/fp');
+var io = require('socket.io-client');
+var fpio = io.connect('http://localhost:3000/fp');
 
 var math = require('mathjs');
 var _ = require('underscore');
@@ -61,79 +61,7 @@ function decrypt(encrypted) {
     });
 }
 
-function checkIfRateUpdated(type, alt1, alt2, factor, send_max_rate) {
-    var src_1_currencies = [];
-    if (typeof alt1.source_amount == "string") {
-        src_1_currencies.push({
-            currency: 'XRP',
-            issuer: 'rrrrrrrrrrrrrrrrrrrrrhoLvTp'
-        })
-    } else {
-        src_1_currencies.push(alt1.source_amount);
-    }
-
-    var src_2_currencies = [];
-    if (typeof alt2.source_amount == "string") {
-        src_2_currencies.push({
-            currency: 'XRP',
-            issuer: 'rrrrrrrrrrrrrrrrrrrrrhoLvTp'
-        })
-    } else {
-        src_2_currencies.push(alt2.source_amount);
-    }
-
-    var betterPath1 = false;
-    var betterPath2 = false;
-
-    var pathFind1 = new PathFind(remote, account, account, Amount.from_json(alt1.dest_amount), src_1_currencies);
-    pathFind1.on('update', function(res) {
-        var raw = res.alternatives[0];
-        if (raw) {
-            var rate = Amount.from_json(raw.source_amount).ratio_human(Amount.from_json(alt1.dest_amount)).to_human().replace(',', '');
-            var currentRate = parseFloat(rate);
-            var rate1 = parseFloat(alt1.rate);
-            if (currentRate <= rate1) {
-                betterPath1 = true;
-                emitter.once('goPay', goPay);
-                emitter.emit('goPay', type, alt1, alt2, factor, send_max_rate, betterPath1, betterPath2)
-            }
-        }
-    });
-
-    var pathFind2 = new PathFind(remote, account, account, Amount.from_json(alt2.dest_amount), src_2_currencies);
-    pathFind2.on('update', function(res) {
-        var raw = res.alternatives[0];
-        if (raw) {
-            var rate = Amount.from_json(raw.source_amount).ratio_human(Amount.from_json(alt2.dest_amount)).to_human().replace(',', '');
-            var currentRate = parseFloat(rate);
-            var rate2 = parseFloat(alt2.rate);
-            if (currentRate <= rate2) {
-                betterPath2 = true;
-                emitter.once('goPay', goPay);
-                emitter.emit('goPay', type, alt1, alt2, factor, send_max_rate, betterPath1, betterPath2)
-            }
-        }
-    });
-
-    pathFind1.create();
-    pathFind2.create();
-}
-
-function goPay(type, alt1, alt2, factor, send_max_rate, betterPath1, betterPath2) {
-    if (betterPath1 && betterPath2) {
-        var currencyPair = type.split(":");
-        if (_.contains(currencies, currencyPair[0]) && _.contains(currencies, currencyPair[1])) {
-            console.log(currencies);
-            currencies = _.without(currencies, currencyPair[0], currencyPair[1]);
-            payment(type, alt1, alt2, factor, send_max_rate);
-        }
-    }
-}
-
 function payment(type, alt1, alt2, factor, send_max_rate) {
-    console.log("we will make payment here!!! yeah!!!" + type);
-    console.log(currencies);
-
     alt1.dest_amount = Amount.from_json(alt1.dest_amount);
     alt1.source_amount = Amount.from_json(alt1.source_amount);
 
@@ -207,15 +135,12 @@ function payment(type, alt1, alt2, factor, send_max_rate) {
         }
     });
 
-    // Logger.log(true, "make a payment(" + type + ")!",
-    //     "tx1", tx1_dest_amount.to_human_full() + "/" + tx1_source_amount.to_human_full(),
-    //     "tx2", tx2_dest_amount.to_human_full() + "/" + tx2_source_amount.to_human_full());
+    Logger.log(true, "make a payment(" + type + ")!",
+        "tx1", tx1_dest_amount.to_human_full() + "/" + tx1_source_amount.to_human_full(),
+        "tx2", tx2_dest_amount.to_human_full() + "/" + tx2_source_amount.to_human_full());
 
-    tx1.emit('proposed', 'proposed');
-    tx2.emit('proposed', 'proposed');
-
-    // tx1.submit();
-    // tx2.submit();
+    tx1.submit();
+    tx2.submit();
 }
 
 function buildErrorRecord(dest_amount, source_amount, send_max_rate, rate) {
@@ -230,6 +155,7 @@ function buildErrorRecord(dest_amount, source_amount, send_max_rate, rate) {
 function txComplete(tx1Complete, tx2Complete, type, txs) {
     if (tx1Complete && tx2Complete) {
         if (txs.length == 1) {
+            Logger.log(true, "add failed record:", txs[0]);
             mongodbManager.saveFailedTransaction(txs[0]);
             setTimeout(function() {
                 reAddCurrencies(type);
@@ -239,9 +165,7 @@ function txComplete(tx1Complete, tx2Complete, type, txs) {
                 reAddCurrencies(type);
             }, 60 * 1000);
         } else if (txs.length == 0) {
-            setTimeout(function() {
-                reAddCurrencies(type);
-            }, 10 * 1000);
+            reAddCurrencies(type);
         }
     }
 }
@@ -249,8 +173,6 @@ function txComplete(tx1Complete, tx2Complete, type, txs) {
 function reAddCurrencies(type) {
     var currencyPair = type.split(":");
     currencies = _.union(currencies, currencyPair);
-    console.log("we are re-add:" + type);
-    console.log(currencies);
 }
 
 function reAddPaymentListener(tx1Complete, tx2Complete, type) {
@@ -297,15 +219,14 @@ function remoteConnect() {
 }
 
 console.log("step5:listen to profit socket!");
-fpio.on('connect', function() {
-    fpio.on('fp', function(type, alt1, alt2, factor, send_max_rate) {
-        var currencyPair = type.split(":");
-        if (_.contains(currencies, currencyPair[0]) && _.contains(currencies, currencyPair[1])) {
-            emitter.once('checkIfRateUpdated', checkIfRateUpdated);
-            emitter.emit('checkIfRateUpdated', type, alt1, alt2, factor, send_max_rate);
-        }
-    })
-});
+fpio.on('fp', function(type, alt1, alt2, factor, send_max_rate) {
+    var currencyPair = type.split(":");
+    if (_.contains(currencies, currencyPair[0]) && _.contains(currencies, currencyPair[1])) {
+        currencies = _.without(currencies, currencyPair[0], currencyPair[1]);
+        emitter.once('payment', payment);
+        emitter.emit('payment', type, alt1, alt2, factor, send_max_rate);
+    }
+})
 
 remote.on('disconnect', function() {
     console.log("the remote was disconnect! we will reconnect it!");

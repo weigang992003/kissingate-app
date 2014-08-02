@@ -83,14 +83,10 @@ function checkIfHaveProfit(alt, type) {
         rate2 = alt2.rate;
 
         var profitRate = math.round(rate1 * rate2, 3);
-
-        console.log("type:" + type + " timeConsume:" + (alt2.time - alt1.time));
-        altMap = {} //TODO we will remove this after finish the test.
+        Logger.log(true, "(" + type + ")" + "profitRate:" + profitRate + "(" + rate1 + ":" + rate2 + ")",
+            "timeConsume:" + (alt1.time - alt2.time));
 
         if (profitRate < profit_rate) {
-            Logger.log(true, "(" + type + ")" + "profitRate:" + profitRate + "(" + rate1 + ":" + rate2 + ")",
-                "timeConsume:" + (alt2.time - alt1.time));
-
             var send_max_rate = math.round(math.sqrt(1 / profitRate), 6);
 
             var factor = 1;
@@ -177,7 +173,7 @@ function goNext() {
 
     if (isNoPathPair(currency1, currency2)) {
         getNextIndex();
-        goNext();
+        triggerGoNext();
         return;
     }
 
@@ -210,7 +206,7 @@ function goNext() {
         var raw = res.alternatives[0];
         if (noPathFound || !raw) {
             addNoPathPair(currency1, currency2);
-            goNext();
+            triggerGoNext();
             return;
         }
         handleAlt(dest_amount_2, raw);
@@ -219,7 +215,7 @@ function goNext() {
     });
     pathFind2.on('error', function(err) {
         Logger.error(true, err);
-        goNext();
+        triggerGoNext();
         return;
     })
 
@@ -227,6 +223,11 @@ function goNext() {
     pathFind2.create();
 
     getNextIndex();
+}
+
+function triggerGoNext() {
+    emitter.once('goNext', goNext);
+    emitter.emit('goNext');
 }
 
 function buildDestAmount(currency) {
