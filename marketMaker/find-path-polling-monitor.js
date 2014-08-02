@@ -107,10 +107,10 @@ function checkIfHaveProfit(alt, type) {
                 "rate": alt2.rate
             }, factor, send_max_rate);
 
-            altMap = {};
         }
+        altMap = {};
 
-        setTimeout(triggerGoNext, 100);
+        goNext();
     }
 }
 
@@ -174,7 +174,7 @@ function goNext() {
 
     if (isNoPathPair(currency1, currency2)) {
         getNextIndex();
-        triggerGoNext();
+        goNext();
         return;
     }
 
@@ -207,7 +207,7 @@ function goNext() {
         var raw = res.alternatives[0];
         if (noPathFound || !raw) {
             addNoPathPair(currency1, currency2);
-            triggerGoNext();
+            goNext();
             return;
         }
         handleAlt(dest_amount_2, raw);
@@ -216,19 +216,13 @@ function goNext() {
     });
     pathFind2.on('error', function(err) {
         Logger.error(true, err);
-        triggerGoNext();
+        goNext();
         return;
     })
-
     pathFind1.create();
     pathFind2.create();
 
     getNextIndex();
-}
-
-function triggerGoNext() {
-    emitter.once('goNext', goNext);
-    emitter.emit('goNext');
 }
 
 function buildDestAmount(currency) {
@@ -279,8 +273,7 @@ function remoteConnect() {
         });
 
         remote.on('error', function(error) {
-            goNext();
-            Logger.error(true, error);
+            throw new Error("remote error!");
         });
 
         remote.on('disconnect', function() {
