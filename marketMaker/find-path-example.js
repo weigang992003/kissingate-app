@@ -66,38 +66,61 @@ remote.connect(function() {
             alt.send_max = alt.amount.product_human(Amount.from_json('0.5'));
             alt.paths = raw.paths_computed ? raw.paths_computed : raw.paths_canonical;
 
-            var tx = remote.transaction();
+            // var tx = remote.transaction();
 
-            tx.payment(account, account, dest_amount);
-            tx.send_max(alt.send_max);
-            tx.paths(alt.paths);
-            tx.setFlags("PartialPayment");
+            // tx.payment(account, account, dest_amount);
+            // tx.send_max(alt.send_max);
+            // tx.paths(alt.paths);
+            // tx.setFlags("PartialPayment");
 
-            if (secret) {
-                tx.secret(secret);
-            } else {
-                return;
-            }
+            // if (secret) {
+            //     tx.secret(secret);
+            // } else {
+            //     return;
+            // }
 
-            tx.on('proposed', function(res) {
-                Logger.log(true, res);
-            });
-            tx.on('success', function(res) {
-                Logger.log(true, res);
-            });
-            tx.on('error', function(res) {
-                Logger.log(true, res);
-            });
-            console.log("submit");
+            // tx.on('proposed', function(res) {
+            //     Logger.log(true, res);
+            // });
+            // tx.on('success', function(res) {
+            //     Logger.log(true, res);
+            // });
+            // tx.on('error', function(res) {
+            //     Logger.log(true, res);
+            // });
+            // console.log("submit");
 
-            if (!trade) {
-                trade = true;
-                tx.submit();
-            }
+            // if (!trade) {
+            //     trade = true;
+            //     tx.submit();
+            // }
         });
     })
 
     pathFind.create();
+
+    var dest_amount_1 = {
+        "currency": "ILS",
+        "issuer": account,
+        "value": "1"
+    };
+
+    remote.requestRipplePathFind(account, account, "1/ILS/" + account, [{
+        "currency": "JPY",
+        "issuer": account
+    }], function(res) {
+        console.log(res.alternatives);
+        var raw = res.alternatives[0];
+        if (raw) {
+            var rate = Amount.from_json(raw.source_amount).ratio_human(Amount.from_json(dest_amount_1)).to_human().replace(',', '');
+
+            console.log(rate);
+        }
+    });
+    // pathFind1.on('update', function(res) {
+
+    // });
+    // pathFind1.create();
 });
 
 

@@ -1,7 +1,6 @@
 var bunyan = require('bunyan');
 
 require('./date-extend.js');
-var mongoManager = require('./mongodb-manager.js');
 
 function Logger() {
     this.logger;
