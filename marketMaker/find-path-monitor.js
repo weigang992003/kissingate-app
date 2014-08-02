@@ -1,5 +1,9 @@
+var Logger = require('./the-future-logger.js').TFLogger;
+Logger.getNewLog('find-path-monitor');
+
 var io = require('socket.io').listen(3000);
 var fpio = io.of('/fp');
+var tfio = io.of('/tf');
 
 var math = require('mathjs');
 var _ = require('underscore');
@@ -10,9 +14,6 @@ var ripple = require('../src/js/ripple');
 var crypto = require('./crypto-util.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
 var mongodbManager = require('./mongodb-manager.js');
-var Logger = require('./the-future-logger.js').TFLogger;
-
-Logger.getNewLog('find-path-monitor');
 
 var emitter = new events.EventEmitter();
 
@@ -79,10 +80,12 @@ function checkIfHaveProfit(alt, type) {
     if (_.indexOf(_.keys(altMap), oppositeType) >= 0) {
         var alt2 = altMap[oppositeType];
         rate2 = alt2.rate;
+
         var profitRate = math.round(rate1 * rate2, 3);
 
         if (profitRate < profit_rate) {
-            Logger.log(true, "(" + type + ")" + "profitRate:" + profitRate);
+            Logger.log(true, "(" + type + ")" + "profitRate:" + profitRate + "(" + rate1 + ":" + rate2 + ")",
+                "timeConsume:" + (alt2.time - alt1.time));
 
             var send_max_rate = math.round(math.sqrt(1 / profitRate), 6);
 
@@ -91,14 +94,16 @@ function checkIfHaveProfit(alt, type) {
                 factor = 0.6;
             }
 
-            fpio.emit('profit', type, {
+            fpio.emit('fp', type, {
                 'dest_amount': alt1.dest_amount.to_json(),
                 'source_amount': alt1.source_amount.to_json(),
-                'paths': alt1.paths
+                'paths': alt1.paths,
+                "rate": alt1.rate
             }, {
                 'dest_amount': alt2.dest_amount.to_json(),
                 'source_amount': alt2.source_amount.to_json(),
-                'paths': alt2.paths
+                'paths': alt2.paths,
+                "rate": alt2.rate
             }, factor, send_max_rate);
 
             _.omit(altMap, [type, oppositeType]);
@@ -152,8 +157,10 @@ function createFindPath(remo, currency) {
                 alt.source_amount = Amount.from_json(raw.source_amount);
                 alt.rate = alt.source_amount.ratio_human(dest_amount).to_human().replace(',', '');
                 alt.paths = raw.paths_computed ? raw.paths_computed : raw.paths_canonical;
-
+                alt.time = new Date().getTime();
                 var type = (typeof dest_amount == "string" ? "XRP" : dest_amount.currency) + ":" + (typeof raw.source_amount == "string" ? "XRP" : raw.source_amount.currency);
+
+                tfio.emit('tf', type, alt.rate);
 
                 checkIfHaveProfit(alt, type);
             });
