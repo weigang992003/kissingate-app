@@ -83,10 +83,11 @@ function checkIfHaveProfit(alt, type) {
         rate2 = alt2.rate;
 
         var profitRate = math.round(rate1 * rate2, 3);
-        Logger.log(true, "(" + type + ")" + "profitRate:" + profitRate + "(" + rate1 + ":" + rate2 + ")",
-            "timeConsume:" + (alt1.time - alt2.time));
 
         if (profitRate < profit_rate) {
+            Logger.log(true, "(" + type + ")" + "profitRate:" + profitRate + "(" + rate1 + ":" + rate2 + ")",
+                "timeConsume:" + (alt1.time - alt2.time));
+
             var send_max_rate = math.round(math.sqrt(1 / profitRate), 6);
 
             var factor = 1;
@@ -109,7 +110,7 @@ function checkIfHaveProfit(alt, type) {
             altMap = {};
         }
 
-        goNext();
+        setTimeout(triggerGoNext, 100);
     }
 }
 
