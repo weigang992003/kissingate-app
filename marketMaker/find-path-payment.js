@@ -215,6 +215,11 @@ function remoteConnect() {
             console.log("step4:prepare currencies!");
             prepareCurrencies(result.lines);
         });
+        remote.on('disconnect', function() {
+            console.log("the remote was disconnect! we will reconnect it!");
+            remote = new ripple.Remote(getRemoteOption());
+            remoteConnect();
+        });
     });
 }
 
@@ -227,9 +232,3 @@ fpio.on('fp', function(type, alt1, alt2, factor, send_max_rate) {
         emitter.emit('payment', type, alt1, alt2, factor, send_max_rate);
     }
 })
-
-remote.on('disconnect', function() {
-    console.log("the remote was disconnect! we will reconnect it!");
-    remote = new ripple.Remote(getRemoteOption());
-    remoteConnect();
-});

@@ -46,7 +46,8 @@ exports.currency_unit = {
     "CAD": "0.200",
     "ILS": "2.000",
     "CHF": "0.200",
-    "NZD": "0.200"
+    "NZD": "0.200",
+    "XAU": "0.00012"
 };
 
 exports.mother = -1;
