@@ -17,7 +17,7 @@ var PathFind = require('../src/js/ripple/pathfind.js').PathFind;
 
 
 var emitter = new events.EventEmitter();
-emitter.on('addPaymentBack', txComplete);
+emitter.on('txComplete', txComplete);
 
 var servers = [{
     host: 's-west.ripple.com',
@@ -103,14 +103,14 @@ function payment(type, alt1, alt2, factor, send_max_rate) {
 
     tx1.on('proposed', function(res) {
         tx1Complete = true;
-        emitter.emit('addPaymentBack', tx1Complete, tx2Complete, type, txsToRecord);
+        emitter.emit('txComplete', tx1Complete, tx2Complete, type, txsToRecord);
         Logger.log(true, "(" + type + ")" + " tx1 is success!");
     });
 
     tx1.on('error', function(res) {
         txsToRecord.push(buildErrorRecord(tx1_dest_amount, tx1_source_amount, send_max_rate, alt1.rate));
         tx1Complete = true;
-        emitter.emit('addPaymentBack', tx1Complete, tx2Complete, type, txsToRecord);
+        emitter.emit('txComplete', tx1Complete, tx2Complete, type, txsToRecord);
         if (res.engine_result != "tecPATH_PARTIAL") {
             Logger.log(true, res);
         }
@@ -118,14 +118,14 @@ function payment(type, alt1, alt2, factor, send_max_rate) {
 
     tx2.on('proposed', function(res) {
         tx2Complete = true;
-        emitter.emit('addPaymentBack', tx1Complete, tx2Complete, type, txsToRecord);
+        emitter.emit('txComplete', tx1Complete, tx2Complete, type, txsToRecord);
         Logger.log(true, "(" + type + ")" + " tx2 is success!");
     });
 
     tx2.on('error', function(res) {
         txsToRecord.push(buildErrorRecord(tx2_dest_amount, tx2_source_amount, send_max_rate, alt2.rate));
         tx2Complete = true;
-        emitter.emit('addPaymentBack', tx1Complete, tx2Complete, type, txsToRecord);
+        emitter.emit('txComplete', tx1Complete, tx2Complete, type, txsToRecord);
         if (res.engine_result != "tecPATH_PARTIAL") {
             Logger.log(true, res);
         }
@@ -155,13 +155,6 @@ function txComplete(tx1Complete, tx2Complete, type, txs) {
             Logger.log(true, "add failed record:", txs[0]);
             mongodbManager.saveFailedTransaction(txs[0]);
         }
-    }
-}
-
-function reAddPaymentListener(tx1Complete, tx2Complete, type) {
-    if (tx1Complete && tx2Complete) {
-        var currencyPair = type.split(":");
-        currencies = _.union(currencies, currencyPair);
     }
 }
 
