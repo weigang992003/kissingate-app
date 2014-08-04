@@ -107,6 +107,14 @@ function checkIfHaveProfit(alt, type) {
                 "rate": alt2.rate
             }, factor, send_max_rate);
 
+            altMap = {};
+
+            setTimeout(function() {
+                goNext(elements[0], elements[1]);
+            }, 2000);
+
+            return;
+
         }
         altMap = {};
 
@@ -160,7 +168,7 @@ function resetNoPathPair() {
 
 setInterval(resetNoPathPair, 1000 * 30 * 60);
 
-function goNext() {
+function goNext(preferC1, preferC2) {
     if (!currencySize) {
         return;
     }
@@ -171,6 +179,11 @@ function goNext() {
 
     var currency1 = currencies[index1];
     var currency2 = currencies[index2];
+
+    if (preferC1 && preferC2) {
+        currency1 = preferC1;
+        currency2 = preferC2;
+    }
 
     if (isNoPathPair(currency1, currency2)) {
         getNextIndex();
