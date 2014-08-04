@@ -55,7 +55,8 @@ var failedTransactionSchema = mongoose.Schema({
     rate: String,
     dest_amount: String,
     source_amount: String,
-    send_max_rate: String
+    send_max_rate: String,
+    caused_by: String
 }, {
     collection: 'failedTransaction'
 });
@@ -164,8 +165,23 @@ function deleteFailedTransactionById(id) {
 //     })
 // }
 
+function getFailedTransactionsByAccount(account, callback) {
+    failedTransaction.find({
+        caused_by: account
+    }, "dest_amount source_amount send_max_rate,caused_by", {
+        limit: 1000
+    }, function(err, result) {
+        if (err) return handleError(err);
+        return callback(result);
+    })
+}
+
 function getAllFailedTransactions(callback) {
-    failedTransaction.find({}, "dest_amount source_amount send_max_rate", {
+    failedTransaction.find({
+        caused_by: {
+            $exists: false
+        }
+    }, "dest_amount source_amount send_max_rate", {
         limit: 1000
     }, function(err, result) {
         if (err) return handleError(err);
@@ -182,7 +198,6 @@ function getAccount(status, callback) {
     });
 }
 
-
 exports.getAccount = getAccount;
 exports.getCryptoOption = getCryptoOption;
 exports.getNextSequence = getNextSequence;
@@ -193,3 +208,4 @@ exports.saveFailedTransaction = saveFailedTransaction;
 exports.deleteFailedTransaction = deleteFailedTransaction;
 exports.getAllFailedTransactions = getAllFailedTransactions;
 exports.deleteFailedTransactionById = deleteFailedTransactionById;
+exports.getFailedTransactionsByAccount = getFailedTransactionsByAccount;
