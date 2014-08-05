@@ -298,7 +298,7 @@ function remoteConnect() {
     console.log("step3:connect to remote!")
     remote.connect(function() {
         console.log("step4:prepare currencies!")
-        currencies = ["XRP", "CNY", "JPY", "USD", "EUR", "FMM", "BTC"];
+        currencies = ["XRP", "CNY", "JPY", "USD", "EUR", "FMM", "BTC", "STR"];
         currencySize = currencies.length;
         console.log("step5:query find path!");
         goNext();

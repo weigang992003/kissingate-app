@@ -20,6 +20,10 @@ var emitter = new events.EventEmitter();
 emitter.on('txComplete', txComplete);
 
 var servers = [{
+    host: 's-east.ripple.com',
+    port: 443,
+    secure: true
+}, {
     host: 's-west.ripple.com',
     port: 443,
     secure: true
@@ -149,11 +153,17 @@ function buildErrorRecord(dest_amount, source_amount, send_max_rate, rate) {
     };
 }
 
+var continueReceive = true;
+
 function txComplete(tx1Complete, tx2Complete, type, txs) {
     if (tx1Complete && tx2Complete) {
         if (txs.length == 1) {
             Logger.log(true, "add failed record:", txs[0]);
             mongodbManager.saveFailedTransaction(txs[0]);
+            continueReceive = false;
+            setTimeout(function() {
+                continueReceive = true;
+            }, 60 * 1000)
         }
     }
 }
@@ -201,6 +211,8 @@ function remoteConnect() {
 
 console.log("step5:listen to profit socket!");
 fpio.on('fp', function(type, alt1, alt2, factor, send_max_rate) {
-    emitter.once('payment', payment);
-    emitter.emit('payment', type, alt1, alt2, factor, send_max_rate);
+    if (continueReceive) {
+        emitter.once('payment', payment);
+        emitter.emit('payment', type, alt1, alt2, factor, send_max_rate);
+    }
 })
