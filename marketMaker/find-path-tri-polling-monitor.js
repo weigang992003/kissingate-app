@@ -69,27 +69,30 @@ function getServer() {
 
 
 function checkIfHaveProfit(alt, type) {
-    var alt1 = alt;
-
-    altMap[type] = alt1;
+    altMap[type] = alt;
 
     var elements = type.split(":");
     var currency1 = elements[0];
     var currency2 = elements[1];
     var currency3 = _.difference(currencyList, elements);
 
-    if (_.indexOf(_.keys(altMap), currency2 + ":" + currency3) >= 0) {
-        if (_.indexOf(_.keys(altMap), currency3 + ":" + currency1) >= 0) {
-            var alt2 = altMap[currency2 + ":" + currency3];
-            var alt3 = altMap[currency3 + ":" + currency1];
-            var rate12 = alt1.rate;
-            var rate23 = alt2.rate;
-            var rate31 = alt3.rate;
-            var profitRate = math.round(rate12 * rate23 * rate31, 3);
-            if (profitRate < 1) {
-                Logger.log(true, urrency1 + ":" + currency2 + ":" + currency3 + ": " + profitRate);
-            }
+    var alt1 = altMap[currency1 + ":" + currency2];
+    var alt2 = altMap[currency2 + ":" + currency3];
+    var alt3 = altMap[currency3 + ":" + currency1];
+
+    if (alt1 && alt2 && alt3) {
+        var rate12 = alt1.rate;
+        var rate23 = alt2.rate;
+        var rate31 = alt3.rate;
+
+        var profitRate = math.round(rate12 * rate23 * rate31, 3);
+        console.log(currency1 + ":" + currency2 + ":" + currency3 + ": " + profitRate);
+
+        if (profitRate < 1) {
+            Logger.log(true, currency1 + ":" + currency2 + ":" + currency3 + ": " + profitRate);
         }
+
+        altMap = {};
     }
 }
 
@@ -192,12 +195,16 @@ function goNext() {
             addNoPathPair(currency1, currency2);
             noPathFound = true;
         }
+
         _.each(res.alternatives, function(raw) {
             handleAlt(dest_amount_1, raw);
         });
 
         pathFind1.close();
     });
+    pathFind1.on('error', function(res) {
+        noPathFound = true;
+    })
 
 
     var pathFind2 = new PathFind(remote, account, account, Amount.from_json(dest_amount_2), src_currencies_2);
@@ -206,39 +213,50 @@ function goNext() {
             noPathFound = true;
             addNoPathPair(currency2, currency3);
         }
+
         _.each(res.alternatives, function(raw) {
             handleAlt(dest_amount_2, raw);
         });
 
         pathFind2.close();
     });
+    pathFind2.on('error', function(res) {
+        noPathFound = true;
+    })
 
 
     var pathFind3 = new PathFind(remote, account, account, Amount.from_json(dest_amount_3), src_currencies_3);
     pathFind3.on('update', function(res) {
-        pathFindDone = true;
         if (!res.alternatives) {
+            noPathFound = true;
             addNoPathPair(currency3, currency1);
         }
         if (noPathFound) {
             pathFind3.close();
+            altMap = {};
             goNext();
             return;
         }
+
         _.each(res.alternatives, function(raw) {
             handleAlt(dest_amount_3, raw);
         });
-        pathFind3.close();
 
+        altMap = {};
         goNext();
+        pathFind3.close();
     });
     pathFind3.on('error', function(res) {
+        altMap = {};
         goNext();
     });
 
     pathFind1.create();
     pathFind2.create();
-    pathFind3.create();
+
+    setTimeout(function() {
+        pathFind3.create();
+    }, 100);
 }
 
 function buildDestAmount(currency) {
@@ -279,14 +297,19 @@ function handleAlt(dest_amount, raw) {
 function remoteConnect() {
     console.log("step3:connect to remote!")
     remote.connect(function() {
-        remote.requestAccountLines(account, function(err, result) {
-            if (err) console.log(err);
-            console.log("step4:prepare currencies!")
-            prepareCurrencies(result.lines);
+        console.log("step4:prepare currencies!")
+        currencies = ["XRP", "CNY", "JPY", "USD", "EUR", "FMM", "BTC"];
+        currencySize = currencies.length;
+        console.log("step5:query find path!");
+        goNext();
+        // remote.requestAccountLines(account, function(err, result) {
+        //     if (err) console.log(err);
+        //     console.log("step4:prepare currencies!")
+        //     prepareCurrencies(result.lines);
 
-            console.log("step5:query find path!");
-            goNext();
-        });
+        //     console.log("step5:query find path!");
+        //     goNext();
+        // });
 
         remote.on('error', function(error) {
             throw new Error("remote error!");
