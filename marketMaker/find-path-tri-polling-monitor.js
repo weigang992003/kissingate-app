@@ -19,10 +19,6 @@ var PathFind = require('../src/js/ripple/pathfind.js').PathFind;
 var emitter = new events.EventEmitter();
 
 var servers = [{
-    host: 's-east.ripple.com',
-    port: 443,
-    secure: true
-}, {
     host: 's-west.ripple.com',
     port: 443,
     secure: true
@@ -67,6 +63,7 @@ function getServer() {
     return servers[(serverIndex++) % servers.length];
 }
 
+var preferCurrencyList = [];
 
 function checkIfHaveProfit(alt, type) {
     altMap[type] = alt;
@@ -89,6 +86,7 @@ function checkIfHaveProfit(alt, type) {
         console.log(currency1 + ":" + currency2 + ":" + currency3 + ": " + profitRate);
 
         if (profitRate < 1) {
+            preferCurrencyList.push(currency1, currency2, currency3);
             Logger.log(true, currency1 + ":" + currency2 + ":" + currency3 + ": " + profitRate);
         }
 
@@ -191,6 +189,8 @@ function goNext() {
 
     var pathFind1 = new PathFind(remote, account, account, Amount.from_json(dest_amount_1), src_currencies_1);
     pathFind1.on('update', function(res) {
+        pathFind1.close();
+
         if (!res.alternatives) {
             addNoPathPair(currency1, currency2);
             noPathFound = true;
@@ -199,8 +199,6 @@ function goNext() {
         _.each(res.alternatives, function(raw) {
             handleAlt(dest_amount_1, raw);
         });
-
-        pathFind1.close();
     });
     pathFind1.on('error', function(res) {
         noPathFound = true;
@@ -209,6 +207,8 @@ function goNext() {
 
     var pathFind2 = new PathFind(remote, account, account, Amount.from_json(dest_amount_2), src_currencies_2);
     pathFind2.on('update', function(res) {
+        pathFind2.close();
+
         if (!res.alternatives) {
             noPathFound = true;
             addNoPathPair(currency2, currency3);
@@ -218,7 +218,6 @@ function goNext() {
             handleAlt(dest_amount_2, raw);
         });
 
-        pathFind2.close();
     });
     pathFind2.on('error', function(res) {
         noPathFound = true;
@@ -227,12 +226,14 @@ function goNext() {
 
     var pathFind3 = new PathFind(remote, account, account, Amount.from_json(dest_amount_3), src_currencies_3);
     pathFind3.on('update', function(res) {
+        pathFind3.close();
+
         if (!res.alternatives) {
             noPathFound = true;
             addNoPathPair(currency3, currency1);
         }
+
         if (noPathFound) {
-            pathFind3.close();
             altMap = {};
             goNext();
             return;
@@ -242,9 +243,15 @@ function goNext() {
             handleAlt(dest_amount_3, raw);
         });
 
+        if (preferCurrencyList.length > 0) {
+            altMap = {};
+            preferCurrencyList = [];
+            setTimeout(goNext, 2000);
+            return;
+        }
+
         altMap = {};
         goNext();
-        pathFind3.close();
     });
     pathFind3.on('error', function(res) {
         altMap = {};
@@ -256,7 +263,7 @@ function goNext() {
 
     setTimeout(function() {
         pathFind3.create();
-    }, 100);
+    }, 200);
 }
 
 function buildDestAmount(currency) {
