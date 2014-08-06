@@ -37,10 +37,9 @@ var serverIndex = 0;
 var remote = new ripple.Remote(getRemoteOption());
 var Amount = ripple.Amount;
 
-var d = require('domain').create();
-d.on('error', function(er) {
-    console.log('Caught error!', er);
-});
+var motherAccount = config.motherAccount;
+var failedCurrencies = [];
+
 
 var account;
 var secret;
@@ -62,6 +61,11 @@ function decrypt(encrypted) {
 }
 
 function payment(type, alt1, alt2, factor, send_max_rate) {
+    alt1.dest_amount = alt1.dest_amount.replace(motherAccount, account);
+    alt1.source_amount = alt1.source_amount.replace(motherAccount, account);
+    alt2.dest_amount = alt2.dest_amount.replace(motherAccount, account);
+    alt2.source_amount = alt2.source_amount.replace(motherAccount, account);
+
     alt1.dest_amount = Amount.from_json(alt1.dest_amount);
     alt1.source_amount = Amount.from_json(alt1.source_amount);
 
@@ -153,18 +157,20 @@ function buildErrorRecord(dest_amount, source_amount, send_max_rate, rate) {
     };
 }
 
-var continueReceive = true;
-
 function txComplete(tx1Complete, tx2Complete, type, txs) {
     if (tx1Complete && tx2Complete) {
+        if (txs.length == 0) {
+            return;
+        }
         if (txs.length == 1) {
             Logger.log(true, "add failed record:", txs[0]);
             mongodbManager.saveFailedTransaction(txs[0]);
-            continueReceive = false;
-            setTimeout(function() {
-                continueReceive = true;
-            }, 60 * 1000)
         }
+
+        failedCurrencies = _.union(failedCurrencies, type.split(":"));
+        setTimeout(function() {
+            _.difference(failedCurrencies, type.split(":"));
+        }, 60 * 1000);
     }
 }
 
@@ -211,7 +217,8 @@ function remoteConnect() {
 
 console.log("step5:listen to profit socket!");
 fpio.on('fp', function(type, alt1, alt2, factor, send_max_rate) {
-    if (continueReceive) {
+    var currencyPair = type.split(":");
+    if (_.intersection(failedCurrencies, type.split(":")).length == 2) {
         emitter.once('payment', payment);
         emitter.emit('payment', type, alt1, alt2, factor, send_max_rate);
     }
