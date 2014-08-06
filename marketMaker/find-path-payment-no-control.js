@@ -218,7 +218,7 @@ function remoteConnect() {
 console.log("step5:listen to profit socket!");
 fpio.on('fp', function(type, alt1, alt2, factor, send_max_rate) {
     var currencyPair = type.split(":");
-    if (_.intersection(failedCurrencies, type.split(":")).length == 2) {
+    if (_.intersection(failedCurrencies, type.split(":")).length < 2) {
         emitter.once('payment', payment);
         emitter.emit('payment', type, alt1, alt2, factor, send_max_rate);
     }
