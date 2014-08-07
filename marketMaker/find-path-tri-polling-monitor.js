@@ -155,7 +155,7 @@ setInterval(resetNoPathPair, 1000 * 30 * 60);
 var currencyList = [];
 var pathFindDone = false;
 
-function goNext() {
+function goNext(prefer1, prefer2, prefer3) {
     pathFindDone = false;
 
     if (!currencySize) {
@@ -172,6 +172,12 @@ function goNext() {
         getNextIndex();
         goNext();
         return;
+    }
+
+    if (prefer1 && prefer2 && prefer3) {
+        currency1 = prefer1;
+        currency2 = prefer2;
+        currency3 = prefer3;
     }
 
     currencyList = [currency1, currency2, currency3];
@@ -246,7 +252,7 @@ function goNext() {
         if (preferCurrencyList.length > 0) {
             altMap = {};
             preferCurrencyList = [];
-            setTimeout(goNext, 2000);
+            setTimeout(doCurrentSearch, 2000);
             return;
         }
 
@@ -264,6 +270,10 @@ function goNext() {
     setTimeout(function() {
         pathFind3.create();
     }, 200);
+}
+
+function doCurrentSearch() {
+    goNext(currencyList[0], currencyList[1], currencyList[2]);
 }
 
 function buildDestAmount(currency) {
