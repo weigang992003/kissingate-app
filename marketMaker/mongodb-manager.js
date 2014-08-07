@@ -67,7 +67,14 @@ var raccountsSchema = mongoose.Schema({
     status: Number
 }, {
     collection: 'raccounts'
-})
+});
+
+var siteCookieSchema = mongoose.Schema({
+    cookie: String,
+    site: String
+}, {
+    collection: 'siteCookie'
+});
 
 
 var crypto = mongoose.model('crypto', cryptoSchema);
@@ -77,6 +84,7 @@ var gatewayInfo = mongoose.model('gatewayInfo', gatewayInfoSchema);
 var orderToXrp = mongoose.model('orderToXrp', orderToXrpSchema);
 var failedTransaction = mongoose.model('failedTransaction', failedTransactionSchema);
 var raccounts = mongoose.model('raccounts', raccountsSchema);
+var siteCookie = mongoose.model('siteCookie', siteCookieSchema);
 
 function getCryptoOption(callback) {
     crypto.findOne({
@@ -198,6 +206,17 @@ function getAccount(status, callback) {
     });
 }
 
+function getCookie(site, callback) {
+    siteCookie.findOne({
+            site: site
+        },
+        function(err, result) {
+            if (err) return handleError(err);
+            callback(result.cookie);
+        });
+}
+
+exports.getCookie = getCookie;
 exports.getAccount = getAccount;
 exports.getCryptoOption = getCryptoOption;
 exports.getNextSequence = getNextSequence;
