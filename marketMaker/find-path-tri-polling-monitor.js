@@ -36,7 +36,7 @@ var Amount = ripple.Amount;
 
 var account;
 console.log("step1:getAccount!")
-mongodbManager.getAccount(config.marketMaker, function(result) {
+mongodbManager.getAccount(0, function(result) {
     account = result.account;
     remoteConnect();
 });
@@ -71,7 +71,7 @@ function checkIfHaveProfit(alt, type) {
     var elements = type.split(":");
     var currency1 = elements[0];
     var currency2 = elements[1];
-    var currency3 = _.difference(currencyList, elements);
+    var currency3 = _.difference(currencyList, elements)[0];
 
     var alt1 = altMap[currency1 + ":" + currency2];
     var alt2 = altMap[currency2 + ":" + currency3];
@@ -83,12 +83,32 @@ function checkIfHaveProfit(alt, type) {
         var rate31 = alt3.rate;
 
         var profitRate = math.round(rate12 * rate23 * rate31, 3);
+        var send_max_rate = math.round(math.eval(1 / profitRate + "^(1/3)"), 3);
         console.log(currency1 + ":" + currency2 + ":" + currency3 + ": " + profitRate);
+
+        fpio.emit('fp', [currency1, currency2, currency3], [{
+            'dest_amount': alt1.dest_amount.to_json(),
+            'source_amount': alt1.source_amount.to_json(),
+            'paths': alt1.paths,
+            "rate": alt1.rate
+        }, {
+            'dest_amount': alt2.dest_amount.to_json(),
+            'source_amount': alt2.source_amount.to_json(),
+            'paths': alt2.paths,
+            "rate": alt2.rate
+        }, {
+            'dest_amount': alt3.dest_amount.to_json(),
+            'source_amount': alt3.source_amount.to_json(),
+            'paths': alt3.paths,
+            "rate": alt3.rate
+        }], 1, send_max_rate);
 
         if (profitRate < 1) {
             preferCurrencyList.push(currency1, currency2, currency3);
 
-            fpio.emit('fp', type, [{
+            var send_max_rate = math.round(math.eval(1 / profitRate + "^(1/3)"), 3);
+
+            fpio.emit('fp', [currency1, currency2, currency3], [{
                 'dest_amount': alt1.dest_amount.to_json(),
                 'source_amount': alt1.source_amount.to_json(),
                 'paths': alt1.paths,
@@ -103,9 +123,9 @@ function checkIfHaveProfit(alt, type) {
                 'source_amount': alt3.source_amount.to_json(),
                 'paths': alt3.paths,
                 "rate": alt3.rate
-            }], factor, send_max_rate);
+            }], 0.6, send_max_rate);
 
-            Logger.log(true, currency1 + ":" + currency2 + ":" + currency3 + ": " + profitRate);
+            Logger.log(true, currency1 + ":" + currency2 + ":" + currency3 + ": " + profitRate, "send_max_rate:" + send_max_rate);
         }
 
         altMap = {};
@@ -332,19 +352,19 @@ function handleAlt(dest_amount, raw) {
 function remoteConnect() {
     console.log("step3:connect to remote!")
     remote.connect(function() {
-        console.log("step4:prepare currencies!")
-        currencies = ["XRP", "CNY", "JPY", "USD", "EUR", "FMM", "BTC", "STR"];
-        currencySize = currencies.length;
-        console.log("step5:query find path!");
-        goNext();
-        // remote.requestAccountLines(account, function(err, result) {
-        //     if (err) console.log(err);
-        //     console.log("step4:prepare currencies!")
-        //     prepareCurrencies(result.lines);
+        // console.log("step4:prepare currencies!")
+        // currencies = ["XRP", "CNY", "JPY", "USD", "EUR", "FMM", "BTC", "STR"];
+        // currencySize = currencies.length;
+        // console.log("step5:query find path!");
+        // goNext();
+        remote.requestAccountLines(account, function(err, result) {
+            if (err) console.log(err);
+            console.log("step4:prepare currencies!")
+            prepareCurrencies(result.lines);
 
-        //     console.log("step5:query find path!");
-        //     goNext();
-        // });
+            console.log("step5:query find path!");
+            goNext();
+        });
 
         remote.on('error', function(error) {
             throw new Error("remote error!");

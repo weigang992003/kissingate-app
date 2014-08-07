@@ -1,8 +1,8 @@
 var Logger = require('./the-future-logger.js').TFLogger;
-Logger.getNewLog('find-path-payment');
+Logger.getNewLog('find-path-tri-payment');
 
 var io = require('socket.io-client');
-var fpio = io.connect('http://localhost:3000/fp');
+var fpio = io.connect('http://localhost:3001/fp');
 
 var math = require('mathjs');
 var _ = require('underscore');
@@ -45,7 +45,7 @@ d.on('error', function(er) {
 var account;
 var secret;
 console.log("step1:getAccount!")
-mongodbManager.getAccount(config.marketMaker, function(result) {
+mongodbManager.getAccount(0, function(result) {
     account = result.account;
     secret = result.secret;
     emitter.emit('decrypt', secret);
@@ -63,8 +63,8 @@ function decrypt(encrypted) {
 
 function payment(type, alts, factor, send_max_rate) {
     var alt1 = alts[0];
-    var alt1 = alts[1];
-    var alt2 = alts[2];
+    var alt2 = alts[1];
+    var alt3 = alts[2];
 
     alt1.dest_amount = Amount.from_json(alt1.dest_amount);
     alt1.source_amount = Amount.from_json(alt1.source_amount);
@@ -163,7 +163,7 @@ function payment(type, alts, factor, send_max_rate) {
 
     Logger.log(true, "make a payment(" + type + ")!",
         "tx1", tx1_dest_amount.to_human_full() + "/" + tx1_source_amount.to_human_full(),
-        "tx1", tx1_dest_amount.to_human_full() + "/" + tx1_source_amount.to_human_full(),
+        "tx2", tx2_dest_amount.to_human_full() + "/" + tx2_source_amount.to_human_full(),
         "tx3", tx3_dest_amount.to_human_full() + "/" + tx3_source_amount.to_human_full());
 
     tx1.submit();
@@ -180,37 +180,29 @@ function buildErrorRecord(dest_amount, source_amount, send_max_rate, rate) {
     };
 }
 
-function txComplete(tx1Complete, tx2Complete, tx3Complete, type, txs) {
-    if (tx1Complete && tx2Complete) {
+function txComplete(tx1Complete, tx2Complete, tx3Complete, currenceList, txs) {
+    if (tx1Complete && tx2Complete && tx3Complete) {
         if (txs.length == 1) {
             Logger.log(true, "add failed record:", txs);
             mongodbManager.saveFailedTransaction(txs[0]);
             setTimeout(function() {
-                reAddCurrencies(type);
+                reAddCurrencies(currenceList);
             }, 60 * 1000);
         } else if (txs.length == 2) {
             Logger.log(true, "add failed record:", txs);
             mongodbManager.saveFailedTransaction(txs[0]);
             mongodbManager.saveFailedTransaction(txs[1]);
             setTimeout(function() {
-                reAddCurrencies(type);
+                reAddCurrencies(currenceList);
             }, 60 * 1000);
         } else if (txs.length == 0) {
-            reAddCurrencies(type);
+            reAddCurrencies(currenceList);
         }
     }
 }
 
-function reAddCurrencies(type) {
-    var currencyPair = type.split(":");
-    currencies = _.union(currencies, currencyPair);
-}
-
-function reAddPaymentListener(tx1Complete, tx2Complete, type) {
-    if (tx1Complete && tx2Complete) {
-        var currencyPair = type.split(":");
-        currencies = _.union(currencies, currencyPair);
-    }
+function reAddCurrencies(currenceList) {
+    currencies = _.union(currencies, currenceList);
 }
 
 function getRemoteOption() {
@@ -255,11 +247,10 @@ function remoteConnect() {
 }
 
 console.log("step5:listen to profit socket!");
-fpio.on('fp', function(type, alts, factor, send_max_rate) {
-    var currencyPair = type.split(":");
-    if (_.contains(currencies, currencyPair[0]) && _.contains(currencies, currencyPair[1])) {
-        currencies = _.without(currencies, currencyPair[0], currencyPair[1]);
+fpio.on('fp', function(currenceList, alts, factor, send_max_rate) {
+    if (_.intersection(currencies, currenceList).length == 3) {
+        currencies = _.difference(currencies, currenceList);
         emitter.once('payment', payment);
-        emitter.emit('payment', type, alts, factor, send_max_rate);
+        emitter.emit('payment', currenceList, alts, factor, send_max_rate);
     }
 })
