@@ -87,6 +87,24 @@ function checkIfHaveProfit(alt, type) {
 
         if (profitRate < 1) {
             preferCurrencyList.push(currency1, currency2, currency3);
+
+            fpio.emit('fp', type, [{
+                'dest_amount': alt1.dest_amount.to_json(),
+                'source_amount': alt1.source_amount.to_json(),
+                'paths': alt1.paths,
+                "rate": alt1.rate
+            }, {
+                'dest_amount': alt2.dest_amount.to_json(),
+                'source_amount': alt2.source_amount.to_json(),
+                'paths': alt2.paths,
+                "rate": alt2.rate
+            }, {
+                'dest_amount': alt3.dest_amount.to_json(),
+                'source_amount': alt3.source_amount.to_json(),
+                'paths': alt3.paths,
+                "rate": alt3.rate
+            }], factor, send_max_rate);
+
             Logger.log(true, currency1 + ":" + currency2 + ":" + currency3 + ": " + profitRate);
         }
 
