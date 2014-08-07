@@ -43,6 +43,7 @@ mongodbManager.getCookie('btc38', function(cookie) {
                     console.log(err);
                 } else {
                     console.log("The file was saved!");
+                    process.exit(1);
                 }
             });
         });
