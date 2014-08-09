@@ -200,7 +200,10 @@ function createOrder(price, amount, alt, pathFind, coin) {
         if (body == "succ") {
             exchangeInRipple(alt);
         } else if (body == "wrongmd5") {
-            throwErrorToExit("md5 is expired!!!! please update it!!!");
+            throwErrorToExit(body);
+        } else {
+            Logger.log(true, form);
+            throwErrorToExit(body);
         }
     });
 }
