@@ -32,6 +32,10 @@ var remote_options = remote_options = {
         host: 's-west.ripple.com',
         port: 443,
         secure: true
+    }, {
+        host: 's1.ripple.com',
+        port: 443,
+        secure: true
     }]
 };
 
@@ -90,6 +94,7 @@ function checkOnBtc38(cnyValue) {
 }
 
 var trade = false;
+var pathFind;
 
 function checkInRipple(btc38Price, cnyValue, amount) {
     var dest_amount = Amount.from_json({
@@ -98,7 +103,11 @@ function checkInRipple(btc38Price, cnyValue, amount) {
         value: cnyValue + ""
     });
 
-    var pathFind = remote.pathFind(account, account, dest_amount, [buildSrcCurrencies("XRP")]);
+    if (pathFind) {
+        pathFind.close();
+    }
+
+    pathFind = remote.pathFind(account, account, dest_amount, [buildSrcCurrencies("XRP")]);
 
     var times = 0;
     var trade = false;
@@ -126,11 +135,10 @@ function checkInRipple(btc38Price, cnyValue, amount) {
             var rPrice = dest_amount.ratio_human(alt.source_amount).to_human();
 
             rPrice = parseFloat(rPrice);
+            console.log("btc38 price:" + btc38Price + " ripple price:" + rPrice);
             if (rPrice > btc38Price) {
-                console.log("btc38 price:" + btc38Price + " ripple price:" + rPrice);
                 console.log("ripple amount:" + parseFloat(raw.source_amount / drops) + " exchange btc38 amount:" + amount);
             } else {
-                console.log("there is no profit in this way,we should check in another way!!");
                 return;
             }
 
@@ -229,24 +237,39 @@ function exchangeInRipple(alt) {
 
 var xrpBalance = 0;
 var reserve = 10000 * drops;
-remote.connect(function() {
-    console.log("remote connected!");
 
-    remote.requestAccountInfo(account, function(err, res) {
-        if (err) {
-            throwErrorToExit("error happen when query account info!!!");
-            return;
-        }
+remoteConnect();
 
-        xrpBalance = res.account_data.Balance;
-        xrpBalance = xrpBalance - reserve;
-        console.log("we have Balance in Ripple:" + xrpBalance);
-        if (xrpBalance > 0) {
-            checkOnBtc38();
-        }
+function remoteConnect() {
+    remote.connect(function() {
+        console.log("remote connected!");
+
+        remote.requestAccountInfo(account, function(err, res) {
+            if (err) {
+                throwErrorToExit("error happen when query account info!!!");
+                return;
+            }
+
+            xrpBalance = res.account_data.Balance;
+            xrpBalance = xrpBalance - reserve;
+            console.log("we have Balance in Ripple:" + xrpBalance);
+            if (xrpBalance > 0) {
+                checkOnBtc38();
+
+                setInterval(checkOnBtc38, 1000 * 60);
+            }
+        });
+
+        remote.on('error', function(error) {
+            throw new Error("remote error!");
+        });
+
+        remote.on('disconnect', function() {
+            remote = new ripple.Remote(remote_options);
+            remoteConnect();
+        });
     });
-});
-
+}
 
 function throwErrorToExit(err) {
     throw new Error(err);
