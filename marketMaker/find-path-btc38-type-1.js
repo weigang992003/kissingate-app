@@ -1,5 +1,5 @@
 var Logger = require('./the-future-logger.js').TFLogger;
-Logger.getNewLog('find-path-btc38');
+Logger.getNewLog('find-path-btc38-type-1');
 
 var http = require('http');
 var math = require('mathjs');
