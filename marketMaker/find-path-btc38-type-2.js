@@ -146,7 +146,7 @@ function checkInRipple(btc38Price, cnyValue, amount) {
 
                 Logger.log(true, "sell xrp on btc38 with price:" + btc38Price + "(CNY)", "buy xrp in ripple with price" + rPrice + "(CNY)");
 
-                createOrder(btc38Price, amount, alt, pathFind);
+                // createOrder(btc38Price, amount, alt, pathFind);
             }
         });
     });
