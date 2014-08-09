@@ -45,7 +45,31 @@ mongodbManager.getAccount(config.mother, function(result) {
 })
 
 
+function paymentInRipple(alt) {
+    var tx = remote.transaction();
 
+    tx.paths(alt.paths);
+    tx.payment(account, account, alt.dest_amount);
+    tx.send_max(alt.source_amount.product_human(1.01));
+
+    Logger.log(true, "tx", alt.dest_amount.to_human_full() + "/" + alt.source_amount.to_human_full());
+
+    if (secret) {
+        tx.secret(secret);
+    } else {
+        return;
+    }
+
+    tx.on('proposed', function(res) {
+        console.log("tx success!");
+    });
+
+    tx.on('error', function(res) {
+        Logger.log(true, res);
+    });
+
+    tx.submit();
+}
 
 remote.connect(function() {
     var dest_amount = Amount.from_json("1000000");
@@ -61,62 +85,37 @@ remote.connect(function() {
 
         var alternatives = _.each(message.alternatives, function(raw) {
             var alt = {};
-            alt.amount = Amount.from_json(raw.source_amount);
-            alt.rate = alt.amount.ratio_human(dest_amount).to_human();
-            alt.send_max = alt.amount.product_human(Amount.from_json('0.5'));
+            alt.dest_amount = dest_amount;
+            alt.source_amount = Amount.from_json(raw.source_amount);
             alt.paths = raw.paths_computed ? raw.paths_computed : raw.paths_canonical;
 
-            // var tx = remote.transaction();
-
-            // tx.payment(account, account, dest_amount);
-            // tx.send_max(alt.send_max);
-            // tx.paths(alt.paths);
-            // tx.setFlags("PartialPayment");
-
-            // if (secret) {
-            //     tx.secret(secret);
-            // } else {
-            //     return;
-            // }
-
-            // tx.on('proposed', function(res) {
-            //     Logger.log(true, res);
-            // });
-            // tx.on('success', function(res) {
-            //     Logger.log(true, res);
-            // });
-            // tx.on('error', function(res) {
-            //     Logger.log(true, res);
-            // });
-            // console.log("submit");
-
-            // if (!trade) {
-            //     trade = true;
-            //     tx.submit();
-            // }
+            if (!trade) {
+                trade = true;
+                paymentInRipple(alt);
+            }
         });
     })
 
     pathFind.create();
 
-    var dest_amount_1 = {
-        "currency": "ILS",
-        "issuer": account,
-        "value": "1"
-    };
+    // var dest_amount_1 = {
+    //     "currency": "ILS",
+    //     "issuer": account,
+    //     "value": "1"
+    // };
 
-    remote.requestRipplePathFind(account, account, "1/ILS/" + account, [{
-        "currency": "JPY",
-        "issuer": account
-    }], function(res) {
-        console.log(res.alternatives);
-        var raw = res.alternatives[0];
-        if (raw) {
-            var rate = Amount.from_json(raw.source_amount).ratio_human(Amount.from_json(dest_amount_1)).to_human().replace(',', '');
+    // remote.requestRipplePathFind(account, account, "1/ILS/" + account, [{
+    //     "currency": "JPY",
+    //     "issuer": account
+    // }], function(res) {
+    //     console.log(res.alternatives);
+    //     var raw = res.alternatives[0];
+    //     if (raw) {
+    //         var rate = Amount.from_json(raw.source_amount).ratio_human(Amount.from_json(dest_amount_1)).to_human().replace(',', '');
 
-            console.log(rate);
-        }
-    });
+    //         console.log(rate);
+    //     }
+    // });
     // pathFind1.on('update', function(res) {
 
     // });

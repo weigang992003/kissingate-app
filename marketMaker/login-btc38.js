@@ -8,7 +8,7 @@ mongodbManager.getCookie('btc38', function(cookie) {
     getBtcHomePage(cookie);
 });
 
-function getBtcHomePage(cookie){
+function getBtcHomePage(cookie) {
     console.log(cookie);
     headers = {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:30.0) Gecko/20100101 Firefox/30.0',
@@ -54,4 +54,6 @@ function getBtcHomePage(cookie){
     }).on('error', function(e) {
         console.log("Got error: " + e.message);
     });
+
+    options['path'] = '/getTradeInfo.php?coin_name=XRP'
 }

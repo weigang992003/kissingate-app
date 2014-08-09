@@ -110,8 +110,13 @@ function queryFindPath(pathFindMap, transactionMap) {
 
         var remo = new ripple.Remote(remote_options);
         remo.connect(function() {
-            var pf = remo.pathFind(account, account, dest_amount, pathFind.src_currencies)
+            var pf = remo.pathFind(account, account, dest_amount, pathFind.src_currencies);
+            var times = 0;
             pf.on("update", function(message) {
+                times++;
+                if (times < 3) {
+                    return;
+                }
                 var alternatives = message.alternatives;
 
                 alternatives = _.each(alternatives, function(raw) {
