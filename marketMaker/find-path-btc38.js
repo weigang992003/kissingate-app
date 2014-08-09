@@ -8,6 +8,7 @@ var events = require('events');
 
 var request = require('request');
 var config = require('./config.js');
+var querystring = require('querystring');
 var crypto = require('./crypto-util.js');
 var ripple = require('../src/js/ripple');
 var jsbn = require('../src/js/jsbn/jsbn.js');
@@ -40,7 +41,7 @@ var Amount = ripple.Amount;
 
 var account;
 var secret;
-mongodbManager.getAccount(config.mother, function(result) {
+mongodbManager.getAccount(0, function(result) {
     account = result.account;
     crypto.decrypt(result.secret, function(result) {
         secret = result;
@@ -49,8 +50,8 @@ mongodbManager.getAccount(config.mother, function(result) {
 
 var md5;
 var cookie;
-mongodbManager.getCookie('btc38', function(cookie) {
-    cookie = cookie;
+mongodbManager.getCookie('btc38', function(result) {
+    cookie = result;
     getMD5(cookie);
 });
 
@@ -60,6 +61,7 @@ function getMD5(cookie) {
         item = item.trim();
         if (item.indexOf("BTC38_md5") > -1) {
             md5 = item.split("=")[1];
+            console.log('md5:' + md5);
         }
     })
 }
@@ -87,7 +89,6 @@ function checkOnBtc38(cnyValue) {
     });
 }
 
-
 var trade = false;
 
 function checkInRipple(btc38Price, cnyValue, amount) {
@@ -100,6 +101,7 @@ function checkInRipple(btc38Price, cnyValue, amount) {
     var pathFind = remote.pathFind(account, account, dest_amount, [buildSrcCurrencies("XRP")]);
 
     var times = 0;
+    var trade = false;
     pathFind.on("update", function(message) {
         times++;
         if (times < 3) {
@@ -115,28 +117,34 @@ function checkInRipple(btc38Price, cnyValue, amount) {
             alt.source_amount = Amount.from_json(raw.source_amount);
             alt.paths = raw.paths_computed ? raw.paths_computed : raw.paths_canonical;
 
+            if (xrpBalance < raw.source_amount) {
+                throwErrorToExit("we don't have enough balance to trade,we total have:" + xrpBalance / drops);
+                pathFind.close();
+                return;
+            }
+
             var rPrice = dest_amount.ratio_human(alt.source_amount).to_human();
 
             rPrice = parseFloat(rPrice);
             if (rPrice > btc38Price) {
                 console.log("btc38 price:" + btc38Price + " ripple price:" + rPrice);
                 console.log("ripple amount:" + parseFloat(raw.source_amount / drops) + " exchange btc38 amount:" + amount);
-                return;
             } else {
                 console.log("there is no profit in this way,we should check in another way!!");
+                return;
             }
 
-            if (!trade) {
-                createOrder(btc38Price, amount, alt);
-            }
+            if (parseInt(raw.source_amount) < (amount * 0.985 * drops) && !trade) {
+                trade = true;
+                pathFind.close();
 
+                Logger.log(true, "buy xrp from btc38 with " + cnyValue + "(CNY)", "sell CNY in ripple with " + raw.source_amount / drops,
+                    "ripple amount:" + parseFloat(raw.source_amount / drops) + " exchange btc38 amount:" + amount);
 
-
-            if (parseInt(raw.source_amount) < (amount * 0.99 * drops)) {
-                Logger.log(true, "buy xrp from btc38 with " + cnyValue + "(CNY)", "sell CNY in ripple with " + raw.source_amount / drops);
+                createOrder(btc38Price, amount, alt, pathFind);
             }
         });
-    })
+    });
 
     pathFind.create();
 
@@ -150,7 +158,7 @@ function buildSrcCurrencies(currency) {
     }
 }
 
-function createOrder(price, amount, alt, coin) {
+function createOrder(price, amount, alt, pathFind, coin) {
     if (!md5 || !secret) {
         return;
     }
@@ -165,18 +173,34 @@ function createOrder(price, amount, alt, coin) {
         check: md5
     }
 
+    console.log(form);
+
+    var headers = {
+        "Content-Length": querystring.stringify(form).length,
+        "Referer": "http://m.btc38.com/tradeInfo.php?coin_name=xrp",
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "X-Requested-With": "XMLHttpRequest",
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:30.0) Gecko/20100101 Firefox/30.0',
+        "Cookie": cookie
+    };
+
+    console.log(headers);
+
     request.post({
         url: url,
         form: form,
         headers: headers
     }, function(e, r, body) {
+        console.log(body);
         if (body == "succ") {
-            sellInRippleNetwork(alt);
+            exchangeInRipple(alt);
+        } else if (body == "wrongmd5") {
+            throwErrorToExit("md5 is expired!!!! please update it!!!");
         }
     });
 }
 
-function sellInRippleNetwork(alt) {
+function exchangeInRipple(alt) {
     var tx = remote.transaction();
 
     tx.paths(alt.paths);
@@ -192,6 +216,7 @@ function sellInRippleNetwork(alt) {
     }
 
     tx.on('proposed', function(res) {
+        Logger.log(true, res);
         console.log("tx success!");
     });
 
@@ -202,14 +227,27 @@ function sellInRippleNetwork(alt) {
     tx.submit();
 }
 
+var xrpBalance = 0;
+var reserve = 10000 * drops;
 remote.connect(function() {
     console.log("remote connected!");
-    checkOnBtc38();
 
-    setInterval(checkOnBtc38, 1000 * 60);
+    remote.requestAccountInfo(account, function(err, res) {
+        if (err) {
+            throwErrorToExit("error happen when query account info!!!");
+            return;
+        }
+
+        xrpBalance = res.account_data.Balance;
+        xrpBalance = xrpBalance - reserve;
+        console.log("we have Balance in Ripple:" + xrpBalance);
+        if (xrpBalance > 0) {
+            checkOnBtc38();
+        }
+    });
 });
 
 
-function throwDisconnectError() {
-    throw new Error('we are disconnect with ripple network!!!');
+function throwErrorToExit(err) {
+    throw new Error(err);
 }

@@ -23,7 +23,8 @@
         "forever": "~0.11.1",
         "socket.io": "~1.0.6",
         "socket.io-client": "~1.0.6",
-        "request": "~2.40.0"
+        "request": "~2.40.0",
+        "querystring": "~0.2.0"
     },
     "devDependencies": {
         "grunt": "~0.4.1",
