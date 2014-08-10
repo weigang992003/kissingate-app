@@ -1,5 +1,5 @@
 var crypto = require('crypto');
-var mongodbManager = require('./mongodb-manager.js');
+var mongodbManager = require('./the-future-manager.js');
 
 function crypt(text, callback) {
     mongodbManager.getCryptoOption(function(result) {

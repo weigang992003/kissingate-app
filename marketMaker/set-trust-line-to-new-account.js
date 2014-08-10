@@ -52,7 +52,7 @@
              if (err) console.log(err);
              newaLines = result.lines;
              remote.requestAccountLines(mother, function(err, result) {
-                 if (err) console.log(err);
+                if (err) console.log(err);
                  lines = result.lines;
                  getNext();
              });

@@ -1,7 +1,7 @@
 var fs = require('fs');
 var http = require('http');
 var iconv = require('iconv-lite');
-var mongodbManager = require('./mongodb-manager.js');
+var mongodbManager = require('./the-future-manager.js');
 
 var cookie;
 mongodbManager.getCookie('btc38', function(cookie) {
@@ -23,6 +23,7 @@ function getBtcHomePage(cookie) {
 
     http.get(options, function(res) {
         console.log("Got response: " + res.statusCode, res.headers);
+
         var buffers = [],
             size = 0;
         res.on('data', function(buffer) {

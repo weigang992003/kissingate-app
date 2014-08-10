@@ -6,13 +6,14 @@ var config = require('./config.js');
 var ripple = require('../src/js/ripple');
 var crypto = require('./crypto-util.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
-var mongodbManager = require('./mongodb-manager.js');
+var mongodbManager = require('./the-future-manager.js');
 var Logger = require('./the-future-logger.js').TFLogger;
 Logger.getNewLog("keep-currency-balance-solution-1");
 
 var emitter = new events.EventEmitter();
 emitter.once('decrypt', decrypt);
 emitter.once('remoteConnect', remoteConnect);
+emitter.on('createOffer', createOffer);
 
 var remote_options = remote_options = {
     // see the API Reference for available options
@@ -85,7 +86,7 @@ function averageBalance(lines) {
     _.each(currencies, function(currency) {
         if (lines[currency].length > 1) {
             lines[currency] = _.sortBy(lines[currency], function(line) {
-                return line.limit;
+                return parseInt(line.limit);
             });
 
             var limit = _.last(lines[currency]).limit;
@@ -124,15 +125,30 @@ function averageBalance(lines) {
                             'value': low.balance,
                         };
                         if (!ifOfferExist(offers, taker_pays, taker_gets)) {
-                            createOffer(taker_pays, taker_gets);
+                            offersCreate.push({
+                                'taker_pays': taker_pays,
+                                'taker_gets': taker_gets
+                            })
                         }
                     });
                 }
             });
         }
     });
+
+    goNext();
 }
 
+var next = 0;
+var offersCreate = [];
+
+function goNext() {
+    if (offersCreate.length > next) {
+        emitter.emit('createOffer', offersCreate[next].taker_pays, offersCreate[next].taker_gets);
+    } else {
+        throw new Error('we are done!!!!');
+    }
+}
 
 function createOffer(taker_pays, taker_gets) {
     var tx = remote.transaction();
@@ -147,6 +163,8 @@ function createOffer(taker_pays, taker_gets) {
     tx.offerCreate(account, taker_pays, taker_gets);
     tx.on("success", function(res) {
         console.log("create offer success");
+        next++;
+        goNext();
     });
     tx.on("error", function(res) {
         console.log(res);

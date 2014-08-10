@@ -3,7 +3,7 @@ var _ = require('underscore');
 var config = require('./config.js');
 var ripple = require('../src/js/ripple');
 var jsbn = require('../src/js/jsbn/jsbn.js');
-var mongodbManager = require('./mongodb-manager.js');
+var mongodbManager = require('./the-future-manager.js');
 
 var Logger = require('./the-future-logger.js').TFLogger;
 var Market = require('./xrp-related-market.js').XRMarket;

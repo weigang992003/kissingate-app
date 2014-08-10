@@ -9,7 +9,7 @@ var events = require('events');
 var request = require('request');
 var querystring = require('querystring');
 var jsbn = require('../src/js/jsbn/jsbn.js');
-var mongodbManager = require('./mongodb-manager.js');
+var mongodbManager = require('./the-future-manager.js');
 
 var md5;
 var cookie;

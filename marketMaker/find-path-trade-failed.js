@@ -12,7 +12,7 @@ var config = require('./config.js');
 var ripple = require('../src/js/ripple');
 var crypto = require('./crypto-util.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
-var mongoManager = require('./mongodb-manager.js');
+var mongoManager = require('./the-future-manager.js');
 
 
 var emitter = new events.EventEmitter();
