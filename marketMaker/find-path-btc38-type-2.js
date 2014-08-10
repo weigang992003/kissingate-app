@@ -140,13 +140,14 @@ function checkInRipple(btc38Price, cnyValue, amount) {
                 return;
             }
 
+            console.log("profit rate is :" + (btc38Price - rPrice) / rPrice);
             if ((btc38Price - rPrice) / rPrice > 0.015 && !trade) {
                 trade = true;
                 pathFind.close();
 
                 Logger.log(true, "sell xrp on btc38 with price:" + btc38Price + "(CNY)", "buy xrp in ripple with price" + rPrice + "(CNY)");
 
-                // createOrder(btc38Price, amount, alt, pathFind);
+                createOrder(btc38Price, amount, alt, pathFind);
             }
         });
     });
