@@ -87,26 +87,33 @@ function queryBook(currency1, gateway1, currency2, gateway2) {
 
     var asks = remote.book(currency1, gateway1, currency2, gateway2);
     asks.offers(function(offers) {
-        orderBook.askNum = offers.length;
         if (offers.length > 0) {
+            orderBook.askNum = offers.length;
+
             if (offers[0].quality) {
-
+                orderBook.askPrice = offers[0].quality;
+            } else {
+                var taker_pays = Amount.from_json(offers[0].TakerPays);
+                var taker_gets = Amount.from_json(offers[0].TakerGets);
+                var askPrice = taker_pays.ratio_human(taker_gets).to_human().replace(',', '');
+                orderBook.askPrice = askPrice;
             }
-            var taker_pays = Amount.from_json(offers[0].TakerPays);
-            var taker_gets = Amount.from_json(offers[0].TakerGets);
-            var rate = taker_gets.ratio_human(taker_pays).to_human().replace(',', '');
-            console.log(rate);
-            console.log(offers[0].quality);
-            close();
-
-            alt.dest_amount = Amount.from_json(dest_amount);
-            alt.source_amount = Amount.from_json(raw.source_amount);
-            alt.rate = alt.source_amount.ratio_human(dest_amount).to_human().replace(',', '');
         }
     });
     var bids = remote.book(currency2, gateway2, currency1, gateway1);
     bids.offers(function(offers) {
-        orderBook.bidNum = offers.length;
+        if (offers.length > 0) {
+            orderBook.bidNum = offers.length;
+
+            if (offers[0].quality) {
+                orderBook.bidPrice = offers[0].quality;
+            } else {
+                var taker_pays = Amount.from_json(offers[0].TakerPays);
+                var taker_gets = Amount.from_json(offers[0].TakerGets);
+                var bidPrice = taker_pays.ratio_human(taker_gets).to_human().replace(',', '');
+                orderBook.bidPrice = bidPrice;
+            }
+        }
     });
 }
 

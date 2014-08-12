@@ -7,7 +7,7 @@
  var crypto = require('./crypto-util.js');
  var ripple = require('../src/js/ripple');
  var jsbn = require('../src/js/jsbn/jsbn.js');
- var mongodbManager = require('./mongodb-manager.js');
+ var mongodbManager = require('./the-future-manager.js');
 
  var Logger = require('./the-future-logger.js').TFLogger;
 
@@ -39,7 +39,7 @@
 
  var newa;
  var secret;
- mongodbManager.getAccount(config.trustLine, function(account) {
+ mongodbManager.getAccount(1, function(account) {
      newa = account.account;
      crypto.decrypt(account.secret, function(decryptText) {
          secret = decryptText;
@@ -52,7 +52,7 @@
              if (err) console.log(err);
              newaLines = result.lines;
              remote.requestAccountLines(mother, function(err, result) {
-                if (err) console.log(err);
+                 if (err) console.log(err);
                  lines = result.lines;
                  getNext();
              });
