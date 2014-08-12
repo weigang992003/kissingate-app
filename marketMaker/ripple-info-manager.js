@@ -1,6 +1,5 @@
 var _ = require('underscore');
 var mongoose = require('mongoose');
-
 mongoose.connect('mongodb://localhost/ripple-info');
 
 
@@ -9,6 +8,7 @@ var currenciesSchema = mongoose.Schema({
     Account: String,
     trade_rate: Number,
     account_rate: Number,
+    transfer_rate_percent: Number,
     balance: Number,
     trust_line_limit_peer: Number,
     domain: String,
@@ -45,5 +45,27 @@ function saveOrderBook(record) {
     });
 }
 
+function getAllGatewaysWithRate(callback) {
+    currencies.find({
+        transfer_rate_percent: {
+            $gt: 0
+        }
+    }, "Account domain transfer_rate_percent", {}, function(err, result) {
+        if (err) return handleError(err);
+        return callback(result);
+    })
+}
+
 exports.getAllCurrencies = getAllCurrencies;
 exports.saveOrderBook = saveOrderBook;
+
+
+getAllGatewaysWithRate(function(result) {
+    var gateways = _.groupBy(result, function(e) {
+        return e.Account;
+    });
+
+    _.each(_.keys(gateways), function(account) {
+        console.log(gateways[account][0]);
+    })
+});
