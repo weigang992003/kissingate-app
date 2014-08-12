@@ -19,7 +19,8 @@ var currenciesSchema = mongoose.Schema({
 
 var orderBookSchema = mongoose.Schema({
     currencyPair: [String],
-    gatewayPair: [String],
+    gAddressPair: [String],
+    gNamePair: [String],
     askNum: Number,
     bidNum: Number,
     askPrice: String,
@@ -32,17 +33,58 @@ var currencies = mongoose.model('currencies', currenciesSchema);
 var orderBook = mongoose.model('orderBook', orderBookSchema);
 
 function getAllCurrencies(callback) {
-    currencies.find({}, "currency Account", {}, function(err, result) {
+    currencies.find({
+        trade_rate: {
+            $gt: 500
+        },
+        trust_line_amount: {
+            $gt: 100
+        }
+    }, "currency Account domain", {}, function(err, result) {
         if (err) return handleError(err);
         return callback(result);
     })
 }
 
 function saveOrderBook(record) {
-    var row = new orderBook(record);
-    row.save(function(err) {
-        if (err) return handleError(err);
-    });
+    var currency1 = record.currencyPair[0];
+    var currency2 = record.currencyPair[1];
+
+    var gAddress1 = record.gAddressPair[0];
+    var gAddress2 = record.gAddressPair[1];
+
+    orderBook.findOne({
+        $or: [{
+            currencyPair: [currency1, currency2],
+            gAddressPair: [gAddress1, gAddress2]
+        }, {
+            currencyPair: [currency2, currency1],
+            gAddressPair: [gAddress2, gAddress1]
+        }, {
+            currencyPair: [currency2, currency1],
+            gAddressPair: [gAddress1, gAddress2]
+        }, {
+            currencyPair: [currency1, currency2],
+            gAddressPair: [gAddress2, gAddress1]
+        }]
+    }, function(err, result) {
+        if (err) handleError(err);
+        if (result) {
+            result.currencyPair = record.currencyPair;
+            result.gAddressPair = record.gAddressPair;
+            result.gNamePair = record.gNamePair;
+            result.askNum = record.askNum;
+            result.askPrice = record.askPrice;
+            result.bidNum = record.bidNum;
+            result.bidPrice = record.bidPrice;
+            result.save();
+        } else {
+            var row = new orderBook(record);
+            row.save(function(err) {
+                if (err) return handleError(err);
+            });
+        }
+    })
 }
 
 function getAllGatewaysWithRate(callback) {
@@ -56,16 +98,16 @@ function getAllGatewaysWithRate(callback) {
     })
 }
 
-exports.getAllCurrencies = getAllCurrencies;
 exports.saveOrderBook = saveOrderBook;
+exports.getAllCurrencies = getAllCurrencies;
 
 
-getAllGatewaysWithRate(function(result) {
-    var gateways = _.groupBy(result, function(e) {
-        return e.Account;
-    });
+// getAllGatewaysWithRate(function(result) {
+//     var gateways = _.groupBy(result, function(e) {
+//         return e.Account;
+//     });
 
-    _.each(_.keys(gateways), function(account) {
-        console.log(gateways[account][0]);
-    })
-});
+//     _.each(_.keys(gateways), function(account) {
+//         console.log(gateways[account][0]);
+//     })
+// });
