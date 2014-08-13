@@ -50,6 +50,14 @@ exports.currency_unit = {
     "XAU": "0.00012"
 };
 
+exports.transfer_rates = {
+    'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B': 0.2,
+    'r9Dr5xwkeLegBeXq6ujinjSBLQzQ1zQGjH': 0.2,
+    'rPDXxSZcuVL3ZWoyU82bcde3zwvmShkRyF': 0.025,
+    'rNPRNzBB92BVpAhhZr4iXDTveCgV5Pofm9': 0.2,
+    'rfYv1TXnwgDDK4WQNbFALykYuEBnrR4pDX': 0.15
+}
+
 exports.mother = -1;
 exports.newAccount = 0;
 exports.tradeFailed = 1;

@@ -53,6 +53,17 @@ function getAllCurrencies(callback) {
     })
 }
 
+function getAllCurrenciesByAccountRate(callback) {
+    currencies.find({
+        account_rate: {
+            $gt: 10000
+        }
+    }, "currency Account domain", {}, function(err, result) {
+        if (err) return handleError(err);
+        return callback(result);
+    })
+}
+
 function saveOrderBook(record) {
     orderBook.findOne({
         $or: [{
@@ -89,6 +100,12 @@ function getAllGatewaysWithRate(callback) {
     currencies.find({
         transfer_rate_percent: {
             $gt: 0
+        },
+        trade_rate: {
+            $gt: 500
+        },
+        trust_line_amount: {
+            $gt: 100
         }
     }, "Account domain transfer_rate_percent", {}, function(err, result) {
         if (err) return handleError(err);
@@ -98,6 +115,7 @@ function getAllGatewaysWithRate(callback) {
 
 exports.saveOrderBook = saveOrderBook;
 exports.getAllCurrencies = getAllCurrencies;
+exports.getAllCurrenciesByAccountRate = getAllCurrenciesByAccountRate;
 
 
 // getAllGatewaysWithRate(function(result) {
