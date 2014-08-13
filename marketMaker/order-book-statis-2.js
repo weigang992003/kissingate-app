@@ -76,7 +76,7 @@ var loop = false;
 function goNextGateway() {
     if (gIndexStack[0] == 1 && gIndexStack[1] == 0) {
         console.log("orderBook build done!");
-        return;
+        process.exit(1);
     } else {
         g1Address = gAddresses[gIndexStack[0]];
         g1Currencies = gatewayMap[g1Address];
