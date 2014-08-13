@@ -55,10 +55,10 @@ var gateways;
 var currencyIndex = 0;
 var currency1;
 var currency2;
-var gAddress1;
-var gAddress2;
-var gName1;
-var gName2;
+var address1;
+var address2;
+var domain1;
+var domain2;
 
 function goNextCurrency() {
     if (currencies.length > currencyIndex) {
@@ -77,34 +77,36 @@ function goNextCurrency() {
 }
 
 function goNextGateway() {
-    var indexStack = nextGIndexStack();
-    if (indexStack[0] == 1 && indexStack[1] == 0) {
-        currencyIndex++;
-        goNextCurrency();
-    }
-
     currency1 = currencies[currencyIndex];
     currency2 = currencies[currencyIndex];
-    gAddress1 = gateways[indexStack[0]].Account;
-    gAddress2 = gateways[indexStack[1]].Account;
-    gName1 = gateways[indexStack[0]].domain;
-    gName2 = gateways[indexStack[1]].domain;
-    console.log(gName1, gName2);
-    emitter.emit('queryBook', currency1, gAddress1, gName1, currency2, gAddress2, gName2);
+    address1 = gateways[gIndexStack[0]].Account;
+    address2 = gateways[gIndexStack[1]].Account;
+    domain1 = gateways[gIndexStack[0]].domain;
+    domain2 = gateways[gIndexStack[1]].domain;
+    console.log(currency1, ":", currency2);
+    console.log(domain1, ":", domain2);
+    emitter.emit('queryBook', currency1, address1, domain1, currency2, address2, domain2);
 }
 
-function queryBook(currency1, gAddress1, gName1, currency2, gAddress2, gName2) {
+function queryBook(currency1, address1, domain1, currency2, address2, domain2) {
     var orderBook = {
-        currencyPair: [currency1, currency2],
-        gAddressPair: [gAddress1, gAddress2],
-        gNamePair: [gName1, gName2],
+        gateway1: {
+            domain: domain1,
+            address: address1,
+            currency: currency1
+        },
+        gateway2: {
+            domain: domain2,
+            address: address2,
+            currency: currency2
+        },
         askNum: 0,
         askPrice: 0,
         bidNum: 0,
         bidPrice: 0
     }
 
-    var asks = remote.book(currency1, gAddress1, currency2, gAddress2);
+    var asks = remote.book(currency1, address1, currency2, address2);
     asks.offers(function(offers) {
         console.log("asks offers return;");
         if (offers.length > 0) {
@@ -121,7 +123,7 @@ function queryBook(currency1, gAddress1, gName1, currency2, gAddress2, gName2) {
         }
     });
 
-    var bids = remote.book(currency2, gAddress2, currency1, gAddress1);
+    var bids = remote.book(currency2, address2, currency1, address1);
     bids.offers(function(offers) {
         console.log("bids offers return;");
         if (offers.length > 0) {
@@ -139,6 +141,19 @@ function queryBook(currency1, gAddress1, gName1, currency2, gAddress2, gName2) {
             rippleInfo.saveOrderBook(orderBook);
         }
 
+        if (gSize == 2) {
+            currencyIndex++;
+            goNextCurrency();
+            return;
+        }
+
+        var indexStack = nextGIndexStack();
+        if ((indexStack[0] == 1 && indexStack[1] == 0)) {
+            currencyIndex++;
+            goNextCurrency();
+            return;
+        }
+
         emitter.emit('goNextGateway');
     });
 }
@@ -146,13 +161,9 @@ function queryBook(currency1, gAddress1, gName1, currency2, gAddress2, gName2) {
 
 
 var gSize = 0;
-var gIndexStack;
+var gIndexStack = [1, 0];
 
 function nextGIndexStack() {
-    if (!gIndexStack) {
-        gIndexStack = [1, 0];
-        return gIndexStack;
-    }
     var index = _.first(gIndexStack);
     gIndexStack = _.rest(gIndexStack);
     index = (index + 1) % gSize;
