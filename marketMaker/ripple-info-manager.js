@@ -18,9 +18,16 @@ var currenciesSchema = mongoose.Schema({
 });
 
 var orderBookSchema = mongoose.Schema({
-    currencyPair: [String],
-    gAddressPair: [String],
-    gNamePair: [String],
+    gateway1: {
+        domain: String,
+        address: String,
+        currency: String
+    },
+    gateway2: {
+        domain: String,
+        address: String,
+        currency: String
+    },
     askNum: Number,
     bidNum: Number,
     askPrice: String,
@@ -47,32 +54,23 @@ function getAllCurrencies(callback) {
 }
 
 function saveOrderBook(record) {
-    var currency1 = record.currencyPair[0];
-    var currency2 = record.currencyPair[1];
-
-    var gAddress1 = record.gAddressPair[0];
-    var gAddress2 = record.gAddressPair[1];
-
     orderBook.findOne({
         $or: [{
-            currencyPair: [currency1, currency2],
-            gAddressPair: [gAddress1, gAddress2]
+            "gateway1.address": record.gateway2.address,
+            "gateway1.currency": record.gateway2.currency,
+            "gateway2.address": record.gateway1.address,
+            "gateway2.currency": record.gateway1.currency
         }, {
-            currencyPair: [currency2, currency1],
-            gAddressPair: [gAddress2, gAddress1]
-        }, {
-            currencyPair: [currency2, currency1],
-            gAddressPair: [gAddress1, gAddress2]
-        }, {
-            currencyPair: [currency1, currency2],
-            gAddressPair: [gAddress2, gAddress1]
+            "gateway1.address": record.gateway1.address,
+            "gateway1.currency": record.gateway1.currency,
+            "gateway2.address": record.gateway2.address,
+            "gateway2.currency": record.gateway2.currency
         }]
     }, function(err, result) {
         if (err) handleError(err);
         if (result) {
-            result.currencyPair = record.currencyPair;
-            result.gAddressPair = record.gAddressPair;
-            result.gNamePair = record.gNamePair;
+            result.gateway1 = result.gateway1;
+            result.gateway2 = result.gateway2;
             result.askNum = record.askNum;
             result.askPrice = record.askPrice;
             result.bidNum = record.bidNum;
