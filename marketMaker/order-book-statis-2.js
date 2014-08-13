@@ -155,7 +155,7 @@ function queryBook(currency1, address1, domain1, currency2, address2, domain2) {
 
         if (orderBook.askNum != 0 || orderBook.bidNum != 0) {
             console.log(index++);
-            // rippleInfo.saveOrderBook(orderBook);
+            rippleInfo.saveOrderBook(orderBook);
         }
 
         nextCIndexStack();
