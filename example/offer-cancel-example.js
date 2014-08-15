@@ -1,12 +1,12 @@
 var jsbn = require('../src/js/jsbn/jsbn.js');
 var ripple = require('../src/js/ripple');
-var config = require('../future/config.js');
+var config = require('../marketMaker/config.js');
 
 var _ = require('underscore');
 
 var Remote = ripple.Remote;
-var account = config.account;
-var secret = config.secret;
+var account = "account";
+var secret = "secret";
 
 var remote = new Remote({
     // see the API Reference for available options
