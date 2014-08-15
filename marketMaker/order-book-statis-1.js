@@ -73,6 +73,7 @@ function goNextGateway() {
         }
     } else {
         console.log("orderBook build done!");
+        throwDisconnectError();
     }
 }
 
@@ -183,4 +184,10 @@ function nextGIndexStack() {
 
     cIndexStack.unshift(index);
     return cIndexStack;
+}
+
+setTimeout(throwDisconnectError, 1000 * 60 * 60);
+
+function throwDisconnectError() {
+    throw new Error('we are disconnect with ripple network!!!');
 }

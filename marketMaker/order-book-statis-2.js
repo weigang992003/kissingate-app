@@ -76,7 +76,7 @@ var loop = false;
 function goNextGateway() {
     if (gIndexStack[0] == 1 && gIndexStack[1] == 0) {
         console.log("orderBook build done!");
-        process.exit(1);
+        throwDisconnectError();
     } else {
         g1Address = gAddresses[gIndexStack[0]];
         g1Currencies = gatewayMap[g1Address];
@@ -205,4 +205,10 @@ function nextGIndexStack() {
 
     gIndexStack.unshift(index);
     return gIndexStack;
+}
+
+setTimeout(throwDisconnectError, 1000 * 60 * 60);
+
+function throwDisconnectError() {
+    throw new Error('we are disconnect with ripple network!!!');
 }
