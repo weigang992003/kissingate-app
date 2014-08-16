@@ -78,7 +78,7 @@ var siteCookieSchema = mongoose.Schema({
 
 var incomeSchema = mongoose.Schema({
     currency: String,
-    incomes: Number
+    income: Number
 })
 
 var accountIncomeSchema = mongoose.Schema({
@@ -236,7 +236,16 @@ function getAccountIncome(account, callback) {
     }, function(err, result) {
         if (err) return handleError(err);
         callback(result);
-    })
+    });
+}
+
+function getAccountIncomes(callback) {
+    accountIncome.findOne({
+        account: account
+    }, function(err, results) {
+        if (err) return handleError(err);
+        callback(results);
+    });
 }
 
 exports.getCookie = getCookie;
@@ -244,6 +253,7 @@ exports.getAccount = getAccount;
 exports.getCryptoOption = getCryptoOption;
 exports.getNextSequence = getNextSequence;
 exports.getAccountIncome = getAccountIncome;
+exports.getAccountIncomes = getAccountIncomes;
 exports.saveAccountLines = saveAccountLines;
 exports.findAllGatewayInfo = findAllGatewayInfo;
 exports.updateOrderCurrencies = updateOrderCurrencies;
