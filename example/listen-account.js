@@ -29,6 +29,7 @@ remote.connect(function() {
     remote.on('transaction_all', transactionListener);
 
     function transactionListener(transaction_data) {
+        console.log(transaction_data.transaction);
         console.dir(transaction_data.meta.AffectedNodes);
     }
 });

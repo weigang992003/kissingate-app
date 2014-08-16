@@ -76,6 +76,19 @@ var siteCookieSchema = mongoose.Schema({
     collection: 'siteCookie'
 });
 
+var incomeSchema = mongoose.Schema({
+    currency: String,
+    incomes: Number
+})
+
+var accountIncomeSchema = mongoose.Schema({
+    account: String,
+    ledger_index_start: Number,
+    incomes: [incomeSchema]
+}, {
+    collection: 'accountIncome'
+});
+
 
 var crypto = mongoose.model('crypto', cryptoSchema);
 var counters = mongoose.model('counters', countersSchema);
@@ -85,6 +98,7 @@ var orderToXrp = mongoose.model('orderToXrp', orderToXrpSchema);
 var failedTransaction = mongoose.model('failedTransaction', failedTransactionSchema);
 var raccounts = mongoose.model('raccounts', raccountsSchema);
 var siteCookie = mongoose.model('siteCookie', siteCookieSchema);
+var accountIncomeSchema = mongoose.model('accountIncome', accountIncomeSchema);
 
 function getCryptoOption(callback) {
     crypto.findOne({
@@ -216,10 +230,20 @@ function getCookie(site, callback) {
         });
 }
 
+function getAccountIncome(account, callback) {
+    accountIncome.findOne({
+        account: account
+    }, function(err, result) {
+        if (err) return handleError(err);
+        callback(result);
+    })
+}
+
 exports.getCookie = getCookie;
 exports.getAccount = getAccount;
 exports.getCryptoOption = getCryptoOption;
 exports.getNextSequence = getNextSequence;
+exports.getAccountIncome = getAccountIncome;
 exports.saveAccountLines = saveAccountLines;
 exports.findAllGatewayInfo = findAllGatewayInfo;
 exports.updateOrderCurrencies = updateOrderCurrencies;
