@@ -75,7 +75,7 @@ function goNext() {
     if (ledger_index_start > ledger_current_index) {
         goNextAccount();
     }
-    ledger_index_end = ledger_index_start + 100;
+    ledger_index_end = ledger_index_start + 1000;
     ledger_index_end = ledger_index_end > ledger_current_index ? ledger_current_index : ledger_index_end,
 
     remote.requestAccountTx({
@@ -92,6 +92,7 @@ function goNext() {
 
 function incomeStatis(err, result) {
     var incomes = {};
+    var account = accountIncome.account;
     _.each(result.transactions, function(tx) {
         if (tx.tx.TransactionType == "Payment" && tx.tx.Account == account && tx.tx.Destination == account) {
             _.each(tx.meta.AffectedNodes, function(affectedNode) {
@@ -101,7 +102,7 @@ function incomeStatis(err, result) {
                 }
                 if (modifiedNode.LedgerEntryType == "AccountRoot") {
                     var finalFields = modifiedNode.FinalFields;
-                    if (finalFields.Account == account) {
+                    if (finalFields && finalFields.Account == account) {
                         var previousFields = modifiedNode.PreviousFields;
                         var income = finalFields.Balance - previousFields.Balance;
                         if (incomes.XRP) {
@@ -113,7 +114,7 @@ function incomeStatis(err, result) {
                 }
                 if (modifiedNode.LedgerEntryType == "RippleState") {
                     var finalFields = modifiedNode.FinalFields;
-                    if (finalFields.HighLimit.issuer == account) {
+                    if (finalFields && finalFields.HighLimit.issuer == account) {
 
                         var currency = finalFields.Balance.currency;
 
@@ -127,7 +128,7 @@ function incomeStatis(err, result) {
                         }
                     }
 
-                    if (finalFields.LowLimit.issuer == account) {
+                    if (finalFields && finalFields.LowLimit.issuer == account) {
                         var currency = finalFields.Balance.currency;
 
                         var previousFields = modifiedNode.PreviousFields;
@@ -165,9 +166,15 @@ function incomeStatis(err, result) {
         });
 
         if (income) {
-            income.income = incomes[currency] + income.income;
+            income.income = (incomes[currency].toFixed(15) - 0) + (income.income - 0);
+            income.income = income.income + "";
+            mergeIncomes.push(income);
+        } else {
+            mergeIncomes.push({
+                'currency': currency,
+                'income': incomes[currency].toFixed(15)
+            })
         }
-        mergeIncomes.push(income);
     });
     console.log(mergeIncomes);
 

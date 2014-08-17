@@ -78,7 +78,7 @@ var siteCookieSchema = mongoose.Schema({
 
 var incomeSchema = mongoose.Schema({
     currency: String,
-    income: Number
+    income: String
 })
 
 var accountIncomeSchema = mongoose.Schema({

@@ -6,6 +6,8 @@ var config = require('../marketMaker/config.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
 
 var Remote = ripple.Remote;
+var Account = ripple.Account;
+
 var account = config.account;
 var secret = config.secret;
 
@@ -25,13 +27,18 @@ var remote = new Remote({
 });
 
 remote.connect(function() {
-    console.log('remote connected!!!');
-    remote.on('transaction_all', transactionListener);
+    console.log("remote connected!");
+    var acc = remote.addAccount("rf9q1WE2Kdmv9AWtesCaANJyNxnFjp5T7z");
+    acc.on('transaction', function(result) {
+        console.log(result);
+    })
+    // console.log('remote connected!!!');
+    // remote.on('transaction_all', transactionListener);
 
-    function transactionListener(transaction_data) {
-        console.log(transaction_data.transaction);
-        console.dir(transaction_data.meta.AffectedNodes);
-    }
+    // function transactionListener(transaction_data) {
+    //     console.log(transaction_data.transaction);
+    //     console.dir(transaction_data.meta.AffectedNodes);
+    // }
 });
 
 
