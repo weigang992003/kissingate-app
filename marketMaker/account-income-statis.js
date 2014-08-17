@@ -186,6 +186,9 @@ function incomeStatis(err, result) {
 
 }
 
+setTimeout(close, 1000 * 60 * 60);
+
+
 function close() {
     remote.disconnect(function() {
         console.log("disconnect");
