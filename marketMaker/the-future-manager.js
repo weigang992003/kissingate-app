@@ -89,7 +89,6 @@ var accountIncomeSchema = mongoose.Schema({
     collection: 'accountIncome'
 });
 
-
 var crypto = mongoose.model('crypto', cryptoSchema);
 var counters = mongoose.model('counters', countersSchema);
 var accountLinesHistory = mongoose.model('accountLinesHistory', accountLinesHistorySchema);
@@ -98,7 +97,7 @@ var orderToXrp = mongoose.model('orderToXrp', orderToXrpSchema);
 var failedTransaction = mongoose.model('failedTransaction', failedTransactionSchema);
 var raccounts = mongoose.model('raccounts', raccountsSchema);
 var siteCookie = mongoose.model('siteCookie', siteCookieSchema);
-var accountIncomeSchema = mongoose.model('accountIncome', accountIncomeSchema);
+var accountIncome = mongoose.model('accountIncome', accountIncomeSchema);
 
 function getCryptoOption(callback) {
     crypto.findOne({
@@ -174,19 +173,6 @@ function deleteFailedTransactionById(id) {
     })
 }
 
-// function getAllFailedTransactions(callback) {
-//     failedTransaction.count({}, function(err, c) {
-//         var skip = c > 500 ? c - 500 : 0
-//         failedTransaction.find({}, "dest_amount source_amount send_max_rate", {
-//             limit: 500,
-//             skip: skip
-//         }, function(err, result) {
-//             if (err) return handleError(err);
-//             return callback(result);
-//         })
-//     })
-// }
-
 function getFailedTransactionsByAccount(account, callback) {
     failedTransaction.find({
         caused_by: account
@@ -240,11 +226,26 @@ function getAccountIncome(account, callback) {
 }
 
 function getAccountIncomes(callback) {
-    accountIncome.findOne({
-        account: account
-    }, function(err, results) {
+    accountIncome.find({}, function(err, results) {
         if (err) return handleError(err);
         callback(results);
+    });
+}
+
+function saveAccountIncome(record) {
+    accountIncome.findOne({
+        account: record.account
+    }, function(err, result) {
+        if (result) {
+            result.ledger_index_start = record.ledger_index_start;
+            result.incomes = record.incomes;
+            result.save();
+        } else {
+            var row = new accountIncome(record);
+            row.save(function(err) {
+                console.log(err);
+            });
+        }
     });
 }
 
@@ -254,6 +255,7 @@ exports.getCryptoOption = getCryptoOption;
 exports.getNextSequence = getNextSequence;
 exports.getAccountIncome = getAccountIncome;
 exports.getAccountIncomes = getAccountIncomes;
+exports.saveAccountIncome = saveAccountIncome;
 exports.saveAccountLines = saveAccountLines;
 exports.findAllGatewayInfo = findAllGatewayInfo;
 exports.updateOrderCurrencies = updateOrderCurrencies;

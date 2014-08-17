@@ -9,9 +9,6 @@ var ripple = require('../src/js/ripple');
 var PathFind = require('../src/js/ripple/pathfind.js').PathFind;
 var jsbn = require('../src/js/jsbn/jsbn.js');
 var mongodbManager = require('./the-future-manager.js');
-var Logger = require('./the-future-logger.js').TFLogger;
-Logger.getNewLog('find-path-example');
-
 
 
 var emitter = new events.EventEmitter();
@@ -52,7 +49,7 @@ function paymentInRipple(alt) {
     tx.payment(account, account, alt.dest_amount);
     tx.send_max(alt.source_amount.product_human(1.01));
 
-    Logger.log(true, "tx", alt.dest_amount.to_human_full() + "/" + alt.source_amount.to_human_full());
+    console.log("tx", alt.dest_amount.to_human_full() + "/" + alt.source_amount.to_human_full());
 
     if (secret) {
         tx.secret(secret);
@@ -65,13 +62,14 @@ function paymentInRipple(alt) {
     });
 
     tx.on('error', function(res) {
-        Logger.log(true, res);
+        console.log(res);
     });
 
     tx.submit();
 }
 
 remote.connect(function() {
+    console.log("remote connected!");
     var dest_amount = Amount.from_json("1000000");
 
     var pathFind = remote.pathFind(account, account, dest_amount, [{
@@ -91,7 +89,7 @@ remote.connect(function() {
 
             if (!trade) {
                 trade = true;
-                paymentInRipple(alt);
+                // paymentInRipple(alt);
             }
         });
     })

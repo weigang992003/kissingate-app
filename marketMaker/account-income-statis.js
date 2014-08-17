@@ -14,7 +14,9 @@ var theFuture = require('./the-future-manager.js');
 var accountIncomes;
 theFuture.getAccountIncomes(function(results) {
     if (results) {
+        console.log("accountIncomes:", results);
         accountIncomes = results;
+        remoteConnect();
     }
 });
 
@@ -27,10 +29,6 @@ var remote = new Remote({
     fee_cushion: 1.5,
     max_fee: 100,
     servers: [{
-        host: 's-east.ripple.com',
-        port: 443,
-        secure: true
-    }, {
         host: 's-west.ripple.com',
         port: 443,
         secure: true
@@ -38,10 +36,13 @@ var remote = new Remote({
         host: 's1.ripple.com',
         port: 443,
         secure: true
+    }, {
+        host: 's-east.ripple.com',
+        port: 443,
+        secure: true
     }]
 });
 
-var incomes = {};
 var accountIndex = -1;
 var accountIncome;
 var ledger_current_index;
@@ -50,10 +51,11 @@ var ledger_index_end;
 
 function remoteConnect() {
     remote.connect(function() {
-        var ledger_current_index;
+        console.log("remote connected!");
         remote.requestLedgerCurrent(function(err, result) {
             if (err) throw new Error(err);
-            ledger_current_index = result.result.ledger_current_index;
+            ledger_current_index = result.ledger_current_index;
+            goNextAccount();
         });
     });
 }
@@ -70,12 +72,16 @@ function goNextAccount() {
 
 function goNext() {
     ledger_index_start = accountIncome.ledger_index_start;
+    if (ledger_index_start > ledger_current_index) {
+        goNextAccount();
+    }
     ledger_index_end = ledger_index_start + 100;
+    ledger_index_end = ledger_index_end > ledger_current_index ? ledger_current_index : ledger_index_end,
 
     remote.requestAccountTx({
         'account': accountIncome.account,
         'ledger_index_min': ledger_index_start,
-        'ledger_index_max': ledger_index_end > ledger_current_index ? ledger_current_index : ledger_index_end,
+        'ledger_index_max': ledger_index_end,
         "binary": false,
         "count": false,
         "descending": false,
@@ -85,6 +91,7 @@ function goNext() {
 }
 
 function incomeStatis(err, result) {
+    var incomes = {};
     _.each(result.transactions, function(tx) {
         if (tx.tx.TransactionType == "Payment" && tx.tx.Account == account && tx.tx.Destination == account) {
             _.each(tx.meta.AffectedNodes, function(affectedNode) {
@@ -136,19 +143,39 @@ function incomeStatis(err, result) {
 
             });
         }
-
     });
 
     console.log(incomes);
-    accountIncome.ledger_index_start = ledger_index_start;
-    _.each(accountIncome.incomes, function(income) {
-        var newIncome = _.find(incomes, function(newIncome) {
-            return newIncome.currency == income.currency;
+    if (_.isEmpty(incomes)) {
+        accountIncome.ledger_index_start = ledger_index_end + 1;
+        theFuture.saveAccountIncome(accountIncome);
+        console.log("current ledger_index_start:", accountIncome.ledger_index_start);
+
+        goNext();
+        return;
+
+    }
+    var currencies = _.keys(incomes);
+
+
+    var mergeIncomes = [];
+    _.each(currencies, function(currency) {
+        var income = _.find(accountIncome.incomes, function(income) {
+            return income.currency == currency;
         });
-        if (newIncome) {
-            income.income = income.income + newIncome.income;
+
+        if (income) {
+            income.income = incomes[currency] + income.income;
         }
-    })
+        mergeIncomes.push(income);
+    });
+    console.log(mergeIncomes);
+
+    accountIncome.incomes = mergeIncomes;
+    accountIncome.ledger_index_start = ledger_index_end + 1;
+    console.log("current ledger_index_start:", accountIncome.ledger_index_start);
+    theFuture.saveAccountIncome(accountIncome);
+
     goNext();
 
 }
