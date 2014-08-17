@@ -158,27 +158,26 @@ function incomeStatis(err, result) {
     }
     var currencies = _.keys(incomes);
 
-
-    var mergeIncomes = [];
     _.each(currencies, function(currency) {
         var income = _.find(accountIncome.incomes, function(income) {
             return income.currency == currency;
         });
 
         if (income) {
+            accountIncome.incomes = _.without(accountIncome.incomes, income);
             income.income = (incomes[currency].toFixed(15) - 0) + (income.income - 0);
             income.income = income.income + "";
-            mergeIncomes.push(income);
+            accountIncome.incomes.push(income);
         } else {
-            mergeIncomes.push({
+            accountIncome.incomes.push({
                 'currency': currency,
                 'income': incomes[currency].toFixed(15)
             })
         }
     });
-    console.log(mergeIncomes);
 
-    accountIncome.incomes = mergeIncomes;
+    console.log(accountIncome.incomes);
+
     accountIncome.ledger_index_start = ledger_index_end + 1;
     console.log("current ledger_index_start:", accountIncome.ledger_index_start);
     theFuture.saveAccountIncome(accountIncome);
