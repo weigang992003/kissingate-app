@@ -28,19 +28,76 @@ var remote = new Remote({
 
 remote.connect(function() {
     console.log("remote connected!");
-    var acc = remote.addAccount("rf9q1WE2Kdmv9AWtesCaANJyNxnFjp5T7z");
-    acc.on('transaction', function(result) {
-        console.log(result);
-    })
-    // console.log('remote connected!!!');
-    // remote.on('transaction_all', transactionListener);
+    var account = "rf9q1WE2Kdmv9AWtesCaANJyNxnFjp5T7z";
+    var acc = remote.addAccount(account);
 
-    // function transactionListener(transaction_data) {
-    //     console.log(transaction_data.transaction);
-    //     console.dir(transaction_data.meta.AffectedNodes);
-    // }
+    acc.on('transaction', function(tx) {
+        var srcCurrency;
+        var srcGateway;
+        var srcValue;
+
+        var dstCurrency;
+        var dstGateway;
+        var dstValue;
+
+        var getAmount = tx.transaction.Amount;
+        if (typeof getAmount == "string") {
+            dstCurrency = "XRP";
+            dstGateway = "";
+            dstValue = getAmount;
+        } else {
+            dstCurrency = getAmount.currency;
+            dstValue = getAmount.value;
+        }
+
+        var payAmount = tx.transaction.SendMax;
+        if (typeof payAmount == "string") {
+            srcCurrency = "XRP";
+            srcGateway = "";
+            srcValue = payAmount;
+        } else {
+            srcCurrency = payAmount.currency;
+            srcValue = payAmount.value;
+        }
+
+        _.each(tx.meta.AffectedNodes, function(affectedNode) {
+            var modifiedNode = affectedNode.ModifiedNode;
+            if (!modifiedNode) {
+                return;
+            }
+            if (modifiedNode.LedgerEntryType == "RippleState") {
+                //here is the rule: finalFields and previsousField always relate LowLimit issuer;
+                var finalFields = modifiedNode.FinalFields;
+                if (finalFields && finalFields.HighLimit.issuer == account) {
+                    if (srcCurrency == finalFields.LowLimit.currency) {
+                        srcGateway = finalFields.LowLimit.issuer;
+                    };
+                    if (dstCurrency == finalFields.LowLimit.currency) {
+                        dstGateway = finalFields.LowLimit.issuer;
+                    }
+                }
+
+                if (finalFields && finalFields.LowLimit.issuer == account) {
+                    if (srcCurrency == finalFields.HighLimit.currency) {
+                        srcGateway = finalFields.HighLimit.issuer;
+                    };
+                    if (dstCurrency == finalFields.HighLimit.currency) {
+                        dstGateway = finalFields.HighLimit.issuer;
+                    }
+                }
+            }
+        });
+
+        console.log({
+            srcCurrency: srcCurrency,
+            srcGateway: srcGateway,
+            srcValue: srcValue,
+            dstCurrency: dstCurrency,
+            dstGateway: dstGateway,
+            dstValue: dstValue
+        })
+    });
 });
-
 
 
 
