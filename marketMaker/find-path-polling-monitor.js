@@ -1,5 +1,6 @@
-var Logger = require('./the-future-logger.js').TFLogger;
-Logger.getNewLog('find-path-polling-monitor');
+var Logger = require('./new-logger.js').Logger;
+var fpLogger = new Logger('find-path-polling-monitor');
+var latLogger = new Logger('listen-account-tx');
 
 var io = require('socket.io').listen(3000);
 var fpio = io.of('/fp');
@@ -26,7 +27,8 @@ var servers = [{
     host: 's-west.ripple.com',
     port: 443,
     secure: true
-}, {    host: 's1.ripple.com',
+}, {
+    host: 's1.ripple.com',
     port: 443,
     secure: true
 }];
@@ -84,7 +86,7 @@ function checkIfHaveProfit(alt, type) {
         var profitRate = math.round(rate1 * rate2, 3);
 
         if (profitRate < profit_rate) {
-            Logger.log(true, "(" + type + ")" + "profitRate:" + profitRate + "(" + rate1 + ":" + rate2 + ")",
+            fpLogger.log(true, "(" + type + ")" + "profitRate:" + profitRate + "(" + rate1 + ":" + rate2 + ")",
                 "timeConsume:" + (alt1.time - alt2.time));
 
             var send_max_rate = math.round(math.sqrt(1 / profitRate), 6);
@@ -210,7 +212,7 @@ function goNext(preferC1, preferC2) {
         pathFind1.close();
     });
     pathFind1.on('error', function(err) {
-        Logger.error(true, err);
+        fpLogger.error(true, err);
         noPathFound = true;
     })
 
@@ -227,7 +229,7 @@ function goNext(preferC1, preferC2) {
         pathFind2.close();
     });
     pathFind2.on('error', function(err) {
-        Logger.error(true, err);
+        fpLogger.error(true, err);
         goNext();
         return;
     })
@@ -291,6 +293,79 @@ function remoteConnect() {
         remote.on('disconnect', function() {
             remote = new ripple.Remote(getRemoteOption());
             remoteConnect();
+        });
+
+        listenAccountTx();
+    });
+}
+
+function listenAccountTx() {
+    var a = remote.addAccount(account);
+
+    a.on('transaction', function(tx) {
+        var srcCurrency;
+        var srcGateway;
+        var srcValue;
+
+        var dstCurrency;
+        var dstGateway;
+        var dstValue;
+
+        var getAmount = tx.transaction.Amount;
+        if (typeof getAmount == "string") {
+            dstCurrency = "XRP";
+            dstGateway = "";
+            dstValue = getAmount;
+        } else {
+            dstCurrency = getAmount.currency;
+            dstValue = getAmount.value;
+        }
+
+        var payAmount = tx.transaction.SendMax;
+        if (typeof payAmount == "string") {
+            srcCurrency = "XRP";
+            srcGateway = "";
+            srcValue = payAmount;
+        } else {
+            srcCurrency = payAmount.currency;
+            srcValue = payAmount.value;
+        }
+
+        _.each(tx.meta.AffectedNodes, function(affectedNode) {
+            var modifiedNode = affectedNode.ModifiedNode;
+            if (!modifiedNode) {
+                return;
+            }
+            if (modifiedNode.LedgerEntryType == "RippleState") {
+                //here is the rule: finalFields and previsousField always relate LowLimit issuer;
+                var finalFields = modifiedNode.FinalFields;
+                if (finalFields && finalFields.HighLimit.issuer == account) {
+                    if (srcCurrency == finalFields.LowLimit.currency) {
+                        srcGateway = finalFields.LowLimit.issuer;
+                    };
+                    if (dstCurrency == finalFields.LowLimit.currency) {
+                        dstGateway = finalFields.LowLimit.issuer;
+                    }
+                }
+
+                if (finalFields && finalFields.LowLimit.issuer == account) {
+                    if (srcCurrency == finalFields.HighLimit.currency) {
+                        srcGateway = finalFields.HighLimit.issuer;
+                    };
+                    if (dstCurrency == finalFields.HighLimit.currency) {
+                        dstGateway = finalFields.HighLimit.issuer;
+                    }
+                }
+            }
+        });
+
+        latLogger.log(true, {
+            srcCurrency: srcCurrency,
+            srcGateway: srcGateway,
+            srcValue: srcValue,
+            dstCurrency: dstCurrency,
+            dstGateway: dstGateway,
+            dstValue: dstValue
         });
     });
 }
