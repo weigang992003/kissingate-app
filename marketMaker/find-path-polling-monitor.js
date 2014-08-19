@@ -314,6 +314,7 @@ function listenAccountTx() {
         var dstIssuers = [];
 
         var getAmount = tx.transaction.Amount;
+        var hash = tx.transaction.hash;
         if (typeof getAmount == "string") {
             dstCurrency = "XRP";
             dstIssuer = "";
@@ -383,7 +384,8 @@ function listenAccountTx() {
             dstValue: dstValue
         }, {
             "srcIssuers": srcIssuers,
-            "dstIssuers": dstIssuers
+            "dstIssuers": dstIssuers,
+            "hash": hash
         });
     });
 }
