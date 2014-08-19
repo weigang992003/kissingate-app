@@ -4,6 +4,7 @@ var _ = require('underscore');
 var ripple = require('../src/js/ripple');
 var config = require('../marketMaker/config.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
+var filterOffers = require('../marketMaker/offer-filter.js').filterOffers;
 
 var Remote = ripple.Remote;
 var account = config.account;
@@ -25,11 +26,16 @@ var remote = new Remote({
 });
 
 remote.connect(function() {
-    // var book = remote.book("CNY", "rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK", "CNY", "razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA"); // ripplecn.
-    // book.offers(function(offers) {
-    //     console.log(offers[0]);
-    //     close();
-    // })
+    var book = remote.book("XRP", "", "CNY", "razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA"); // ripplecn.
+    book.offers(function(offers) {
+        var newOffers = filterOffers(offers, "XRP", "CNY", "abc", "asks");
+        console.log(newOffers[0].TakerPays.to_text_full());
+        console.log(newOffers[0].TakerGets.to_text_full());
+
+
+        // console.log(offers[0].quality);
+        close();
+    })
 
     //the response
     // {

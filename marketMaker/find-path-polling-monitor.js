@@ -304,17 +304,19 @@ function listenAccountTx() {
 
     a.on('transaction', function(tx) {
         var srcCurrency;
-        var srcGateway;
+        var srcIssuer;
         var srcValue;
+        var srcIssuers = [];
 
         var dstCurrency;
-        var dstGateway;
+        var dstIssuer;
         var dstValue;
+        var dstIssuers = [];
 
         var getAmount = tx.transaction.Amount;
         if (typeof getAmount == "string") {
             dstCurrency = "XRP";
-            dstGateway = "";
+            dstIssuer = "";
             dstValue = getAmount;
         } else {
             dstCurrency = getAmount.currency;
@@ -324,7 +326,7 @@ function listenAccountTx() {
         var payAmount = tx.transaction.SendMax;
         if (typeof payAmount == "string") {
             srcCurrency = "XRP";
-            srcGateway = "";
+            srcIssuer = "";
             srcValue = payAmount;
         } else {
             srcCurrency = payAmount.currency;
@@ -341,31 +343,47 @@ function listenAccountTx() {
                 var finalFields = modifiedNode.FinalFields;
                 if (finalFields && finalFields.HighLimit.issuer == account) {
                     if (srcCurrency == finalFields.LowLimit.currency) {
-                        srcGateway = finalFields.LowLimit.issuer;
+                        srcIssuer = finalFields.LowLimit.issuer;
+                        if (!_.contains(srcIssuers, srcIssuer)) {
+                            srcIssuers.push(srcIssuer);
+                        }
                     };
                     if (dstCurrency == finalFields.LowLimit.currency) {
-                        dstGateway = finalFields.LowLimit.issuer;
+                        dstIssuer = finalFields.LowLimit.issuer;
+                        if (!_.contains(dstIssuers, dstIssuer)) {
+                            dstIssuers.push(dstIssuer);
+                        }
                     }
                 }
 
                 if (finalFields && finalFields.LowLimit.issuer == account) {
                     if (srcCurrency == finalFields.HighLimit.currency) {
-                        srcGateway = finalFields.HighLimit.issuer;
+                        srcIssuer = finalFields.HighLimit.issuer;
+                        if (!_.contains(srcIssuers, srcIssuer)) {
+                            srcIssuers.push(srcIssuer);
+                        }
                     };
                     if (dstCurrency == finalFields.HighLimit.currency) {
-                        dstGateway = finalFields.HighLimit.issuer;
+                        dstIssuer = finalFields.HighLimit.issuer;
+                        if (!_.contains(dstIssuers, dstIssuer)) {
+                            dstIssuers.push(dstIssuer);
+                        }
                     }
                 }
             }
         });
 
+
         latLogger.log(true, {
             srcCurrency: srcCurrency,
-            srcGateway: srcGateway,
+            srcIssuer: srcIssuer,
             srcValue: srcValue,
             dstCurrency: dstCurrency,
-            dstGateway: dstGateway,
+            dstIssuer: dstIssuer,
             dstValue: dstValue
+        }, {
+            "srcIssuers": srcIssuers,
+            "dstIssuers": dstIssuers
         });
     });
 }
