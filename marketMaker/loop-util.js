@@ -1,10 +1,21 @@
-var size = 0;
-var indexSet = [1, 0];
+var _ = require('underscore');
 
-function nextIndexSet(indexSet, size) {
+var indexSet;
+var size;
+var loop = 0;
+
+function init(p_index_set, p_size) {
+    indexSet = p_index_set;
+    size = p_size;
+}
+
+function next() {
+    if (!indexSet || !size) {
+        return;
+    }
+
     var first = _.first(indexSet);
     var rest = _.rest(indexSet);
-
     first = (first + 1) % size;
     if (rest.length == 0) {
         return [first];
@@ -14,12 +25,21 @@ function nextIndexSet(indexSet, size) {
         rest = nextIndexSet(rest, size);
     }
 
+    if (_.isEqual([0], _.union([first], rest))) {
+        loop++;
+    }
+
     while (_.contains(rest, first)) {
-        indexSet = rest.unshift(first);
+        rest.unshift(first);
+        indexSet = rest;
+
         indexSet = nextIndexSet(indexSet, size);
-        var first = _.first(indexSet);
-        var rest = _.rest(indexSet);
+        first = _.first(indexSet);
+        rest = _.rest(indexSet);
     }
 
     return _.union([first], rest);
 }
+
+exports.init = init;
+exports.next = next;
