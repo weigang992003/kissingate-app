@@ -3,6 +3,8 @@ var bunyan = require('bunyan');
 require('./date-extend.js');
 
 function Logger(action) {
+    var self = this;
+
     var date = new Date().format('yyyy-MM-dd-hh-mm-ss.S');
     this.logger = bunyan.createLogger({
         name: 'ripple-app',

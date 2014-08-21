@@ -24,7 +24,7 @@ function queryBook(remote, currency1, issuer1, currency2, issuer2, account, logg
                 callback(bookInfo);
             }
 
-            logger.log(true, bookInfo);
+            // logger.log(true, bookInfo);
         }
     });
 }

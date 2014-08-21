@@ -301,39 +301,41 @@ function remoteConnect() {
     });
 }
 
+var books = [];
+
 function listenAccountTx() {
     var a = remote.addAccount(account);
 
     a.on('transaction', function(tx) {
-        var srcCurrency;
-        var srcIssuer;
-        var srcValue;
-        var srcIssuers = [];
+        var src_currency;
+        var src_issuer;
+        var src_value;
+        var src_issuers = [];
 
-        var dstCurrency;
-        var dstIssuer;
-        var dstValue;
-        var dstIssuers = [];
+        var dst_currency;
+        var dst_issuer;
+        var dst_value;
+        var dst_issuers = [];
 
         var getAmount = tx.transaction.Amount;
         var hash = tx.transaction.hash;
         if (typeof getAmount == "string") {
-            dstCurrency = "XRP";
-            dstIssuer = "rrrrrrrrrrrrrrrrrrrrrhoLvTp";
-            dstValue = getAmount;
+            dst_currency = "XRP";
+            dst_issuer = "rrrrrrrrrrrrrrrrrrrrrhoLvTp";
+            dst_value = getAmount;
         } else {
-            dstCurrency = getAmount.currency;
-            dstValue = getAmount.value;
+            dst_currency = getAmount.currency;
+            dst_value = getAmount.value;
         }
 
         var payAmount = tx.transaction.SendMax;
         if (typeof payAmount == "string") {
-            srcCurrency = "XRP";
-            srcIssuer = "rrrrrrrrrrrrrrrrrrrrrhoLvTp";
-            srcValue = payAmount;
+            src_currency = "XRP";
+            src_issuer = "rrrrrrrrrrrrrrrrrrrrrhoLvTp";
+            src_value = payAmount;
         } else {
-            srcCurrency = payAmount.currency;
-            srcValue = payAmount.value;
+            src_currency = payAmount.currency;
+            src_value = payAmount.value;
         }
 
         _.each(tx.meta.AffectedNodes, function(affectedNode) {
@@ -345,54 +347,92 @@ function listenAccountTx() {
                 //here is the rule: finalFields and previsousField always relate LowLimit issuer;
                 var finalFields = modifiedNode.FinalFields;
                 if (finalFields && finalFields.HighLimit.issuer == account) {
-                    if (srcCurrency == finalFields.LowLimit.currency) {
-                        srcIssuer = finalFields.LowLimit.issuer;
-                        if (!_.contains(srcIssuers, srcIssuer)) {
-                            srcIssuers.push(srcIssuer);
+                    if (src_currency == finalFields.LowLimit.currency) {
+                        src_issuer = finalFields.LowLimit.issuer;
+                        if (!_.contains(src_issuers, src_issuer)) {
+                            src_issuers.push(src_issuer);
                         }
                     };
-                    if (dstCurrency == finalFields.LowLimit.currency) {
-                        dstIssuer = finalFields.LowLimit.issuer;
-                        if (!_.contains(dstIssuers, dstIssuer)) {
-                            dstIssuers.push(dstIssuer);
+                    if (dst_currency == finalFields.LowLimit.currency) {
+                        dst_issuer = finalFields.LowLimit.issuer;
+                        if (!_.contains(dst_issuers, dst_issuer)) {
+                            dst_issuers.push(dst_issuer);
                         }
                     }
                 }
 
                 if (finalFields && finalFields.LowLimit.issuer == account) {
-                    if (srcCurrency == finalFields.HighLimit.currency) {
-                        srcIssuer = finalFields.HighLimit.issuer;
-                        if (!_.contains(srcIssuers, srcIssuer)) {
-                            srcIssuers.push(srcIssuer);
+                    if (src_currency == finalFields.HighLimit.currency) {
+                        src_issuer = finalFields.HighLimit.issuer;
+                        if (!_.contains(src_issuers, src_issuer)) {
+                            src_issuers.push(src_issuer);
                         }
                     };
-                    if (dstCurrency == finalFields.HighLimit.currency) {
-                        dstIssuer = finalFields.HighLimit.issuer;
-                        if (!_.contains(dstIssuers, dstIssuer)) {
-                            dstIssuers.push(dstIssuer);
+                    if (dst_currency == finalFields.HighLimit.currency) {
+                        dst_issuer = finalFields.HighLimit.issuer;
+                        if (!_.contains(dst_issuers, dst_issuer)) {
+                            dst_issuers.push(dst_issuer);
                         }
                     }
                 }
             }
         });
 
+        books.push({
+            src_currency: src_currency,
+            src_issuer: src_issuer,
+            dst_currency: dst_currency,
+            dst_issuer: dst_issuer
+        });
 
-        if (dstIssuer && srcIssuer) {
-            queryBook(remote, dstCurrency, dstIssuer, srcCurrency, srcIssuer, account, qbLogger);
+        if (books.length % 2 == 0 && books.length > 1) {
+            checkProfit();
         }
 
-
         latLogger.log(true, {
-            srcCurrency: srcCurrency,
-            srcIssuer: srcIssuer,
-            srcValue: srcValue,
-            dstCurrency: dstCurrency,
-            dstIssuer: dstIssuer,
-            dstValue: dstValue
+            src_currency: src_currency,
+            src_issuer: src_issuer,
+            src_value: src_value,
+            dst_currency: dst_currency,
+            dst_issuer: dst_issuer,
+            dst_value: dst_value
         }, {
-            "srcIssuers": srcIssuers,
-            "dstIssuers": dstIssuers,
+            "src_issuers": src_issuers,
+            "dst_issuers": dst_issuers,
             "hash": hash
         });
     });
+}
+
+function checkProfit() {
+    var b1 = books[0];
+    var b2 = books[1];
+
+    books = _.rest(books, 2);
+
+    if (!b1.src_issuer || !b1.dst_issuer || !b2.src_issuer || !b2.dst_issuer) {
+        return;
+    }
+
+    var bi1;
+    var bi2;
+
+    queryBook(remote, b1.dst_currency, b1.dst_issuer, b1.src_currency, b1.src_issuer, account, qbLogger, function(bi) {
+        bi1 = bi;
+        if (bi1 && bi2) {
+            createOffer(bi1, bi2);
+        }
+    });
+    queryBook(remote, b2.dst_currency, b2.dst_issuer, b2.src_currency, b2.src_issuer, account, qbLogger, function(bi) {
+        bi2 = bi;
+        if (bi1 && bi2) {
+            createOffer(bi1, bi2);
+        }
+    });
+}
+
+function createOffer(bi1, bi2) {
+    if (bi1.price * bi2.price < 1) {
+        qbLogger.log(true, "profit:" + bi1.price * bi2.price, bi1, bi2);
+    }
 }
