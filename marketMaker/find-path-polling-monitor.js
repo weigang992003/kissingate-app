@@ -1,6 +1,7 @@
 var Logger = require('./new-logger.js').Logger;
 var fpLogger = new Logger('find-path-polling-monitor');
 var latLogger = new Logger('listen-account-tx');
+var qbLogger = new Logger('query-book');
 
 var io = require('socket.io').listen(3000);
 var fpio = io.of('/fp');
@@ -14,6 +15,7 @@ var config = require('./config.js');
 var ripple = require('../src/js/ripple');
 var crypto = require('./crypto-util.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
+var queryBook = require('./query-book.js').queryBook;
 var mongodbManager = require('./the-future-manager.js');
 var PathFind = require('../src/js/ripple/pathfind.js').PathFind;
 
@@ -317,7 +319,7 @@ function listenAccountTx() {
         var hash = tx.transaction.hash;
         if (typeof getAmount == "string") {
             dstCurrency = "XRP";
-            dstIssuer = "";
+            dstIssuer = "rrrrrrrrrrrrrrrrrrrrrhoLvTp";
             dstValue = getAmount;
         } else {
             dstCurrency = getAmount.currency;
@@ -327,7 +329,7 @@ function listenAccountTx() {
         var payAmount = tx.transaction.SendMax;
         if (typeof payAmount == "string") {
             srcCurrency = "XRP";
-            srcIssuer = "";
+            srcIssuer = "rrrrrrrrrrrrrrrrrrrrrhoLvTp";
             srcValue = payAmount;
         } else {
             srcCurrency = payAmount.currency;
@@ -373,6 +375,11 @@ function listenAccountTx() {
                 }
             }
         });
+
+
+        if (dstIssuer && srcIssuer) {
+            queryBook(remote, dstCurrency, dstIssuer, srcCurrency, srcIssuer, account, qbLogger);
+        }
 
 
         latLogger.log(true, {
