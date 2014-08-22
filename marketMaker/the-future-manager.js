@@ -1,7 +1,7 @@
 var _ = require('underscore');
 var mongoose = require('mongoose');
 
-mongoose.connect('mongodb://localhost/the-future');
+var tf = mongoose.createConnection('mongodb://localhost/the-future');
 
 var cryptoSchema = mongoose.Schema({
     key: String,
@@ -92,15 +92,15 @@ var accountIncomeSchema = mongoose.Schema({
     collection: 'accountIncome'
 });
 
-var crypto = mongoose.model('crypto', cryptoSchema);
-var counters = mongoose.model('counters', countersSchema);
-var accountLinesHistory = mongoose.model('accountLinesHistory', accountLinesHistorySchema);
-var gatewayInfo = mongoose.model('gatewayInfo', gatewayInfoSchema);
-var orderToXrp = mongoose.model('orderToXrp', orderToXrpSchema);
-var failedTransaction = mongoose.model('failedTransaction', failedTransactionSchema);
-var raccounts = mongoose.model('raccounts', raccountsSchema);
-var siteCookie = mongoose.model('siteCookie', siteCookieSchema);
-var accountIncome = mongoose.model('accountIncome', accountIncomeSchema);
+var crypto = tf.model('crypto', cryptoSchema);
+var counters = tf.model('counters', countersSchema);
+var accountLinesHistory = tf.model('accountLinesHistory', accountLinesHistorySchema);
+var gatewayInfo = tf.model('gatewayInfo', gatewayInfoSchema);
+var orderToXrp = tf.model('orderToXrp', orderToXrpSchema);
+var failedTransaction = tf.model('failedTransaction', failedTransactionSchema);
+var raccounts = tf.model('raccounts', raccountsSchema);
+var siteCookie = tf.model('siteCookie', siteCookieSchema);
+var accountIncome = tf.model('accountIncome', accountIncomeSchema);
 
 function getCryptoOption(callback) {
     crypto.findOne({

@@ -384,10 +384,10 @@ function listenAccountTx() {
         });
 
         books.push({
-            src_currency: src_currency,
-            src_issuer: src_issuer,
             dst_currency: dst_currency,
             dst_issuer: dst_issuer
+            src_currency: src_currency,
+            src_issuer: src_issuer,
         });
 
         if (books.length % 2 == 0 && books.length > 1) {
@@ -439,7 +439,7 @@ function checkProfit() {
 function createOffer(b1, bi1, b2, bi2) {
     if (bi1.price * bi2.price < 1) {
         rippleInfo.save({
-            books: [b1, b2];
+            books: [b1, b2]
         });
         qbLogger.log(true, "profit:" + bi1.price * bi2.price, bi1, bi2);
     }

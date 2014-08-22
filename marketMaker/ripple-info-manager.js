@@ -1,7 +1,6 @@
 var _ = require('underscore');
 var mongoose = require('mongoose');
-mongoose.connect('mongodb://localhost/ripple-info');
-
+var ridb = mongoose.createConnection('mongodb://localhost/ripple-info');
 
 var currenciesSchema = mongoose.Schema({
     currency: String,
@@ -47,9 +46,9 @@ var profitBookPathSchema = mongoose.Schema({
     collection: 'profitBookPath'
 });
 
-var currencies = mongoose.model('currencies', currenciesSchema);
-var orderBook = mongoose.model('orderBook', orderBookSchema);
-var profitBookPath = mongoose.model('profitBookPath', profitBookPathSchema);
+var currencies = ridb.model('currencies', currenciesSchema);
+var orderBook = ridb.model('orderBook', orderBookSchema);
+var profitBookPath = ridb.model('profitBookPath', profitBookPathSchema);
 
 function getAllCurrencies(callback) {
     currencies.find({
