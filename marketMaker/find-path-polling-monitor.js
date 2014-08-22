@@ -464,6 +464,10 @@ function checkProfit() {
         return;
     }
 
+    if (b1.src_currency != b2.dst_currency || b1.dst_currency != b2.src_currency) {
+        return;
+    }
+
     var bi1;
     var bi2;
 
