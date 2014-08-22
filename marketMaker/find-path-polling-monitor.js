@@ -387,7 +387,7 @@ function listenAccountTx() {
             dst_currency: dst_currency,
             dst_issuer: dst_issuer,
             src_currency: src_currency,
-            src_issuer: src_issuer,
+            src_issuer: src_issuer
         });
 
         if (books.length % 2 == 0 && books.length > 1) {
