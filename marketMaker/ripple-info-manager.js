@@ -128,16 +128,16 @@ function saveProfitBookPath(record) {
     var query = [];
     _.each(record.books, function(book) {
         query.push({
-            "books.dst_currency": book.currency
+            "books.dst_currency": book.dst_currency
         });
         query.push({
-            "books.dst_issuer": book.issuer
+            "books.dst_issuer": book.dst_issuer
         });
         query.push({
-            "books.src_currency": book.currency
+            "books.src_currency": book.src_currency
         });
         query.push({
-            "books.src_issuer": book.issuer
+            "books.src_issuer": book.src_issuer
         });
     });
 
