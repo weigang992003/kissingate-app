@@ -385,7 +385,7 @@ function listenAccountTx() {
 
         books.push({
             dst_currency: dst_currency,
-            dst_issuer: dst_issuer
+            dst_issuer: dst_issuer,
             src_currency: src_currency,
             src_issuer: src_issuer,
         });
