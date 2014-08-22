@@ -303,6 +303,7 @@ function remoteConnect() {
 }
 
 var books = [];
+var account_balances = {};
 
 function listenAccountTx() {
     var a = remote.addAccount(account);
@@ -315,11 +316,13 @@ function listenAccountTx() {
         var src_currency;
         var src_issuer;
         var src_value;
+        var src_balance;
         var src_issuers = [];
 
         var dst_currency;
         var dst_issuer;
         var dst_value;
+        var dst_balance;
         var dst_issuers = [];
 
         var getAmount = tx.transaction.Amount;
@@ -348,16 +351,37 @@ function listenAccountTx() {
             if (!modifiedNode) {
                 return;
             }
+
+            if (modifiedNode.LedgerEntryType == "AccountRoot") {
+                var finalFields = modifiedNode.FinalFields;
+                if (finalFields && finalFields.Account == account) {
+                    if (src_currency == "XRP") {
+                        src_balance = finalFields.Balance;
+                    }
+                    if (dst_currency == "XRP") {
+                        dst_balance = finalFields.Balance;
+                    }
+                }
+            }
+
             if (modifiedNode.LedgerEntryType == "RippleState") {
                 //here is the rule: finalFields and previsousField always relate LowLimit issuer;
                 var finalFields = modifiedNode.FinalFields;
                 if (finalFields && finalFields.HighLimit.issuer == account) {
+                    if (finalFields.Balance.currency == src_currency) {
+                        src_balance = 0 - finalFields.Balance.value + "";
+                    }
+                    if (finalFields.Balance.currency == dst_currency) {
+                        dst_balance = 0 - finalFields.Balance.value + "";
+                    }
+
                     if (src_currency == finalFields.LowLimit.currency) {
                         src_issuer = finalFields.LowLimit.issuer;
                         if (!_.contains(src_issuers, src_issuer)) {
                             src_issuers.push(src_issuer);
                         }
-                    };
+                    }
+
                     if (dst_currency == finalFields.LowLimit.currency) {
                         dst_issuer = finalFields.LowLimit.issuer;
                         if (!_.contains(dst_issuers, dst_issuer)) {
@@ -367,6 +391,12 @@ function listenAccountTx() {
                 }
 
                 if (finalFields && finalFields.LowLimit.issuer == account) {
+                    if (finalFields.Balance.currency == src_currency) {
+                        src_balance = finalFields.Balance.value;
+                    } else if (finalFields.Balance.currency == dst_currency) {
+                        dst_balance = finalFields.Balance.value;
+                    }
+
                     if (src_currency == finalFields.HighLimit.currency) {
                         src_issuer = finalFields.HighLimit.issuer;
                         if (!_.contains(src_issuers, src_issuer)) {
@@ -378,7 +408,7 @@ function listenAccountTx() {
                         if (!_.contains(dst_issuers, dst_issuer)) {
                             dst_issuers.push(dst_issuer);
                         }
-                    }
+                    };
                 }
             }
         });
@@ -390,6 +420,19 @@ function listenAccountTx() {
             src_issuer: src_issuer
         });
 
+        if (src_issuer) {
+            account_balances[src_currency] = {
+                value: src_balance,
+                issuer: src_issuer
+            }
+        }
+        if (dst_currency) {
+            account_balances[dst_currency] = {
+                value: dst_balance,
+                issuer: dst_issuer
+            }
+        }
+
         if (books.length % 2 == 0 && books.length > 1) {
             checkProfit();
         }
@@ -398,9 +441,11 @@ function listenAccountTx() {
             src_currency: src_currency,
             src_issuer: src_issuer,
             src_value: src_value,
+            src_balance: src_balance,
             dst_currency: dst_currency,
             dst_issuer: dst_issuer,
-            dst_value: dst_value
+            dst_value: dst_value,
+            dst_value: dst_balance
         }, {
             "src_issuers": src_issuers,
             "dst_issuers": dst_issuers,
@@ -438,7 +483,7 @@ function checkProfit() {
 
 function createOffer(b1, bi1, b2, bi2) {
     if (bi1.price * bi2.price < 1) {
-        rippleInfo.save({
+        rippleInfo.saveProfitBookPath({
             books: [b1, b2]
         });
         qbLogger.log(true, "profit:" + bi1.price * bi2.price, bi1, bi2);
