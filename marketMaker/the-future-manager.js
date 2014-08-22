@@ -76,15 +76,18 @@ var siteCookieSchema = mongoose.Schema({
     collection: 'siteCookie'
 });
 
-var incomeSchema = mongoose.Schema({
-    currency: String,
-    income: String
-})
+// var incomeSchema = mongoose.Schema({
+//     currency: String,
+//     income: String
+// })
 
 var accountIncomeSchema = mongoose.Schema({
     account: String,
     ledger_index_start: Number,
-    incomes: [incomeSchema]
+    incomes: [{
+        currency: String,
+        income: String
+    }]
 }, {
     collection: 'accountIncome'
 });

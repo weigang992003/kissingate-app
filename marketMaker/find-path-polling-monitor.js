@@ -16,7 +16,8 @@ var ripple = require('../src/js/ripple');
 var crypto = require('./crypto-util.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
 var queryBook = require('./query-book.js').queryBook;
-var mongodbManager = require('./the-future-manager.js');
+var theFuture = require('./the-future-manager.js');
+var rippleInfo = require('./ripple-info-manager.js');
 var PathFind = require('../src/js/ripple/pathfind.js').PathFind;
 
 var emitter = new events.EventEmitter();
@@ -43,7 +44,7 @@ var Amount = ripple.Amount;
 
 var account;
 console.log("step1:getAccount!")
-mongodbManager.getAccount(config.marketMaker, function(result) {
+theFuture.getAccount(config.marketMaker, function(result) {
     account = result.account;
     remoteConnect();
 });
@@ -307,6 +308,10 @@ function listenAccountTx() {
     var a = remote.addAccount(account);
 
     a.on('transaction', function(tx) {
+        if (tx.transaction.TransactionType != 'Payment') {
+            return;
+        }
+
         var src_currency;
         var src_issuer;
         var src_value;
@@ -420,19 +425,22 @@ function checkProfit() {
     queryBook(remote, b1.dst_currency, b1.dst_issuer, b1.src_currency, b1.src_issuer, account, qbLogger, function(bi) {
         bi1 = bi;
         if (bi1 && bi2) {
-            createOffer(bi1, bi2);
+            createOffer(b1, bi1, b2, bi2);
         }
     });
     queryBook(remote, b2.dst_currency, b2.dst_issuer, b2.src_currency, b2.src_issuer, account, qbLogger, function(bi) {
         bi2 = bi;
         if (bi1 && bi2) {
-            createOffer(bi1, bi2);
+            createOffer(b1, bi1, b2, bi2);
         }
     });
 }
 
-function createOffer(bi1, bi2) {
+function createOffer(b1, bi1, b2, bi2) {
     if (bi1.price * bi2.price < 1) {
+        rippleInfo.save({
+            books: [b1, b2];
+        });
         qbLogger.log(true, "profit:" + bi1.price * bi2.price, bi1, bi2);
     }
 }

@@ -36,8 +36,20 @@ var orderBookSchema = mongoose.Schema({
     collection: 'orderBook'
 });
 
+var profitBookPathSchema = mongoose.Schema({
+    books: [{
+        dst_currency: String,
+        dst_issuer: String,
+        src_currency: String,
+        src_issuer: String
+    }]
+}, {
+    collection: 'profitBookPath'
+});
+
 var currencies = mongoose.model('currencies', currenciesSchema);
 var orderBook = mongoose.model('orderBook', orderBookSchema);
+var profitBookPath = mongoose.model('profitBookPath', profitBookPathSchema);
 
 function getAllCurrencies(callback) {
     currencies.find({
@@ -113,10 +125,40 @@ function getAllGatewaysWithRate(callback) {
     })
 }
 
+function saveProfitBookPath(record) {
+    var query = [];
+    _.each(record.books, function(book) {
+        query.push({
+            "books.dst_currency": book.currency
+        });
+        query.push({
+            "books.dst_issuer": book.issuer
+        });
+        query.push({
+            "books.src_currency": book.currency
+        });
+        query.push({
+            "books.src_issuer": book.issuer
+        });
+    });
+
+    profitBookPath.findOne({
+        $and: query
+    }, function(err, result) {
+        if (err) throw new Error(err);
+        if (!result) {
+            var row = new profitBookPath(record);
+            row.save(function(err) {
+                if (err) return handleError(err);
+            });
+        }
+    });
+}
+
 exports.saveOrderBook = saveOrderBook;
 exports.getAllCurrencies = getAllCurrencies;
+exports.saveProfitBookPath = saveProfitBookPath;
 exports.getAllCurrenciesByAccountRate = getAllCurrenciesByAccountRate;
-
 
 // getAllGatewaysWithRate(function(result) {
 //     var gateways = _.groupBy(result, function(e) {
