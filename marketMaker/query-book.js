@@ -14,17 +14,28 @@ function queryBook(remote, currency1, issuer1, currency2, issuer2, account, logg
             bookInfo.price = price + "";
 
             bookInfo.taker_pays = newOffers[0].TakerPays.to_json();
-            var value = bookInfo.taker_pays.value;
-            value = (value - 0) + value * rate;
-            bookInfo.taker_pays.value = value + "";
+
+            if (typeof bookInfo.taker_pays == "string") {
+                var value = bookInfo.taker_pays;
+                value = (value - 0) + value * rate;
+                bookInfo.taker_pays = value + "";
+            } else {
+                var value = bookInfo.taker_pays.value;
+                value = (value - 0) + value * rate;
+                bookInfo.taker_pays.value = value + "";
+            }
 
             bookInfo.taker_gets = newOffers[0].TakerGets.to_json();
+
+            if (logger) {
+                logger.log(true, bookInfo);
+            }
+
+            console.log(bookInfo);
 
             if (callback) {
                 callback(bookInfo);
             }
-
-            logger.log(true, bookInfo);
         }
     });
 }

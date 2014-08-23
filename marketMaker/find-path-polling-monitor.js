@@ -20,6 +20,8 @@ var theFuture = require('./the-future-manager.js');
 var rippleInfo = require('./ripple-info-manager.js');
 var PathFind = require('../src/js/ripple/pathfind.js').PathFind;
 
+var osjs = require('./offer-service.js');
+
 var emitter = new events.EventEmitter();
 
 var servers = [{
@@ -277,9 +279,14 @@ function handleAlt(dest_amount, raw) {
     checkIfHaveProfit(alt, type);
 }
 
+var offers;
+
 function remoteConnect() {
     console.log("step3:connect to remote!")
     remote.connect(function() {
+        osjs.create(remote, account);
+        osjs.getOffers();
+
         remote.requestAccountLines(account, function(err, result) {
             if (err) console.log(err);
             console.log("step4:prepare currencies!")
@@ -421,15 +428,25 @@ function listenAccountTx() {
         });
 
         if (src_issuer) {
-            account_balances[src_currency] = {
-                value: src_balance,
-                issuer: src_issuer
+            if (src_currency == "XRP") {
+                account_balances[src_currency] = Amount.from_json(src_balance);
+            } else {
+                account_balances[src_currency] = Amount.from_json({
+                    currency: src_currency,
+                    value: src_balance,
+                    issuer: src_issuer
+                });
             }
         }
-        if (dst_currency) {
-            account_balances[dst_currency] = {
-                value: dst_balance,
-                issuer: dst_issuer
+        if (dst_issuer) {
+            if (dst_currency == "XRP") {
+                account_balances[dst_currency] = Amount.from_json(dst_balance);
+            } else {
+                account_balances[dst_currency] = Amount.from_json({
+                    currency: dst_currency,
+                    value: dst_balance,
+                    issuer: dst_issuer
+                });
             }
         }
 
@@ -490,6 +507,34 @@ function createOffer(b1, bi1, b2, bi2) {
         rippleInfo.saveProfitBookPath({
             books: [b1, b2]
         });
+
+        // var bi1_taker_gets = Amount.from_json(bi1.taker_gets);
+        // var bi1_taker_pays = Amount.from_json(bi1.taker_pays);
+        // var bi2_taker_gets = Amount.from_json(bi2.taker_gets);
+        // var bi2_taker_pays = Amount.from_json(bi2.taker_pays);
+
+        // if (bi1_taker_gets.compareTo(bi2.taker_pays) == 1) {
+        //     var c = bi2_taker_pays.currency().to_json();
+        //     var account_balance = account_balances[c];
+        //     if (account_balance.compareTo(bi2_taker_pays) == -1) {
+        //         bi2_taker_pays = account_balance;
+        //     }
+
+        //     var times＝ bi1_taker_gets.ratio_human(bi2_taker_pays).to_human().replace(',', '');
+        //     bi1_taker_gets = bi2.taker_pays;
+        //     bi1_taker_pays = bi1_taker_pays.divide(Amount.from_json(times));
+        // } else if (bi2_taker_gets.compareTo(bi1_taker_pays) == 1) {
+        //     var c = bi1_taker_pays.currency().to_json();
+        //     var account_balance = account_balances[c];
+        //     if (account_balance.compareTo(bi1_taker_pays) == -1) {
+        //         bi1_taker_pays = account_balance;
+        //     }
+
+        //     var times＝ bi2_taker_gets.ratio_human(bi1_taker_pays).to_human().replace(',', '');
+        //     bi2_taker_gets = bi1_taker_pays;
+        //     bi2_taker_pays = bi2_taker_pays.divide(Amount.from_json(times));
+        // }
+
         qbLogger.log(true, "profit:" + bi1.price * bi2.price, bi1, bi2);
     }
 }
