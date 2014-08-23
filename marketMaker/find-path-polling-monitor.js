@@ -508,31 +508,26 @@ function createOffer(b1, bi1, b2, bi2) {
             books: [b1, b2]
         });
 
-        // var bi1_taker_gets = Amount.from_json(bi1.taker_gets);
-        // var bi1_taker_pays = Amount.from_json(bi1.taker_pays);
-        // var bi2_taker_gets = Amount.from_json(bi2.taker_gets);
-        // var bi2_taker_pays = Amount.from_json(bi2.taker_pays);
-
-        // if (bi1_taker_gets.compareTo(bi2.taker_pays) == 1) {
-        //     var c = bi2_taker_pays.currency().to_json();
+        // if (bi1.taker_gets.compareTo(bi2.taker_pays) == 1) {
+        //     var c = bi2.taker_pays.currency().to_json();
         //     var account_balance = account_balances[c];
-        //     if (account_balance.compareTo(bi2_taker_pays) == -1) {
-        //         bi2_taker_pays = account_balance;
+        //     if (account_balance && account_balance.compareTo(bi2.taker_pays) == -1) {
+        //         bi2.taker_pays = account_balance;
         //     }
 
-        //     var times＝ bi1_taker_gets.ratio_human(bi2_taker_pays).to_human().replace(',', '');
-        //     bi1_taker_gets = bi2.taker_pays;
-        //     bi1_taker_pays = bi1_taker_pays.divide(Amount.from_json(times));
-        // } else if (bi2_taker_gets.compareTo(bi1_taker_pays) == 1) {
-        //     var c = bi1_taker_pays.currency().to_json();
+        //     var times＝ bi1.taker_gets.ratio_human(bi2.taker_pays).to_human().replace(',', '');
+        //     bi1.taker_gets = bi2.taker_pays;
+        //     bi1.taker_pays = bi1.taker_pays.divide(Amount.from_json(times));
+        // } else if (bi2.taker_gets.compareTo(bi1.taker_pays) == 1) {
+        //     var c = bi1.taker_pays.currency().to_json();
         //     var account_balance = account_balances[c];
-        //     if (account_balance.compareTo(bi1_taker_pays) == -1) {
-        //         bi1_taker_pays = account_balance;
+        //     if (account_balance && account_balance.compareTo(bi1.taker_pays) == -1) {
+        //         bi1.taker_pays = account_balance;
         //     }
 
-        //     var times＝ bi2_taker_gets.ratio_human(bi1_taker_pays).to_human().replace(',', '');
-        //     bi2_taker_gets = bi1_taker_pays;
-        //     bi2_taker_pays = bi2_taker_pays.divide(Amount.from_json(times));
+        //     var times＝ bi2.taker_gets.ratio_human(bi1.taker_pays).to_human().replace(',', '');
+        //     bi2.taker_gets = bi1.taker_pays;
+        //     bi2.taker_pays = bi2.taker_pays.divide(Amount.from_json(times));
         // }
 
         qbLogger.log(true, "profit:" + bi1.price * bi2.price, bi1, bi2);
