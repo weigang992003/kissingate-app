@@ -35,13 +35,17 @@ var orderBookSchema = mongoose.Schema({
     collection: 'orderBook'
 });
 
+var bookSchema = mongoose.Schema({
+    dst_currency: String,
+    dst_issuer: String,
+    src_currency: String,
+    src_issuer: String
+}, {
+    _id: false
+})
+
 var profitBookPathSchema = mongoose.Schema({
-    books: [{
-        dst_currency: String,
-        dst_issuer: String,
-        src_currency: String,
-        src_issuer: String
-    }]
+    books: [bookSchema]
 }, {
     collection: 'profitBookPath'
 });
