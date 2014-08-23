@@ -508,28 +508,32 @@ function createOffer(b1, bi1, b2, bi2) {
             books: [b1, b2]
         });
 
-        // if (bi1.taker_gets.compareTo(bi2.taker_pays) == 1) {
-        //     var c = bi2.taker_pays.currency().to_json();
-        //     var account_balance = account_balances[c];
-        //     if (account_balance && account_balance.compareTo(bi2.taker_pays) == -1) {
-        //         bi2.taker_pays = account_balance;
-        //     }
+        if (bi1.taker_gets.compareTo(bi2.taker_pays) == 1) {
+            var c = bi2.taker_pays.currency().to_json();
+            var account_balance = account_balances[c];
+            if (account_balance && account_balance.compareTo(bi2.taker_pays) == -1) {
+                bi2.taker_pays = account_balance;
+            }
 
-        //     var times＝ bi1.taker_gets.ratio_human(bi2.taker_pays).to_human().replace(',', '');
-        //     bi1.taker_gets = bi2.taker_pays;
-        //     bi1.taker_pays = bi1.taker_pays.divide(Amount.from_json(times));
-        // } else if (bi2.taker_gets.compareTo(bi1.taker_pays) == 1) {
-        //     var c = bi1.taker_pays.currency().to_json();
-        //     var account_balance = account_balances[c];
-        //     if (account_balance && account_balance.compareTo(bi1.taker_pays) == -1) {
-        //         bi1.taker_pays = account_balance;
-        //     }
+            var times = bi1.taker_gets.ratio_human(bi2.taker_pays).to_human().replace(',', '');
+            times = math.round(times - 0, 6) + "";
+            bi1.taker_gets = bi2.taker_pays;
+            bi1.taker_pays = bi1.taker_pays.divide(Amount.from_json(times));
+        } else if (bi2.taker_gets.compareTo(bi1.taker_pays) == 1) {
+            var c = bi1.taker_pays.currency().to_json();
+            var account_balance = account_balances[c];
+            if (account_balance && account_balance.compareTo(bi1.taker_pays) == -1) {
+                bi1.taker_pays = account_balance;
+            }
 
-        //     var times＝ bi2.taker_gets.ratio_human(bi1.taker_pays).to_human().replace(',', '');
-        //     bi2.taker_gets = bi1.taker_pays;
-        //     bi2.taker_pays = bi2.taker_pays.divide(Amount.from_json(times));
-        // }
+            var times = bi2.taker_gets.ratio_human(bi1.taker_pays).to_human().replace(',', '');
+            times = math.round(times - 0, 6) + "";
+            bi2.taker_gets = bi1.taker_pays;
+            bi2.taker_pays = bi2.taker_pays.divide(Amount.from_json(times));
+        }
 
-        qbLogger.log(true, "profit:" + bi1.price * bi2.price, bi1, bi2);
+        qbLogger.log(true, "profit:" + bi1.price * bi2.price,
+            bi1.taker_pays.to_text_full(), bi1.taker_gets.to_text_full(),
+            bi2.taker_pays.to_text_full(), bi2.taker_gets.to_text_full());
     }
 }

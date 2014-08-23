@@ -2,7 +2,7 @@ var filterOffers = require('./offer-filter.js').filterOffers;
 
 function queryBook(remote, currency1, issuer1, currency2, issuer2, account, logger, callback) {
     var bookInfo = {};
-    var rate = "1.000001";
+    var rate = "1.00001";
 
     var asks = remote.book(currency1, issuer1, currency2, issuer2);
     asks.offers(function(offers) {

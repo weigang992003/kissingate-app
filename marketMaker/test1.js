@@ -39,6 +39,8 @@ var dest_amount = Amount.from_json({
     value: '0.0001'
 });
 
+console.log(dest_amount.divide(Amount.from_json("1.1234567")).to_human())
+
 console.log(dest_amount.to_text_full());
 console.log(dest_amount.to_human({
     precision: 2
