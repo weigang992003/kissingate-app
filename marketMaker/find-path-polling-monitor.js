@@ -450,6 +450,7 @@ function listenAccountTx() {
             }
         }
 
+
         if (books.length % 2 == 0 && books.length > 1) {
             checkProfit();
         }
@@ -510,7 +511,9 @@ function createOffer(b1, bi1, b2, bi2) {
 
         if (bi1.taker_gets.compareTo(bi2.taker_pays) == 1) {
             var c = bi2.taker_pays.currency().to_json();
+
             var account_balance = account_balances[c];
+            latLogger.log(true, account_balance.to_text_full());
             if (account_balance && account_balance.compareTo(bi2.taker_pays) == -1) {
                 bi2.taker_pays = account_balance;
             }
@@ -521,7 +524,9 @@ function createOffer(b1, bi1, b2, bi2) {
             bi1.taker_pays = bi1.taker_pays.product_human(times);
         } else if (bi2.taker_gets.compareTo(bi1.taker_pays) == 1) {
             var c = bi1.taker_pays.currency().to_json();
+
             var account_balance = account_balances[c];
+            latLogger.log(true, account_balance.to_text_full());
             if (account_balance && account_balance.compareTo(bi1.taker_pays) == -1) {
                 bi1.taker_pays = account_balance;
             }
@@ -529,7 +534,7 @@ function createOffer(b1, bi1, b2, bi2) {
             var times = bi1.taker_pays.ratio_human(bi2.taker_gets).to_human().replace(',', '');
             times = math.round(times - 0, 6) + "";
             bi2.taker_gets = bi1.taker_pays;
-            bi2.taker_pays = bi2.taker_pays.divide(Amount.from_json(times));
+            bi2.taker_pays = bi2.taker_pays.product_human(times);
         }
 
         qbLogger.log(true, "profit:" + bi1.price * bi2.price,

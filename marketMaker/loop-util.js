@@ -1,15 +1,31 @@
 var _ = require('underscore');
 
-var indexSet;
-var size;
-var loop = 0;
-
-function init(p_index_set, p_size) {
-    indexSet = p_index_set;
-    size = p_size;
+function Loop(init_set) {
+    this.init_set = init_set;
+    this.cycle = false;
 }
 
-function next() {
+Loop.prototype.next = function(indexSet) {
+    var self = this;
+
+    var size = indexSet.length;
+    result = getNext(indexSet, size);
+    if (init_set.length == size) {
+        var ranges = _.range(size);
+        var isEqual = true;
+        _.each(ranges, function(range) {
+            if (init_set[range] != indexSet[range]) {
+                isEqual = false;
+            }
+        })
+        if (isEqual) {
+            self.cycle = true;
+        }
+    }
+    return result;
+}
+
+function getNext(indexSet, size) {
     if (!indexSet || !size) {
         return;
     }
@@ -25,10 +41,6 @@ function next() {
         rest = nextIndexSet(rest, size);
     }
 
-    if (_.isEqual([0], _.union([first], rest))) {
-        loop++;
-    }
-
     while (_.contains(rest, first)) {
         rest.unshift(first);
         indexSet = rest;
@@ -41,5 +53,4 @@ function next() {
     return _.union([first], rest);
 }
 
-exports.init = init;
-exports.next = next;
+exports.Loop = Loop;

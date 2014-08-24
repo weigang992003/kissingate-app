@@ -6,9 +6,12 @@ var config = require('./config.js');
 var ripple = require('../src/js/ripple');
 var crypto = require('./crypto-util.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
+var osjs = require('./offer-service.js');
+var lujs = require('./loop-util.js');
 var mongodbManager = require('./the-future-manager.js');
-var Logger = require('./the-future-logger.js').TFLogger;
-Logger.getNewLog("keep-currency-balance-solution");
+
+var Logger = require('./new-logger.js').Logger;
+var scpLogger = new Logger('same-currency-profit');
 
 var emitter = new events.EventEmitter();
 emitter.once('decrypt', decrypt);
@@ -120,7 +123,7 @@ function createOffer(taker_pays, taker_gets) {
         return;
     }
 
-    Logger.log(true, "we are create offer here", "taker_pays", taker_pays, "taker_gets", taker_gets);
+    scpLogger.log(true, "we are create offer here", "taker_pays", taker_pays, "taker_gets", taker_gets);
 
     tx.offerCreate(account, taker_pays, taker_gets);
     tx.on("success", function(res) {
