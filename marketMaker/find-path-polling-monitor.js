@@ -431,7 +431,7 @@ function listenAccountTx() {
             if (src_currency == "XRP") {
                 account_balances[src_currency] = Amount.from_json(src_balance);
             } else {
-                account_balances[src_currency] = Amount.from_json({
+                account_balances[src_currency + src_issuer] = Amount.from_json({
                     currency: src_currency,
                     value: src_balance,
                     issuer: src_issuer
@@ -442,7 +442,7 @@ function listenAccountTx() {
             if (dst_currency == "XRP") {
                 account_balances[dst_currency] = Amount.from_json(dst_balance);
             } else {
-                account_balances[dst_currency] = Amount.from_json({
+                account_balances[dst_currency + dst_issuer] = Amount.from_json({
                     currency: dst_currency,
                     value: dst_balance,
                     issuer: dst_issuer
@@ -512,8 +512,12 @@ function createOffer(b1, bi1, b2, bi2) {
         var times;
         if (bi1.taker_gets.compareTo(bi2.taker_pays) == 1) {
             var c = bi2.taker_pays.currency().to_json();
+            var i = "";
+            if (c != "XRP") {
+                i = bi2.taker_pays.issuer().to_json();
+            }
 
-            var account_balance = account_balances[c];
+            var account_balance = account_balances[c + i];
             latLogger.log(true, account_balance.to_text_full());
             if (account_balance && account_balance.compareTo(bi2.taker_pays) == -1) {
                 times = account_balance.ratio_human(bi2.taker_pays).to_human().replace(',', '');
@@ -528,8 +532,12 @@ function createOffer(b1, bi1, b2, bi2) {
             bi1.taker_pays = bi1.taker_pays.product_human(times);
         } else if (bi2.taker_gets.compareTo(bi1.taker_pays) == 1) {
             var c = bi1.taker_pays.currency().to_json();
+            var i = "";
+            if (c != "XRP") {
+                i = bi1.taker_pays.issuer().to_json();
+            }
 
-            var account_balance = account_balances[c];
+            var account_balance = account_balances[c + i];
             latLogger.log(true, account_balance.to_text_full());
             if (account_balance && account_balance.compareTo(bi1.taker_pays) == -1) {
                 times = account_balance.ratio_human(bi1.taker_pays).to_human().replace(',', '');
