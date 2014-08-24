@@ -30,7 +30,8 @@ var orderBookSchema = mongoose.Schema({
     askNum: Number,
     bidNum: Number,
     askPrice: String,
-    bidPrice: String
+    bidPrice: String,
+    date: Date
 }, {
     collection: 'orderBook'
 });
@@ -101,9 +102,11 @@ function saveOrderBook(record) {
             result.askPrice = record.askPrice;
             result.bidNum = record.bidNum;
             result.bidPrice = record.bidPrice;
+            result.date = new Date();
             result.save();
         } else {
             var row = new orderBook(record);
+            row.date = new Date();
             row.save(function(err) {
                 if (err) return handleError(err);
             });
