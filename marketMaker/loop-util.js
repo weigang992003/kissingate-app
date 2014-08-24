@@ -5,27 +5,39 @@ function Loop(init_set) {
     this.cycle = false;
 }
 
-Loop.prototype.next = function(indexSet) {
+Loop.prototype.next = function(indexSet, size) {
     var self = this;
 
-    var size = indexSet.length;
-    result = getNext(indexSet, size);
-    if (init_set.length == size) {
-        var ranges = _.range(size);
+    indexSet = nextIndexSet(indexSet, size);
+
+    var len = indexSet.length;
+    if (self.init_set.length == len) {
         var isEqual = true;
+
+        var ranges = _.range(len);
         _.each(ranges, function(range) {
-            if (init_set[range] != indexSet[range]) {
+            if (self.init_set[range] != indexSet[range]) {
                 isEqual = false;
             }
-        })
+        });
+
         if (isEqual) {
             self.cycle = true;
         }
     }
-    return result;
+
+    return indexSet;
 }
 
-function getNext(indexSet, size) {
+Loop.prototype.isCycle = function() {
+    return this.cycle;
+}
+
+Loop.prototype.reset = function() {
+    this.cycle = false;
+}
+
+function nextIndexSet(indexSet, size) {
     if (!indexSet || !size) {
         return;
     }
@@ -54,3 +66,11 @@ function getNext(indexSet, size) {
 }
 
 exports.Loop = Loop;
+
+// var loop = new Loop([1, 0]);
+// var is = [1, 0];
+// _.each(_.range(6), function() {
+//     is = loop.next(is, 3);
+//     console.log(is);
+//     console.log(loop.isCycle());
+// })

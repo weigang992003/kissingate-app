@@ -7,16 +7,27 @@ function create(r, a) {
     account = a;
 }
 
-function getOffers() {
+function getOffers(callback) {
     remote.requestAccountOffers(account, function(err, result) {
         offers = result.offers;
         console.log(offers);
+
+        if (callback) {
+            callback(offers);
+        }
     });
 }
 
 function ifOfferExist(pays, gets) {
     if (offers.length == 0) {
         return false;
+    }
+
+    if (pays instanceof Amount) {
+        pays = pays.to_json();
+    }
+    if (gets instanceof Amount) {
+        gets = gets.to_json();
     }
 
     var result = _.filter(offers, function(offer) {

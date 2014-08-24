@@ -39,7 +39,7 @@ var dest_amount = Amount.from_json({
     value: '0.0001'
 });
 
-console.log(dest_amount.divide(Amount.from_json("1.1234567")).to_human())
+// console.log(dest_amount.divide(Amount.from_json("1.1234567")).to_human())
 
 console.log(dest_amount.to_text_full());
 console.log(dest_amount.to_human({
@@ -50,6 +50,10 @@ console.log(dest_amount.product_human(1.005).to_text_full());
 console.log(dest_amount.to_text_full());
 
 var a = Amount.from_json("0.00000893068385/BTC/rf9q1WE2Kdmv9AWtesCaANJyNxnFjp5T7z");
+console.log(a instanceof Amount);
+var c = Amount.json_rewrite(a);
+console.log("c", c);
+
 var b = Amount.from_json("0.0000084/BTC/rf9q1WE2Kdmv9AWtesCaANJyNxnFjp5T7z");
 console.log(a.to_json());
 console.log(a.ratio_human(b).to_human());
