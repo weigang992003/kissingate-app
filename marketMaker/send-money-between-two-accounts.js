@@ -31,8 +31,10 @@
      }]
  };
 
+ // 0.01/BTC/rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q snapswap
 
- var asks = ["please input source account:", "please input dest account:"];
+
+ var asks = ["please input source account:", "please input dest account:", "please input value/curreny/issuer list:"];
 
  function ask(question) {
      var stdin = process.stdin,
@@ -53,12 +55,22 @@
                      ask(asks[1]);
                  });
              });
-         } else {
+         } else if (question == asks[1]) {
              mongodbManager.getAccount(data, function(result) {
                  dest = result.account;
                  console.log("dest:" + dest);
-                 connectRemote();
+                 ask(asks[2]);
              });
+         } else if (question == asks[2]) {
+             if (data.length != 0) {
+                 remote.connect(function() {
+                     _.each(data.split(","), function(amount) {
+                         sendMoney(amount);
+                     })
+                 })
+             } else {
+                 connectRemote();
+             }
          }
      });
  }
