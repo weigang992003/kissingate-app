@@ -509,16 +509,20 @@ function createOffer(b1, bi1, b2, bi2) {
             books: [b1, b2]
         });
 
+        var times;
         if (bi1.taker_gets.compareTo(bi2.taker_pays) == 1) {
             var c = bi2.taker_pays.currency().to_json();
 
             var account_balance = account_balances[c];
             latLogger.log(true, account_balance.to_text_full());
             if (account_balance && account_balance.compareTo(bi2.taker_pays) == -1) {
+                times = account_balance.ratio_human(bi2.taker_pays).to_human().replace(',', '');
+                times = math.round(times - 0, 6);
                 bi2.taker_pays = account_balance;
+                bi2.taker_gets = bi2.taker_gets.product_human(times);
             }
 
-            var times = bi2.taker_pays.ratio_human(bi1.taker_gets).to_human().replace(',', '');
+            times = bi2.taker_pays.ratio_human(bi1.taker_gets).to_human().replace(',', '');
             times = math.round(times - 0, 6);
             bi1.taker_gets = bi2.taker_pays;
             bi1.taker_pays = bi1.taker_pays.product_human(times);
@@ -528,10 +532,13 @@ function createOffer(b1, bi1, b2, bi2) {
             var account_balance = account_balances[c];
             latLogger.log(true, account_balance.to_text_full());
             if (account_balance && account_balance.compareTo(bi1.taker_pays) == -1) {
+                times = account_balance.ratio_human(bi1.taker_pays).to_human().replace(',', '');
+                times = math.round(times - 0, 6);
                 bi1.taker_pays = account_balance;
+                bi1.taker_gets = bi1.taker_gets.product_human(times);
             }
 
-            var times = bi1.taker_pays.ratio_human(bi2.taker_gets).to_human().replace(',', '');
+            times = bi1.taker_pays.ratio_human(bi2.taker_gets).to_human().replace(',', '');
             times = math.round(times - 0, 6) + "";
             bi2.taker_gets = bi1.taker_pays;
             bi2.taker_pays = bi2.taker_pays.product_human(times);

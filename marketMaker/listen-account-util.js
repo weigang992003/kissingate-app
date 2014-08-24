@@ -37,7 +37,6 @@ AccountListener.prototype.listenOffer = function(remote) {
                     aim.saveHB(balanceHistory);
                 }
             }
-
         });
     });
 }
