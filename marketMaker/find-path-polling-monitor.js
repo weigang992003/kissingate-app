@@ -515,10 +515,10 @@ function createOffer(b1, bi1, b2, bi2) {
                 bi2.taker_pays = account_balance;
             }
 
-            var times = bi1.taker_gets.ratio_human(bi2.taker_pays).to_human().replace(',', '');
-            times = math.round(times - 0, 6) + "";
+            var times = bi2.taker_pays.ratio_human(bi1.taker_gets).to_human().replace(',', '');
+            times = math.round(times - 0, 6);
             bi1.taker_gets = bi2.taker_pays;
-            bi1.taker_pays = bi1.taker_pays.divide(Amount.from_json(times));
+            bi1.taker_pays = bi1.taker_pays.product_human(times);
         } else if (bi2.taker_gets.compareTo(bi1.taker_pays) == 1) {
             var c = bi1.taker_pays.currency().to_json();
             var account_balance = account_balances[c];
@@ -526,7 +526,7 @@ function createOffer(b1, bi1, b2, bi2) {
                 bi1.taker_pays = account_balance;
             }
 
-            var times = bi2.taker_gets.ratio_human(bi1.taker_pays).to_human().replace(',', '');
+            var times = bi1.taker_pays.ratio_human(bi2.taker_gets).to_human().replace(',', '');
             times = math.round(times - 0, 6) + "";
             bi2.taker_gets = bi1.taker_pays;
             bi2.taker_pays = bi2.taker_pays.divide(Amount.from_json(times));

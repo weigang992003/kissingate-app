@@ -1,6 +1,7 @@
 var http = require('http');
 var _ = require('underscore');
 
+var math = require('mathjs');
 var ripple = require('../src/js/ripple');
 var config = require('../marketMaker/config.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
@@ -10,6 +11,7 @@ var filterOffers = require('../marketMaker/offer-filter.js').filterOffers;
 var Remote = ripple.Remote;
 var account = config.account;
 var secret = config.secret;
+var Amount = ripple.Amount;
 
 var remote = new Remote({
     // see the API Reference for available options
@@ -26,9 +28,53 @@ var remote = new Remote({
     }]
 });
 
+var bi1;
+var bi2;
+var account = "r9cZA1mLK5R5Am25ArfXFmqgNwjZgnfk59";
+
+
+function createOffer(bi1, bi2) {
+    if (bi1.taker_gets.compareTo(bi2.taker_pays) == 1) {
+        var c = bi2.taker_pays.currency().to_json();
+
+        var times = bi2.taker_pays.ratio_human(bi1.taker_gets).to_human().replace(',', '');
+        times = math.round(times - 0, 6);
+        bi1.taker_gets = bi2.taker_pays;
+        bi1.taker_pays = bi1.taker_pays.product_human(times);
+    } else if (bi2.taker_gets.compareTo(bi1.taker_pays) == 1) {
+        var c = bi1.taker_pays.currency().to_json();
+
+        var times = bi2.taker_gets.ratio_human(bi1.taker_pays).to_human().replace(',', '');
+        times = math.round(times - 0, 6) + "";
+        bi2.taker_gets = bi1.taker_pays;
+        bi2.taker_pays = bi2.taker_pays.divide(Amount.from_json(times));
+    }
+
+    console.log(true, "profit:" + bi1.price * bi2.price,
+        bi1.taker_pays.to_text_full(), bi1.taker_gets.to_text_full(),
+        bi2.taker_pays.to_text_full(), bi2.taker_gets.to_text_full());
+}
+
+
+
 remote.connect(function() {
-    var book = remote.book("XRP", "", "CNY", "razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA"); // ripplecn.
-    queryBook(remote, "XRP", "", "CNY", "razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA");
+    console.log("remote connected!");
+    // var book = remote.book("XRP", "", "CNY", "razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA"); // ripplecn.
+    // queryBook(remote, "XRP", "", "CNY", "razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA");
+
+    queryBook(remote, "XRP", "", "CNY", "razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA", account, null, function(bi) {
+        bi1 = bi;
+        if (bi1 && bi2) {
+            createOffer(bi1, bi2);
+        }
+    });
+    queryBook(remote, "CNY", "rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK", "XRP", "", account, null, function(bi) {
+        bi2 = bi;
+        if (bi1 && bi2) {
+            createOffer(bi1, bi2);
+        }
+    });
+
 
     // book.offers(function(offers) {
     //     var newOffers = filterOffers(offers, "XRP", "CNY", "abc", "asks");
