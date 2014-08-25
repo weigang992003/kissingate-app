@@ -17,6 +17,7 @@ var balanceHistory = ai.model('balanceHistory', balanceHistorySchema);
 
 function saveBH(record) {
     balanceHistory.findOne({
+        hash: record.hash,
         sequence: record.sequence
     }, function(err, result) {
         if (result) {

@@ -1,3 +1,5 @@
+var aim = require('./account-info-manager.js');
+
 var remote;
 var account;
 var offers = [];
@@ -41,7 +43,7 @@ function ifOfferExist(pays, gets) {
     return false;
 }
 
-function createOffer(taker_pays, taker_gets, logger) {
+function createOffer(taker_pays, taker_gets, logger, createHB) {
     var tx = remote.transaction();
     if (secret) {
         tx.secret(secret);
@@ -55,6 +57,16 @@ function createOffer(taker_pays, taker_gets, logger) {
     tx.offerCreate(account, taker_pays, taker_gets);
     tx.on("success", function(res) {
         getOffers();
+        if (createHB) {
+            var price = taker_pays.ratio_human(taker_gets).to_human().replace(',', '');
+            aim.saveHB({
+                'hash': res.transaction.hash,
+                'sequence': res.transaction.Sequence,
+                'price': price,
+                'dst_amount': taker_pays.product_human("0").to_text_full(),
+                'src_amount': taker_gets.product_human("0").to_text_full()
+            })
+        }
     });
 
     tx2.on('proposed', function(res) {
