@@ -503,57 +503,72 @@ function checkProfit() {
     });
 }
 
+function getAccountBalance(amount) {
+    var c = amount.currency().to_json();
+    var i = "";
+    if (c != "XRP") {
+        i = amount.issuer().to_json();
+    }
+
+    return account_balances[c + i];
+}
+
+function minAmount(amounts) {
+    if (!amounts || amounts.length == 0) {
+        return;
+    }
+    if (amounts.length == 1) {
+        return amounts[0];
+    }
+    var minAmount = amounts[0];
+
+    _.each(amounts, function(amount) {
+        if (minAmount.compareTo(amount) == 1) {
+            minAmount = amount;
+        }
+    })
+
+    return minAmount;
+}
+
 function createOffer(b1, bi1, b2, bi2) {
     if (bi1.price * bi2.price < 1) {
         rippleInfo.saveProfitBookPath({
             books: [b1, b2]
         });
 
+        var bi1_tp_ab = getAccountBalance(bi1.taker_pays);
+        var bi1_tg_ab = getAccountBalance(bi1.taker_gets);
+
+        if (!bi1_tp_ab || !bi1_tg_ab) {
+            return;
+        }
+
+        var min_taker_pays = minAmount([bi1.taker_pays, bi2.taker_gets, bi1_tp_ab]);
+        var min_taker_gets = minAmount([bi1.taker_gets, bi2.taker_pays, bi1_tg_ab]);
+
         var times;
-        if (bi1.taker_gets.compareTo(bi2.taker_pays) == 1) {
-            var c = bi2.taker_pays.currency().to_json();
-            var i = "";
-            if (c != "XRP") {
-                i = bi2.taker_pays.issuer().to_json();
-            }
-
-            var account_balance = account_balances[c + i];
-            latLogger.log(true, account_balance.to_text_full());
-            if (account_balance && account_balance.compareTo(bi2.taker_pays) == -1) {
-                times = account_balance.ratio_human(bi2.taker_pays).to_human().replace(',', '');
-                times = math.round(times - 0, 6);
-                bi2.taker_pays = account_balance;
-                bi2.taker_gets = bi2.taker_gets.product_human(times);
-            }
-
-            times = bi2.taker_pays.ratio_human(bi1.taker_gets).to_human().replace(',', '');
-            times = math.round(times - 0, 6);
-            bi1.taker_gets = bi2.taker_pays;
+        if (min_taker_pays.compareTo(min_taker_gets.product_human(bi1.price)) == 1) {
+            times = min_taker_gets.ratio_human(bi1.taker_gets).to_human().replace(',', '');
+            bi1.taker_gets = min_taker_gets;
             bi1.taker_pays = bi1.taker_pays.product_human(times);
-        } else if (bi2.taker_gets.compareTo(bi1.taker_pays) == 1) {
-            var c = bi1.taker_pays.currency().to_json();
-            var i = "";
-            if (c != "XRP") {
-                i = bi1.taker_pays.issuer().to_json();
-            }
 
-            var account_balance = account_balances[c + i];
-            latLogger.log(true, account_balance.to_text_full());
-            if (account_balance && account_balance.compareTo(bi1.taker_pays) == -1) {
-                times = account_balance.ratio_human(bi1.taker_pays).to_human().replace(',', '');
-                times = math.round(times - 0, 6);
-                bi1.taker_pays = account_balance;
-                bi1.taker_gets = bi1.taker_gets.product_human(times);
-            }
+            times = min_taker_gets.ratio_human(bi2.taker_pays).to_human().replace(',', '');
+            bi2.taker_pays = min_taker_gets;
+            bi2.taker_gets = bi2.taker_gets.product_human(times);
+        } else {
+            times = min_taker_pays.ratio_human(bi1.taker_pays).to_human().replace(',', '');
+            bi1.taker_pays = min_taker_pays;
+            bi1.taker_gets = bi1.taker_gets.product_human(times);
 
-            times = bi1.taker_pays.ratio_human(bi2.taker_gets).to_human().replace(',', '');
-            times = math.round(times - 0, 6) + "";
-            bi2.taker_gets = bi1.taker_pays;
-            bi2.taker_pays = bi2.taker_pays.product_human(times);
+            times = min_taker_pays.ratio_human(bi2.taker_gets).to_human().replace(',', '');
+            bi2.taker_gets = min_taker_pays;
+            bi2.taker_pays = bi2.taker_gets.product_human(times);
         }
 
         qbLogger.log(true, "profit:" + bi1.price * bi2.price,
             bi1.taker_pays.to_text_full(), bi1.taker_gets.to_text_full(),
-            bi2.taker_pays.to_text_full(), bi2.taker_gets.to_text_full());
+            bi2.taker_pays.to_text_full(), bi2.taker_gets.to_text_full(),
+            bi1_tp_ab.to_text_full(), bi1_tg_ab.to_text_full());
     }
 }
