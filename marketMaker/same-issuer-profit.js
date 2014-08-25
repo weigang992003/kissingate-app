@@ -9,10 +9,10 @@ var jsbn = require('../src/js/jsbn/jsbn.js');
 var osjs = require('./offer-service.js');
 var Loop = require('./loop-util.js').Loop;
 var theFuture = require('./the-future-manager.js');
-var queryBook = require('./query-book.js').queryBook;
+var queryBookNoRate = require('./query-book.js').queryBookNoRate;
 
 var Logger = require('./new-logger.js').Logger;
-var scpLogger = new Logger('same-currency-profit');
+var sipLogger = new Logger('same-issuer-profit');
 
 var emitter = new events.EventEmitter();
 emitter.once('decrypt', decrypt);
@@ -71,13 +71,13 @@ function remoteConnect() {
 }
 
 var same_currency_profit = config.same_currency_profit;
-var currencies;
-var issuerMap = {};
+var issuers;
+var currencyMap = {};
 var next = 0;
-var ipLoop;
-var curIssuers;
-var curCurrency;
-var ipIndexSet = [1, 0];
+var cpLoop;
+var curCurrencies;
+var curIssuer;
+var cpIndexSet = [1, 0];
 
 function makeProfit(lines) {
     //get all effective trust line.
@@ -87,54 +87,58 @@ function makeProfit(lines) {
 
     //group all trust line by currency.
     lines = _.groupBy(lines, function(line) {
-        return line.currency;
+        return line.account;
     })
 
-    //apply to those currencies we support. we store them into same_currency_profilt 
-    currencies = _.intersection(_.keys(lines), same_currency_profit);
-    _.each(currencies, function(currency) {
-        // find out currencies which have multi issuers and build issuerMap
-        if (lines[currency].length > 1) {
-            var issuers = _.pluck(lines[currency], 'account');
-            issuerMap[currency] = issuers;
+    //apply to those issuers we support. we store them into same_currency_profilt 
+    issuers = _.intersection(_.keys(lines), same_currency_profit);
+    _.each(issuers, function(issuer) {
+        // find out issuers which have multi issuers and build issuerMap
+        if (lines[issuer].length > 1) {
+            currencyMap[issuer] = _.pluck(lines[issuer], 'currency');
         }
     });
-    currencies = _.keys(issuerMap);
+    issuers = _.keys(currencyMap);
 
-    goNextCurrency();
+    goNextIssuer();
 }
 
-function goNextCurrency() {
-    if (currencies.length > next) {
-        curCurrency = currencies[next];
-        curIssuers = issuerMap[curCurrency];
+function goNextIssuer() {
+    if (issuers.length > next) {
+        curIssuer = issuers[next];
+        curCurrencies = currencyMap[curIssuer];
 
-        ipLoop = new Loop([1, 0]);
-        goNextIssuerPair();
+        cpLoop = new Loop([1, 0]);
+        goNextCurrencyPair();
     } else {
         throw new Error('we are done!!!!');
     }
 }
 
 
-function goNextIssuerPair() {
-    var issuer1 = curIssuers[ipIndexSet[0]];
-    var issuer2 = curIssuers[ipIndexSet[1]];
+function goNextCurrencyPair() {
+    var currency1 = curCurrencies[cpIndexSet[0]];
+    var currency2 = curCurrencies[cpIndexSet[1]];
 
-    queryBook(remote, curCurrency, issuer1, curCurrency, issuer2, account, scpLogger, function(bi) {
-        console.log("buy " + issuer1, "price:" + bi.price, "with:" + issuer2);
-        if (bi.price - 0 < 0.999) {
-            osjs.createOffer(bi.taker_pays, bi.taker_gets, scpLogger);
-        }
-
-        ipIndexSet = ipLoop.next(ipIndexSet, curIssuers.length);
-        if (ipLoop.isCycle()) {
-            next++;
-            goNextCurrency();
+    queryBookNoRate(remote, currency1, curIssuer, currency2, curIssuer, account, sipLogger, function(bi) {
+        if (bi.my) {
+            goNext();
         } else {
-            goNextIssuerPair();
+            bi.taker_pays.product_human("0.99999");
+            osjs.createOffer(bi.taker_pays, bi.taker_gets, sipLogger);
+            goNext();
         }
     });
+}
+
+function goNext() {
+    cpIndexSet = cpLoop.next(cpIndexSet, curCurrencies.length);
+    if (cpLoop.isCycle()) {
+        next++;
+        goNextIssuer();
+    } else {
+        goNextCurrencyPair();
+    }
 }
 
 setTimeout(throwDisconnectError, 1000 * 60 * 10);

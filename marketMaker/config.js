@@ -59,6 +59,7 @@ exports.transfer_rates = {
 }
 
 exports.same_currency_profit = ["CNY"];
+exports.same_issuer_profit = ["rNPRNzBB92BVpAhhZr4iXDTveCgV5Pofm9"];
 
 exports.mother = -1;
 exports.newAccount = 0;

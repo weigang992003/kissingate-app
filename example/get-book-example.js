@@ -75,6 +75,10 @@ remote.connect(function() {
         }
     });
 
+    // queryBook(remote, "BTC", "rNPRNzBB92BVpAhhZr4iXDTveCgV5Pofm9", "LTC", "rNPRNzBB92BVpAhhZr4iXDTveCgV5Pofm9", "rnbYVHTYdUgjNFAX9fT1W9MkDgPtmpoNcM", null, function(bi) {
+    //     console.log(bi.my, bi.taker_pays.to_text_full(), bi.taker_gets.to_text_full(), bi.price);
+    // });
+
 
     // book.offers(function(offers) {
     //     var newOffers = filterOffers(offers, "XRP", "CNY", "abc", "asks");
