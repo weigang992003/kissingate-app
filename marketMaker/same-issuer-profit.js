@@ -10,6 +10,7 @@ var osjs = require('./offer-service.js');
 var Loop = require('./loop-util.js').Loop;
 var theFuture = require('./the-future-manager.js');
 var queryBookNoRate = require('./query-book.js').queryBookNoRate;
+var AccountListener = require('./listen-account-util.js').AccountListener;
 
 var Logger = require('./new-logger.js').Logger;
 var sipLogger = new Logger('same-issuer-profit');
@@ -45,6 +46,7 @@ var remote = new ripple.Remote(remote_options);
 
 var account;
 var secret;
+var al;
 theFuture.getAccount(config.mother, function(result) {
     account = result.account;
     secret = result.secret;
@@ -60,6 +62,8 @@ function decrypt(encrypted) {
 
 function remoteConnect() {
     remote.connect(function() {
+        al = new AccountListener(account);
+        al.listenOffer();
         osjs.create(remote, account);
         osjs.getOffers(function() {
             remote.requestAccountLines(account, function(err, result) {

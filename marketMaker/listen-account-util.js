@@ -1,10 +1,12 @@
 var aim = require('./account-info-manager');
 
-function AccountListener(accountId) {
+function AccountListener(remote, accountId) {
+    this.remote = remote;
     this.accountId = accountId;
 }
 
-AccountListener.prototype.listenOffer = function(remote) {
+AccountListener.prototype.listenOffer = function() {
+    var remote = this.remote;
     var accountId = this.accountId;
 
     var account = remote.addAccount(accountId);
@@ -30,6 +32,7 @@ AccountListener.prototype.listenOffer = function(remote) {
                     var dst_amount = f_take_pays.value - p_take_pays.value + '/' + f_take_pays.currency + '/' + f_take_pays.issuer;
                     var src_amount = f_take_gets.value - p_take_gets.value + '/' + f_take_gets.currency + '/' + f_take_gets.issuer;
 
+                    balanceHistory.account = accountId;
                     balanceHistory.dst_amount = dst_amount;
                     balanceHistory.src_amount = src_amount;
                     balanceHistory.sequence = finalFields.Sequence;
@@ -40,3 +43,5 @@ AccountListener.prototype.listenOffer = function(remote) {
         });
     });
 }
+
+exports.AccountListener = AccountListener;

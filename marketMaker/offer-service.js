@@ -62,6 +62,7 @@ function createOffer(taker_pays, taker_gets, logger, createHB) {
             aim.saveHB({
                 'hash': res.transaction.hash,
                 'sequence': res.transaction.Sequence,
+                'account': account,
                 'price': price,
                 'dst_amount': taker_pays.product_human("0").to_text_full(),
                 'src_amount': taker_gets.product_human("0").to_text_full()

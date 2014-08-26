@@ -5,6 +5,7 @@ var ai = mongoose.createConnection('mongodb://localhost/account-info');
 
 var balanceHistorySchema = mongoose.Schema({
     hash: String,
+    account: String,
     sequence: Number,
     price: String,
     dst_amount: String,
@@ -18,7 +19,7 @@ var balanceHistory = ai.model('balanceHistory', balanceHistorySchema);
 function saveBH(record) {
     balanceHistory.findOne({
         hash: record.hash,
-        sequence: record.sequence
+        account: record.account
     }, function(err, result) {
         if (result) {
             result.dst_amount = add(result.dst_amount, record.dst_amount);
