@@ -10,6 +10,8 @@ var osjs = require('./offer-service.js');
 var Loop = require('./loop-util.js').Loop;
 var theFuture = require('./the-future-manager.js');
 var queryBook = require('./query-book.js').queryBook;
+var AccountListener = require('./listen-account-util.js').AccountListener;
+var al;
 
 var Logger = require('./new-logger.js').Logger;
 var scpLogger = new Logger('same-currency-profit');
@@ -60,7 +62,10 @@ function decrypt(encrypted) {
 
 function remoteConnect() {
     remote.connect(function() {
-        osjs.create(remote, account);
+        al = new AccountListener(account);
+        al.listenOffer();
+
+        osjs.create(remote, account, secret);
         osjs.getOffers(function() {
             remote.requestAccountLines(account, function(err, result) {
                 if (err) console.log(err);

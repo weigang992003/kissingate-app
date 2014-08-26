@@ -29,8 +29,19 @@ AccountListener.prototype.listenOffer = function() {
                     var f_take_gets = finalFields.TakerGets;
                     var p_take_gets = previsousField.TakerGets;
 
-                    var dst_amount = f_take_pays.value - p_take_pays.value + '/' + f_take_pays.currency + '/' + f_take_pays.issuer;
-                    var src_amount = f_take_gets.value - p_take_gets.value + '/' + f_take_gets.currency + '/' + f_take_gets.issuer;
+                    var dst_amount;
+                    var src_amount;
+                    if (typeof f_take_pays == "string") {
+                        dst_amount = f_take_pays - p_take_pays + '/XRP/rrrrrrrrrrrrrrrrrrrrrhoLvTp';
+                    } else {
+                        dst_amount = f_take_pays.value - p_take_pays.value + '/' + f_take_pays.currency + '/' + f_take_pays.issuer;
+                    }
+
+                    if (typeof f_take_gets == "string") {
+                        src_amount = f_take_gets - p_take_gets + '/XRP/rrrrrrrrrrrrrrrrrrrrrhoLvTp';
+                    } else {
+                        src_amount = f_take_gets.value - p_take_gets.value + '/' + f_take_gets.currency + '/' + f_take_gets.issuer;
+                    }
 
                     balanceHistory.account = accountId;
                     balanceHistory.dst_amount = dst_amount;

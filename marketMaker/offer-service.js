@@ -1,11 +1,13 @@
 var aim = require('./account-info-manager.js');
 
 var remote;
+var secret;
 var account;
 var offers = [];
 
-function create(r, a) {
+function create(r, a, s) {
     remote = r;
+    secret = s;
     account = a;
 }
 
@@ -83,6 +85,17 @@ function createOffer(taker_pays, taker_gets, logger, createHB) {
     });
 
     tx.submit();
+}
+
+function cancelOfferUnderSameBook(pays, gets) {
+    var offersCancel = _.filter(offers, function(offer) {
+        return offer.taker_pays.currency == pays.currency && offer.taker_pays.issuer == pays.issuer && offer.taker_gets.currency == gets.currency && offer.taker_gets.issuer == gets.issuer;
+    });
+    _.each(offersCancel, function(offer) {
+        remote.transaction().offerCancel(account, offer.seq).secret(secret).on('success', function() {
+            console.log('offerCancel', offer.taker_pays, offer.taker_gets);
+        }).submit();
+    });
 }
 
 exports.create = create;

@@ -9,7 +9,7 @@ var jsbn = require('../src/js/jsbn/jsbn.js');
 var osjs = require('./offer-service.js');
 var Loop = require('./loop-util.js').Loop;
 var theFuture = require('./the-future-manager.js');
-var queryBookNoRate = require('./query-book.js').queryBookNoRate;
+var queryBook = require('./query-book.js').queryBook;
 var AccountListener = require('./listen-account-util.js').AccountListener;
 
 var Logger = require('./new-logger.js').Logger;
@@ -64,7 +64,7 @@ function remoteConnect() {
     remote.connect(function() {
         al = new AccountListener(account);
         al.listenOffer();
-        osjs.create(remote, account);
+        osjs.create(remote, account, secret);
         osjs.getOffers(function() {
             remote.requestAccountLines(account, function(err, result) {
                 if (err) console.log(err);
@@ -124,11 +124,12 @@ function goNextCurrencyPair() {
     var currency1 = curCurrencies[cpIndexSet[0]];
     var currency2 = curCurrencies[cpIndexSet[1]];
 
-    queryBookNoRate(remote, currency1, curIssuer, currency2, curIssuer, account, sipLogger, function(bi) {
+    queryBook(remote, currency1, curIssuer, currency2, curIssuer, account, sipLogger, function(bi) {
         if (bi.my) {
             goNext();
         } else {
             bi.taker_pays.product_human("0.99999");
+            osjs.cancelOfferUnderSameBook(bi.taker_pays.to_json(), bi.taker_gets.to_json());
             osjs.createOffer(bi.taker_pays, bi.taker_gets, sipLogger);
             goNext();
         }
