@@ -553,19 +553,23 @@ function createOffer(b1, bi1, b2, bi2) {
             min_taker_pays.to_text_full(), min_taker_gets.to_text_full());
 
         var times = min_taker_gets.ratio_human(bi1.taker_gets).to_human().replace(',', '');
+        times = math.round(times - 0, 6);
         if (min_taker_pays.compareTo(bi1.taker_pays.product_human(times)) == 1) {
             bi1.taker_gets = min_taker_gets;
             bi1.taker_pays = bi1.taker_pays.product_human(times);
 
             times = min_taker_gets.ratio_human(bi2.taker_pays).to_human().replace(',', '');
+            times = math.round(times - 0, 6);
             bi2.taker_pays = min_taker_gets;
             bi2.taker_gets = bi2.taker_gets.product_human(times);
         } else {
             times = min_taker_pays.ratio_human(bi1.taker_pays).to_human().replace(',', '');
+            times = math.round(times - 0, 6);
             bi1.taker_pays = min_taker_pays;
             bi1.taker_gets = bi1.taker_gets.product_human(times);
 
             times = min_taker_pays.ratio_human(bi2.taker_gets).to_human().replace(',', '');
+            times = math.round(times - 0, 6);
             bi2.taker_gets = min_taker_pays;
             bi2.taker_pays = bi2.taker_gets.product_human(times);
         }
