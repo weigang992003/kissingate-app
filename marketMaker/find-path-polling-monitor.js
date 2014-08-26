@@ -467,7 +467,8 @@ function listenAccountTx() {
         }, {
             "src_issuers": src_issuers,
             "dst_issuers": dst_issuers,
-            "hash": hash
+            "hash": hash,
+            "mutil_issuers": src_issuers.length > 1 || dst_issuers.length > 1
         });
     });
 }
@@ -547,9 +548,8 @@ function createOffer(b1, bi1, b2, bi2) {
         var min_taker_pays = minAmount([bi1.taker_pays, bi2.taker_gets, bi1_tp_ab]);
         var min_taker_gets = minAmount([bi1.taker_gets, bi2.taker_pays, bi1_tg_ab]);
 
-        var times;
-        if (min_taker_pays.compareTo(min_taker_gets.product_human(bi1.price)) == 1) {
-            times = min_taker_gets.ratio_human(bi1.taker_gets).to_human().replace(',', '');
+        var times = min_taker_gets.ratio_human(bi1.taker_gets).to_human().replace(',', '');
+        if (min_taker_pays.compareTo(bi1.taker_pays.product_human(times)) == 1) {
             bi1.taker_gets = min_taker_gets;
             bi1.taker_pays = bi1.taker_pays.product_human(times);
 
