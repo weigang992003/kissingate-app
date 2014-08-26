@@ -547,6 +547,10 @@ function createOffer(b1, bi1, b2, bi2) {
 
         var min_taker_pays = minAmount([bi1.taker_pays, bi2.taker_gets, bi1_tp_ab]);
         var min_taker_gets = minAmount([bi1.taker_gets, bi2.taker_pays, bi1_tg_ab]);
+        qbLogger.log(true,"before","profit:" + bi1.price * bi2.price,
+            bi1.taker_pays.to_text_full(), bi1.taker_gets.to_text_full(),
+            bi2.taker_pays.to_text_full(), bi2.taker_gets.to_text_full(),
+            min_taker_pays.to_text_full(), min_taker_gets.to_text_full());
 
         var times = min_taker_gets.ratio_human(bi1.taker_gets).to_human().replace(',', '');
         if (min_taker_pays.compareTo(bi1.taker_pays.product_human(times)) == 1) {
@@ -566,7 +570,7 @@ function createOffer(b1, bi1, b2, bi2) {
             bi2.taker_pays = bi2.taker_gets.product_human(times);
         }
 
-        qbLogger.log(true, "profit:" + bi1.price * bi2.price,
+        qbLogger.log(true,"after","profit:" + bi1.price * bi2.price,
             bi1.taker_pays.to_text_full(), bi1.taker_gets.to_text_full(),
             bi2.taker_pays.to_text_full(), bi2.taker_gets.to_text_full(),
             bi1_tp_ab.to_text_full(), bi1_tg_ab.to_text_full());
