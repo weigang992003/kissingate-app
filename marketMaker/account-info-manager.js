@@ -7,7 +7,7 @@ var balanceHistorySchema = mongoose.Schema({
     hash: String,
     account: String,
     sequence: Number,
-    price: String,
+    price: Number,
     dst_amount: String,
     src_amount: String
 }, {

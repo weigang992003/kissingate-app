@@ -21,6 +21,7 @@ var rippleInfo = require('./ripple-info-manager.js');
 var PathFind = require('../src/js/ripple/pathfind.js').PathFind;
 
 var osjs = require('./offer-service.js');
+var minAmount = require('./amount-util.js').minAmount;
 
 var emitter = new events.EventEmitter();
 
@@ -514,24 +515,6 @@ function getAccountBalance(amount) {
     return account_balances[c + i];
 }
 
-function minAmount(amounts) {
-    if (!amounts || amounts.length == 0) {
-        return;
-    }
-    if (amounts.length == 1) {
-        return amounts[0];
-    }
-    var minAmount = amounts[0];
-
-    _.each(amounts, function(amount) {
-        if (minAmount.compareTo(amount) == 1) {
-            minAmount = amount;
-        }
-    })
-
-    return minAmount;
-}
-
 function createOffer(b1, bi1, b2, bi2) {
     if (bi1.price * bi2.price < 1) {
         rippleInfo.saveProfitBookPath({
@@ -547,7 +530,7 @@ function createOffer(b1, bi1, b2, bi2) {
 
         var min_taker_pays = minAmount([bi1.taker_pays, bi2.taker_gets, bi1_tp_ab]);
         var min_taker_gets = minAmount([bi1.taker_gets, bi2.taker_pays, bi1_tg_ab]);
-        qbLogger.log(true,"before","profit:" + bi1.price * bi2.price,
+        qbLogger.log(true, "before", "profit:" + bi1.price * bi2.price,
             bi1.taker_pays.to_text_full(), bi1.taker_gets.to_text_full(),
             bi2.taker_pays.to_text_full(), bi2.taker_gets.to_text_full(),
             min_taker_pays.to_text_full(), min_taker_gets.to_text_full());
@@ -574,7 +557,7 @@ function createOffer(b1, bi1, b2, bi2) {
             bi2.taker_pays = bi2.taker_gets.product_human(times);
         }
 
-        qbLogger.log(true,"after","profit:" + bi1.price * bi2.price,
+        qbLogger.log(true, "after", "profit:" + bi1.price * bi2.price,
             bi1.taker_pays.to_text_full(), bi1.taker_gets.to_text_full(),
             bi2.taker_pays.to_text_full(), bi2.taker_gets.to_text_full(),
             bi1_tp_ab.to_text_full(), bi1_tg_ab.to_text_full());

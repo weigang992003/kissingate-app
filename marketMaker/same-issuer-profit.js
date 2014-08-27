@@ -11,9 +11,13 @@ var Loop = require('./loop-util.js').Loop;
 var theFuture = require('./the-future-manager.js');
 var queryBook = require('./query-book.js').queryBook;
 var AccountListener = require('./listen-account-util.js').AccountListener;
+var TrustLineService = require('./trust-line-service.js').TrustLineService;
+var minAmount = require('./amount-util.js').minAmount;
 
-var Logger = require('./new-logger.js').Logger;
-var sipLogger = new Logger('same-issuer-profit');
+
+// var Logger = require('./new-logger.js').Logger;
+// var sipLogger = new Logger('same-issuer-profit');
+var sipLogger;
 
 var emitter = new events.EventEmitter();
 emitter.once('decrypt', decrypt);
@@ -47,7 +51,10 @@ var remote = new ripple.Remote(remote_options);
 var account;
 var secret;
 var al;
-theFuture.getAccount(config.mother, function(result) {
+var tls;
+
+console.log("getAccount!");
+theFuture.getAccount(3, function(result) { // 3 ripple isreal
     account = result.account;
     secret = result.secret;
     emitter.emit('decrypt', secret);
@@ -62,19 +69,23 @@ function decrypt(encrypted) {
 
 function remoteConnect() {
     remote.connect(function() {
-        al = new AccountListener(account);
+        console.log("remote connected!");
+
+        al = new AccountListener(remote, account);
         al.listenOffer();
+
+        tls = new TrustLineService(remote, account);
+
         osjs.create(remote, account, secret);
         osjs.getOffers(function() {
-            remote.requestAccountLines(account, function(err, result) {
-                if (err) console.log(err);
-                makeProfit(result.lines);
+            tls.getLines(function(result) {
+                makeProfit(result);
             });
         });
     });
 }
 
-var same_currency_profit = config.same_currency_profit;
+var same_issuer_profit = config.same_issuer_profit;
 var issuers;
 var currencyMap = {};
 var next = 0;
@@ -95,13 +106,17 @@ function makeProfit(lines) {
     })
 
     //apply to those issuers we support. we store them into same_currency_profilt 
-    issuers = _.intersection(_.keys(lines), same_currency_profit);
+    issuers = _.intersection(_.keys(lines), same_issuer_profit);
     _.each(issuers, function(issuer) {
         // find out issuers which have multi issuers and build issuerMap
         if (lines[issuer].length > 1) {
-            currencyMap[issuer] = _.pluck(lines[issuer], 'currency');
+            var cs = _.pluck(lines[issuer], 'currency');
+            cs.push("XRP");
+            currencyMap[issuer] = cs;
         }
     });
+
+    console.log(currencyMap);
     issuers = _.keys(currencyMap);
 
     goNextIssuer();
@@ -127,10 +142,21 @@ function goNextCurrencyPair() {
     queryBook(remote, currency1, curIssuer, currency2, curIssuer, account, sipLogger, function(bi) {
         if (bi.my) {
             goNext();
+            return;
         } else {
-            bi.taker_pays.product_human("0.99999");
-            osjs.cancelOfferUnderSameBook(bi.taker_pays.to_json(), bi.taker_gets.to_json());
-            osjs.createOffer(bi.taker_pays, bi.taker_gets, sipLogger);
+            var account_balance = tls.getBalance(curIssuer, bi.taker_gets.currency().to_json());
+            if (account_balance) {
+                var min_taker_gets = minAmount([bi.taker_gets, account_balance]);
+
+                var times = min_taker_gets.ratio_human(bi.taker_gets).to_human().replace(',', '');
+                times = math.round(times * 0.99999, 6);
+                bi.taker_pays = bi.taker_pays.product_human(times);
+
+
+                osjs.cancelOfferUnderSameBook(bi.taker_pays.to_json(), bi.taker_gets.to_json());
+                console.log("createOffer", bi.taker_pays.to_json(), bi.taker_gets.to_json());
+                osjs.createOffer(bi.taker_pays, bi.taker_gets, sipLogger);
+            }
             goNext();
         }
     });

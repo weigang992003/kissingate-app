@@ -1,3 +1,5 @@
+var _ = require('underscore');
+var math = require('mathjs');
 var aim = require('./account-info-manager.js');
 
 var remote;
@@ -61,6 +63,7 @@ function createOffer(taker_pays, taker_gets, logger, createHB) {
         getOffers();
         if (createHB) {
             var price = taker_pays.ratio_human(taker_gets).to_human().replace(',', '');
+            price = math.round(price * 1, 6);
             aim.saveHB({
                 'hash': res.transaction.hash,
                 'sequence': res.transaction.Sequence,
@@ -102,3 +105,4 @@ exports.create = create;
 exports.getOffers = getOffers;
 exports.createOffer = createOffer;
 exports.ifOfferExist = ifOfferExist;
+exports.cancelOfferUnderSameBook = cancelOfferUnderSameBook;
