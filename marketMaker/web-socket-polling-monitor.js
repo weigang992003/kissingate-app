@@ -19,9 +19,28 @@ var queryBook = require('./query-book.js').queryBook;
 var theFuture = require('./the-future-manager.js');
 var rippleInfo = require('./ripple-info-manager.js');
 var PathFind = require('../src/js/ripple/pathfind.js').PathFind;
+var TrustLineService = require('./trust-line-service.js').TrustLineService;
+var tls;
 
+var Loop = require('./loop-util.js');
 var osjs = require('./offer-service.js');
 var minAmount = require('./amount-util.js').minAmount;
+
+var ws = new WebSocket('ws://localhost:7890');
+var wsConnected = false;
+ws.on('open', function() {
+    wsConnected = true;
+});
+ws.on('message', function(data, flags) {
+    console.log(data);
+});
+ws.on('close', function() {
+    wsConnected = false;
+    ws.close();
+});
+
+
+
 
 var emitter = new events.EventEmitter();
 
@@ -130,9 +149,6 @@ function checkIfHaveProfit(alt, type) {
 }
 
 function prepareCurrencies(lines) {
-    lines = _.filter(lines, function(line) {
-        return line.balance != 0 && line.limit != 0;
-    });
     currencies = _.pluck(lines, 'currency');
     currencies = _.uniq(currencies);
     currencies.push("XRP");
@@ -140,109 +156,29 @@ function prepareCurrencies(lines) {
     return currencies;
 }
 
-var index1 = 0;
-var index2 = 1;
+var cLoop = new Loop([1, 0]);
+var cIndexSet = [1, 0];
 var currencySize;
 
-function getNextIndex() {
-    index2 = (index2 + 1) % currencySize;
-    if (index2 == 0) {
-        index1 = (index1 + 1) % currencySize;
-        if (index1 == 0) {
-            index2 = (index2 + 1) % currencySize;
-        }
-    }
-}
-
-var noPathPair = [];
-
-function addNoPathPair(currency1, currency2) {
-    if (_.contains(noPathPair, (currency1 + ":" + currency2))) {
-        return;
-    }
-    noPathPair.push(currency1 + ":" + currency2);
-    noPathPair.push(currency2 + ":" + currency1);
-    console.log(noPathPair);
-}
-
-function isNoPathPair(currency1, currency2) {
-    return _.contains(noPathPair, (currency1 + ":" + currency2));
-}
-
-function resetNoPathPair() {
-    noPathPair = [];
-}
-
-setInterval(resetNoPathPair, 1000 * 30 * 60);
-
-function goNext(preferC1, preferC2) {
+function goNext() {
     if (!currencySize) {
         return;
     }
 
-    if (index1 == index2) {
-        getNextIndex();
-    }
+    var currency1 = currencies[cIndexSet[0]];
+    var currency2 = currencies[cIndexSet[1]];
 
-    var currency1 = currencies[index1];
-    var currency2 = currencies[index2];
-
-    if (preferC1 && preferC2) {
-        currency1 = preferC1;
-        currency2 = preferC2;
-    }
-
-    if (isNoPathPair(currency1, currency2)) {
-        getNextIndex();
-        goNext();
-        return;
-    }
-
-    var dest_amount_1 = buildDestAmount(currency1);
-    var src_currencies_1 = [buildSrcCurrencies(currency2)];
-
-    var dest_amount_2 = buildDestAmount(currency2);
-    var src_currencies_2 = [buildSrcCurrencies(currency1)];
-
-    var noPathFound = false;
-
-    var pathFind1 = new PathFind(remote, account, account, Amount.from_json(dest_amount_1), src_currencies_1);
-    pathFind1.on('update', function(res) {
-        var raw = res.alternatives[0];
-        if (raw) {
-            handleAlt(dest_amount_1, raw);
-        } else {
-            addNoPathPair(currency1, currency2);
-            noPathFound = true;
+    if (wsConnected) {
+        var req = {
+            "src_currency": currency1,
+            "dst_currency": currency2,
+            "limit": 1
         }
-        pathFind1.close();
-    });
-    pathFind1.on('error', function(err) {
-        fpLogger.error(true, err);
-        noPathFound = true;
-    })
 
-    var pathFind2 = new PathFind(remote, account, account, Amount.from_json(dest_amount_2), src_currencies_2);
-    pathFind2.on('update', function(res) {
-        var raw = res.alternatives[0];
-        if (noPathFound || !raw) {
-            addNoPathPair(currency1, currency2);
-            goNext();
-            return;
-        }
-        handleAlt(dest_amount_2, raw);
+        ws.send(JSON.stringify(req));
+    }
 
-        pathFind2.close();
-    });
-    pathFind2.on('error', function(err) {
-        fpLogger.error(true, err);
-        goNext();
-        return;
-    })
-    pathFind1.create();
-    pathFind2.create();
-
-    getNextIndex();
+    cLoop.next();
 }
 
 function buildDestAmount(currency) {
@@ -288,10 +224,10 @@ function remoteConnect() {
         osjs.create(remote, account);
         osjs.getOffers();
 
-        remote.requestAccountLines(account, function(err, result) {
-            if (err) console.log(err);
+        tls = new TrustLineService(remote, account);
+        tls.getLines(function(lines) {
             console.log("step4:prepare currencies!")
-            prepareCurrencies(result.lines);
+            prepareCurrencies(lines);
 
             console.log("step5:query find path!");
             goNext();
