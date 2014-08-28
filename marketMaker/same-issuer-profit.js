@@ -146,6 +146,7 @@ function goNextCurrencyPair() {
         } else {
             var account_balance = tls.getBalance(curIssuer, bi.taker_gets.currency().to_json());
             if (account_balance) {
+                account_balance = account_balance.product_human("0.2");
                 var min_taker_gets = minAmount([bi.taker_gets, account_balance]);
 
                 var times = min_taker_gets.ratio_human(bi.taker_gets).to_human().replace(',', '');
