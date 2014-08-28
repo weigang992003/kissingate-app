@@ -8,23 +8,50 @@ var balanceHistorySchema = mongoose.Schema({
     account: String,
     sequence: Number,
     price: Number,
-    dst_amount: String,
-    src_amount: String
+    dst_amount: {
+        issuer: String,
+        currency: String,
+        value: Number
+    },
+    src_amount: {
+        issuer: String,
+        currency: String,
+        value: Number
+    }
 }, {
     collection: 'balanceHistory'
 });
 
 var balanceHistory = ai.model('balanceHistory', balanceHistorySchema);
 
-function saveBH(record) {
+function saveBH(record, minus) {
     balanceHistory.findOne({
         hash: record.hash,
         account: record.account
     }, function(err, result) {
         if (result) {
-            result.dst_amount = add(result.dst_amount, record.dst_amount);
-            result.src_amount = add(result.src_amount, record.src_amount);
-            result.save();
+            if (!minus) {
+                var dst_result = add(result.dst_amount, record.dst_amount);
+                if (dst_result) {
+                    result.dst_amount = dst_result;
+                }
+                var src_result = add(result.src_amount, record.src_amount);
+                if (src_result) {
+                    result.src_amount = src_result;
+                }
+                result.save();
+            } else {
+                var dst_result = minus(result.dst_amount, record.dst_amount);
+                if (dst_result) {
+                    result.dst_amount = dst_result;
+                }
+                var src_result = minus(result.src_amount, record.src_amount);
+                if (src_result) {
+                    result.src_amount = src_result;
+                }
+                result.save();
+            }
+
         } else {
             var row = new balanceHistory(record);
             row.save(function(err) {
@@ -38,13 +65,22 @@ function saveBH(record) {
 
 
 function add(amount1, amount2) {
-    var amountInfo1 = amount1.split("/");
-    var amountInfo2 = amount2.split("/");
+    if (amount1.issuer == amount2.issuer && amount1.currency == amount2.currency) {
+        return {
+            issuer: amount1.issuer,
+            currency: amount1.currency,
+            value: amount1.value - (-amount2.value)
+        }
+    }
+}
 
-    if (amountInfo1[1] == amountInfo2[1] && amountInfo1[2] == amountInfo2[2]) {
-        var balance1 = amountInfo1[0];
-        var balance2 = amountInfo2[0];
-        return balance1 - (-balance2) + "/" + amountInfo1[1] + "/" + amountInfo1[2];
+function minus(src_amount, reduce_amount) {
+    if (src_amount.issuer == reduce_amount.issuer && src_amount.currency == reduce_amount.currency) {
+        return {
+            issuer: src_amount.issuer,
+            currency: src_amount.currency,
+            value: src_amount.value - reduce_amount.value
+        }
     }
 }
 
