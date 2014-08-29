@@ -46,3 +46,5 @@ test/config.js
 # Ignore log files
 log/*
 *.sh
+*.tags
+*.tags_sorted_by_file

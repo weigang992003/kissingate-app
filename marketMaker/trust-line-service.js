@@ -5,7 +5,8 @@ function TrustLineService(r, a) {
     this.remote = r;
     this.accountId = a;
     this.lines = [];
-    this.account_balances = [];
+    this.account_balances = {};
+    this.issuerMap = {};
 }
 
 TrustLineService.prototype.getLines = function(callback) {
@@ -17,6 +18,12 @@ TrustLineService.prototype.getLines = function(callback) {
         lines = arguments[1].lines;
         _.each(lines, function(line) {
             account_balances[line.account + line.currency] = line.balance;
+
+            var issuers = issuerMap[line.currency];
+            if (issuers) {
+                issuers.push(line.account);
+                issuerMap[line.currency] = issuers;
+            }
         });
 
         if (callback) {
@@ -32,6 +39,10 @@ TrustLineService.prototype.getBalance = function(issuer, currency) {
         'currency': currency,
         'value': value
     });
+}
+
+TrustLineService.prototype.getIssuers = function(currency) {
+    return currency == "XRP" ? ["rrrrrrrrrrrrrrrrrrrrrhoLvTp"] : this.issuerMap[currency];
 }
 
 exports.TrustLineService = TrustLineService;
