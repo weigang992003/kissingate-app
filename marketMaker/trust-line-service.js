@@ -13,6 +13,7 @@ TrustLineService.prototype.getLines = function(callback) {
     var remote = this.remote;
     var accountId = this.accountId;
     var account_balances = this.account_balances;
+    var issuerMap = this.issuerMap;
 
     remote.requestAccountLines(accountId, function() {
         lines = arguments[1].lines;

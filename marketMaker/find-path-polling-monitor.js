@@ -20,7 +20,12 @@ var theFuture = require('./the-future-manager.js');
 var rippleInfo = require('./ripple-info-manager.js');
 var PathFind = require('../src/js/ripple/pathfind.js').PathFind;
 
-var osjs = require('./offer-service.js');
+var OfferService = require('./offer-service.js').OfferService;
+var osjs;
+
+var TrustLineService = require('./trust-line-service.js').TrustLineService;
+var tls;
+
 var minAmount = require('./amount-util.js').minAmount;
 
 var emitter = new events.EventEmitter();
@@ -46,11 +51,22 @@ var remote = new ripple.Remote(getRemoteOption());
 var Amount = ripple.Amount;
 
 var account;
+var secret;
 console.log("step1:getAccount!")
 theFuture.getAccount(config.marketMaker, function(result) {
     account = result.account;
-    remoteConnect();
+    secret = result.secret;
+    decrypt(secret);
 });
+
+function decrypt(encrypted) {
+    console.log("step2:decrypt secret!")
+    crypto.decrypt(encrypted, function(result) {
+        secret = result;
+        remoteConnect();
+    });
+}
+
 
 var profit_rate = config.profitRate;
 var currency_unit = config.currency_unit;
@@ -285,13 +301,18 @@ var offers;
 function remoteConnect() {
     console.log("step3:connect to remote!")
     remote.connect(function() {
-        osjs.create(remote, account);
+        if (!account || !secret) {
+            console.log("no account!!!");
+            process.exit(1);
+        }
+
+        osjs = new OfferService(remote, account, secret);
         osjs.getOffers();
 
-        remote.requestAccountLines(account, function(err, result) {
-            if (err) console.log(err);
+        tls = new TrustLineService(remote, account);
+        tls.getLines(function(lines) {
             console.log("step4:prepare currencies!")
-            prepareCurrencies(result.lines);
+            prepareCurrencies(lines);
 
             console.log("step5:query find path!");
             goNext();

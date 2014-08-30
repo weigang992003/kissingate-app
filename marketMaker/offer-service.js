@@ -2,29 +2,31 @@ var _ = require('underscore');
 var math = require('mathjs');
 var aim = require('./account-info-manager.js');
 
-var remote;
-var secret;
-var account;
-var offers = [];
-
-function create(r, a, s) {
-    remote = r;
-    secret = s;
-    account = a;
+function OfferService(r, a, s) {
+    this.remote = r;
+    this.secret = s;
+    this.accountId = a;
+    this.offers = [];
 }
 
-function getOffers(callback) {
-    remote.requestAccountOffers(account, function(err, result) {
-        offers = result.offers;
-        console.log(offers);
+OfferService.prototype.getOffers = function(callback) {
+    var self = this;
+    var remote = this.remote;
+    var accountId = this.accountId;
+
+    remote.requestAccountOffers(accountId, function(err, result) {
+        self.offers = result.offers;
+        console.log(self.offers);
 
         if (callback) {
-            callback(offers);
+            callback(self.offers);
         }
     });
-}
+};
 
-function ifOfferExist(pays, gets) {
+OfferService.prototype.ifOfferExist = function(pays, gets) {
+    var offers = this.offers;
+
     if (offers.length == 0) {
         return false;
     }
@@ -47,7 +49,13 @@ function ifOfferExist(pays, gets) {
     return false;
 }
 
-function createOffer(taker_pays, taker_gets, logger, createHB) {
+OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, createHB) {
+    var self = this;
+    var remote = this.remote;
+    var secret = this.secret;
+    var accountId = this.accountId;
+    var offers = this.offers;
+
     var tx = remote.transaction();
     if (secret) {
         tx.secret(secret);
@@ -58,25 +66,25 @@ function createOffer(taker_pays, taker_gets, logger, createHB) {
     if (logger)
         logger.log(true, "we are create offer here", "taker_pays", taker_pays, "taker_gets", taker_gets);
 
-    tx.offerCreate(account, taker_pays, taker_gets);
+    tx.offerCreate(accountId, taker_pays, taker_gets);
     tx.on("success", function(res) {
-        getOffers();
+        self.getOffers();
         if (createHB) {
             var price = taker_pays.ratio_human(taker_gets).to_human().replace(',', '');
             price = math.round(price * 1, 6);
             aim.saveHB({
                 'hash': res.transaction.hash,
                 'sequence': res.transaction.Sequence,
-                'account': account,
+                'account': accountId,
                 'price': price,
                 'dst_amount': taker_pays.product_human("0").to_text_full(),
                 'src_amount': taker_gets.product_human("0").to_text_full()
-            })
+            });
         }
     });
 
     tx2.on('proposed', function(res) {
-        offers.push({
+        self.offers.push({
             'taker_pays': taker_pays,
             'taker_gets': taker_gets
         })
@@ -90,19 +98,23 @@ function createOffer(taker_pays, taker_gets, logger, createHB) {
     tx.submit();
 }
 
-function cancelOfferUnderSameBook(pays, gets) {
+OfferService.prototype.cancelOfferUnderSameBook = function(pays, gets) {
+    var offers = this.offers;
+    var secret = this.secret;
+    var accountId = this.accountId;
+
     var offersCancel = _.filter(offers, function(offer) {
-        return offer.taker_pays.currency == pays.currency && offer.taker_pays.issuer == pays.issuer && offer.taker_gets.currency == gets.currency && offer.taker_gets.issuer == gets.issuer;
+        return offer.taker_pays.currency == pays.currency && offer.taker_pays.issuer == pays.issuer &&
+            offer.taker_gets.currency == gets.currency && offer.taker_gets.issuer == gets.issuer;
     });
+
     _.each(offersCancel, function(offer) {
-        remote.transaction().offerCancel(account, offer.seq).secret(secret).on('success', function() {
+        remote.transaction().offerCancel(accountId, offer.seq).secret(secret).on('success', function() {
             console.log('offerCancel', offer.taker_pays, offer.taker_gets);
         }).submit();
     });
 }
 
-exports.create = create;
-exports.getOffers = getOffers;
-exports.createOffer = createOffer;
-exports.ifOfferExist = ifOfferExist;
-exports.cancelOfferUnderSameBook = cancelOfferUnderSameBook;
+
+
+exports.OfferService = OfferService;
