@@ -174,8 +174,8 @@ function goNext() {
         console.log("query done!");
         cLoop = new Loop([1, 0]);
         cIndexSet = [1, 0];
-        console.log("next round would be start in 10 seconds!");
-        setTimeout(goNext, 1000 * 30);
+        console.log("next round would be start in 20 seconds!");
+        setTimeout(goNext, 1000 * 20);
         return;
     }
 
@@ -214,4 +214,10 @@ function decrypt(encrypted) {
         secret = result;
         remoteConnect();
     });
+}
+
+setTimeout(throwDisconnectError, 1000 * 60 * 60);
+
+function throwDisconnectError() {
+    throw new Error('we are disconnect with ripple network!!!');
 }
