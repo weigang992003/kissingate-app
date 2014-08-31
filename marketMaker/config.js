@@ -71,3 +71,5 @@ exports.factorWeight = 5;
 exports.profitRate = 0.999;
 exports.delayWhenFailure = 60000;
 exports.ratio = 1.2;
+
+exports.xrpIssuer = "rrrrrrrrrrrrrrrrrrrrrhoLvTp";

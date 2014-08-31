@@ -100,16 +100,16 @@ function checkOrders(orders) {
             if (profit < 1) {
                 wsio.emit('po', order_type_1, order_type_2);
 
-                var createOffer = true;
-                queryBookByOrder(remote, order_type_1, function(nodiff) {
-                    if (!nodiff) createOffer = false;
-                });
+                // var createOffer = true;
+                // queryBookByOrder(remote, order_type_1, function(nodiff) {
+                //     if (!nodiff) createOffer = false;
+                // });
 
-                queryBookByOrder(remote, order_type_2, function(nodiff) {
-                    if (createOffer && nodiff) {
-                        wspm.log(true, "Yes, we will create offer here!");
-                    }
-                });
+                // queryBookByOrder(remote, order_type_2, function(nodiff) {
+                //     if (createOffer && nodiff) {
+                //         wspm.log(true, "Yes, we will create offer here!");
+                //     }
+                // });
 
                 wspm.log(true, order_type_1.TakerPays, order_type_1.TakerGets,
                     order_type_2.TakerPays, order_type_2.TakerGets,
@@ -175,7 +175,7 @@ function goNext() {
         cLoop = new Loop([1, 0]);
         cIndexSet = [1, 0];
         console.log("next round would be start in 10 seconds!");
-        setTimeout(goNext, 1000 * 60);
+        setTimeout(goNext, 1000 * 30);
         return;
     }
 

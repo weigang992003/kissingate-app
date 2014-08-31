@@ -1,5 +1,8 @@
 var _ = require('underscore');
 
+var ripple = require('../src/js/ripple');
+var Amount = ripple.Amount;
+
 function minAmount(amounts) {
     if (!amounts || amounts.length == 0) {
         return;
@@ -18,14 +21,28 @@ function minAmount(amounts) {
     return minAmount;
 }
 
-function getIssuer(pays_or_gets) {
-    return typeof pays_or_gets == "string" ? "rrrrrrrrrrrrrrrrrrrrrhoLvTp" : pays_or_gets.issuer;
+function getIssuer(amountJson) {
+    return typeof amountJson == "string" ? "rrrrrrrrrrrrrrrrrrrrrhoLvTp" : amountJson.issuer;
 }
 
-function getCurrency(pays_or_gets) {
-    return typeof pays_or_gets == "string" ? "XRP" : pays_or_gets.currency;
+function getCurrency(amountJson) {
+    return typeof amountJson == "string" ? "XRP" : amountJson.currency;
+}
+
+function setValue(src_amount, dst_amount) {
+    if (src_amount.currency().to_json() == "XRP") {
+        return dst_amount;
+    }
+
+    var src_amount_json = src_amount.to_json();
+    var dst_amount_json = dst_amount.to_json();
+
+    src_amount_json.value = dst_amount_json.value;
+
+    return Amount.from_json(src_amount_json);
 }
 
 exports.minAmount = minAmount;
 exports.getIssuer = getIssuer;
 exports.getCurrency = getCurrency;
+exports.setValue = setValue;
