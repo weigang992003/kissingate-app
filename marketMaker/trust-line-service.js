@@ -1,5 +1,7 @@
 var _ = require('underscore');
 var Amount = require('../src/js/ripple').Amount;
+var io = require('socket.io-client');
+var abio = io.connect('http://localhost:3004/ab');
 
 function TrustLineService(r, a) {
     this.remote = r;
@@ -7,6 +9,8 @@ function TrustLineService(r, a) {
     this.lines = [];
     this.account_balances = {};
     this.issuerMap = {};
+
+    this.listenBalanceUpdate();
 }
 
 TrustLineService.prototype.getLines = function(callback) {
@@ -46,15 +50,28 @@ TrustLineService.prototype.getLines = function(callback) {
 
 TrustLineService.prototype.getBalance = function(issuer, currency) {
     var value = this.account_balances[issuer + currency];
-    return Amount.from_json({
-        'issuer': issuer,
-        'currency': currency,
-        'value': value
-    });
+    if (value) {
+        return Amount.from_json({
+            'issuer': issuer,
+            'currency': currency,
+            'value': value
+        });
+    }
 }
+
+TrustLineService.prototype.setBalance = function(issuer, currency, balance) {
+    this.account_balances[issuer + currency] = balance;
+};
 
 TrustLineService.prototype.getIssuers = function(currency) {
     return currency == "XRP" ? ["rrrrrrrrrrrrrrrrrrrrrhoLvTp"] : this.issuerMap[currency];
 }
+
+TrustLineService.prototype.listenBalanceUpdate = function() {
+    var self = this;
+    abio.on('ab', function(issuer, currency, balance) {
+        self.setBalance(issuer, currency, balance);
+    });
+};
 
 exports.TrustLineService = TrustLineService;

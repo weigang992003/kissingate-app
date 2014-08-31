@@ -98,6 +98,8 @@ function checkOrders(orders) {
             var profit = order_type_1.quality * order_type_2.quality;
             console.log(profit);
             if (profit < 1) {
+                wsio.emit('po', order_type_1, order_type_2);
+
                 var createOffer = true;
                 queryBookByOrder(remote, order_type_1, function(nodiff) {
                     if (!nodiff) createOffer = false;

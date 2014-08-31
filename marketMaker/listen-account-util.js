@@ -1,4 +1,6 @@
 var aim = require('./account-info-manager');
+var io = require('socket.io').listen(3004);
+var abio = io.of('/ab'); //account balance io
 
 function AccountListener(remote, accountId) {
     this.remote = remote;
@@ -16,6 +18,24 @@ AccountListener.prototype.listenOffer = function() {
             var modifiedNode = affectedNode.ModifiedNode;
             if (!modifiedNode) {
                 return;
+            }
+
+            if (modifiedNode.LedgerEntryType == "AccountRoot") {
+                var finalFields = modifiedNode.FinalFields;
+                if (finalFields && finalFields.Account == accountId) {
+                    abio.emit("ab", "rrrrrrrrrrrrrrrrrrrrrhoLvTp", "XRP", finalFields.Balance);
+                }
+            }
+
+            if (modifiedNode.LedgerEntryType == "RippleState") {
+                var finalFields = modifiedNode.FinalFields;
+                if (finalFields && finalFields.HighLimit.issuer == accountId) {
+                    abio.emit("ab", finalFields.LowLimit.issuer, finalFields.Balance.currency, 0 - finalFields.Balance.value + "");
+                }
+
+                if (finalFields && finalFields.LowLimit.issuer == accountId) {
+                    abio.emit("ab", finalFields.HighLimit.issuer, finalFields.Balance.currency, finalFields.Balance.value);
+                }
             }
 
             if (modifiedNode.LedgerEntryType == "Offer") {
