@@ -5,7 +5,7 @@ var ripple = require('../src/js/ripple');
 var Amount = ripple.Amount;
 
 
-function filterOffers(offers, currency1, currency2, account, action) {
+function filterOffers(offers, currency1, currency2, account, action, combine) {
     var lastprice;
     var rowCount = 0;
     var max_rows = 1;
@@ -50,7 +50,7 @@ function filterOffers(offers, currency1, currency2, account, action) {
             d.my = true;
         }
 
-        if (lastprice === price && !d.my) {
+        if (lastprice === price && !d.my && combine) {
             offers[current].TakerPays = Amount.from_json(offers[current].TakerPays).add(d.TakerPays);
             offers[current].TakerGets = Amount.from_json(offers[current].TakerGets).add(d.TakerGets);
             d = false;

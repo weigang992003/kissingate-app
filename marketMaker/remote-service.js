@@ -1,3 +1,5 @@
+var ripple = require('../src/js/ripple');
+
 var servers = [{
     host: 's-east.ripple.com',
     port: 443,
@@ -28,5 +30,10 @@ function getServer() {
     return servers[(new Date().getTime()) % servers.length];
 }
 
+function getRemote() {
+    return new ripple.Remote(getRemoteOption());
+}
+
 exports.getServer = getServer;
 exports.getRemoteOption = getRemoteOption;
+exports.getRemote = getRemote;
