@@ -47,17 +47,19 @@ function queryBookByOrder(remote, order, callback) {
             var newOffers = filterOffers(offers, currency1, currency2, "", "asks");
 
             var bookInfo = {};
-            bookInfo.price = newOffers[0].quality;
+            bookInfo.quality = newOffers[0].quality;
             bookInfo.taker_gets = newOffers[0].TakerGets;
             bookInfo.taker_pays = newOffers[0].TakerPays;
 
+            var nodiff = true;
             if (difference(order.quality, newOffers[0].quality) > 0.0001) {
+                nodiff = false;
                 console.log("price:" + order.quality, taker_pays, taker_gets);
-                console.log("price:" + newOffers[0].quality, bookInfo.taker_pays.to_json(), bookInfo.taker_gets.to_json());
+                console.log("price:" + bookInfo.quality, bookInfo.taker_pays.to_json(), bookInfo.taker_gets.to_json());
             }
 
             if (callback) {
-                callback(bookInfo);
+                callback(nodiff);
             }
         }
     });

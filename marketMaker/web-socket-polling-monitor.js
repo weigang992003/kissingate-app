@@ -98,7 +98,18 @@ function checkOrders(orders) {
             var profit = order_type_1.quality * order_type_2.quality;
             console.log(profit);
             if (profit < 1) {
-                console.log(true, order_type_1.TakerPays, order_type_1.TakerGets,
+                var createOffer = true;
+                queryBookByOrder(remote, order_type_1, function(nodiff) {
+                    if (!nodiff) createOffer = false;
+                });
+
+                queryBookByOrder(remote, order_type_2, function(nodiff) {
+                    if (createOffer && nodiff) {
+                        wspm.log(true, "Yes, we will create offer here!");
+                    }
+                });
+
+                wspm.log(true, order_type_1.TakerPays, order_type_1.TakerGets,
                     order_type_2.TakerPays, order_type_2.TakerGets,
                     "profit:" + profit, "price1:" + order_type_1.quality, "price2:" + order_type_2.quality);
             }
@@ -108,21 +119,6 @@ function checkOrders(orders) {
 
     cIndexSet = cLoop.next(cIndexSet, currencySize);
     goNext();
-}
-
-var orderQueue = [];
-var nextOrder = 0;
-
-function isOrderNewest() {
-    if (orderQueue.length > nextOrder) {
-        queryBookByOrder(remote, orderQueue[nextOrder], function() {
-            nextOrder++;
-            isOrderNewest();
-        });
-    } else {
-        cIndexSet = cLoop.next(cIndexSet, currencySize);
-        goNext();
-    }
 }
 
 function getPrice(order, pays_currency, gets_currency) {
