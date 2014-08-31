@@ -66,13 +66,13 @@ function checkOrders(orders) {
 
         if (gets_currency == currency1 && _.contains(cur1_issuers, gets_issuer) &&
             pays_currency == currency2 && _.contains(cur2_issuers, pays_issuer)) {
-            order.quality = getPrice(order, pays_currency, gets_currency);
+            order.quality = math.round(order.quality - 0, 15) + "";
             orders_type_1.push(order);
         }
 
         if (gets_currency == currency2 && _.contains(cur2_issuers, gets_issuer) &&
             pays_currency == currency1 && _.contains(cur1_issuers, pays_issuer)) {
-            order.quality = getPrice(order, pays_currency, gets_currency);
+            order.quality = math.round(order.quality - 0, 15) + "";
             orders_type_2.push(order);
         }
     });
@@ -119,16 +119,6 @@ function checkOrders(orders) {
 
     cIndexSet = cLoop.next(cIndexSet, currencySize);
     goNext();
-}
-
-function getPrice(order, pays_currency, gets_currency) {
-    if (gets_currency == "XRP") {
-        return math.round(order.quality * drops, 15) + "";
-    } else if (pays_currency == "XRP") {
-        return math.round(order.quality / drops, 15) + "";
-    } else {
-        return math.round(order.quality - 0, 15) + "";
-    }
 }
 
 function remoteConnect() {
