@@ -66,13 +66,13 @@ function checkOrders(orders) {
 
         if (gets_currency == currency1 && _.contains(cur1_issuers, gets_issuer) &&
             pays_currency == currency2 && _.contains(cur2_issuers, pays_issuer)) {
-            order.quality = math.round(order.quality - 0, 15) + "";
+            order.quality = getPrice(order, pays_currency, gets_currency);
             orders_type_1.push(order);
         }
 
         if (gets_currency == currency2 && _.contains(cur2_issuers, gets_issuer) &&
             pays_currency == currency1 && _.contains(cur1_issuers, pays_issuer)) {
-            order.quality = math.round(order.quality - 0, 15) + "";
+            order.quality = getPrice(order, pays_currency, gets_currency);
             orders_type_2.push(order);
         }
     });
@@ -95,21 +95,40 @@ function checkOrders(orders) {
 
     orders_type_1.every(function(order_type_1) {
         orders_type_2.every(function(order_type_2) {
+            if (isSameIssuers(order_type_1, order_type_2)) {
+                return;
+            }
+
             var profit = order_type_1.quality * order_type_2.quality;
             console.log(profit);
             if (profit < profit_rate) {
                 wsio.emit('po', order_type_1, order_type_2);
+                wsio.emit('pc', currency1, currency2);
 
                 wspm.log(true, order_type_1.TakerPays, order_type_1.TakerGets,
                     order_type_2.TakerPays, order_type_2.TakerGets,
                     "profit:" + profit, "price1:" + order_type_1.quality, "price2:" + order_type_2.quality);
             }
-            return profit < profit_rate;
+            return profit < 1;
         });
     });
 
     cIndexSet = cLoop.next(cIndexSet, currencySize);
     goNext();
+}
+
+function isSameIssuers(order1, order2) {
+    return order1.TakerPays.issuer == order2.TakerGets.issuer && order1.TakerGets.issuer == order2.TakerPays.issuer;
+}
+
+function getPrice(order, pays_currency, gets_currency) {
+    if (gets_currency == "XRP") {
+        return math.round(order.quality * drops, 15) + "";
+    } else if (pays_currency == "XRP") {
+        return math.round(order.quality / drops, 15) + "";
+    } else {
+        return math.round(order.quality - 0, 15) + "";
+    }
 }
 
 function remoteConnect() {
