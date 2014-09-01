@@ -97,25 +97,14 @@ function checkOrders(orders) {
         orders_type_2.every(function(order_type_2) {
             var profit = order_type_1.quality * order_type_2.quality;
             console.log(profit);
-            if (profit < 1) {
+            if (profit < profit_rate) {
                 wsio.emit('po', order_type_1, order_type_2);
-
-                // var createOffer = true;
-                // queryBookByOrder(remote, order_type_1, function(nodiff) {
-                //     if (!nodiff) createOffer = false;
-                // });
-
-                // queryBookByOrder(remote, order_type_2, function(nodiff) {
-                //     if (createOffer && nodiff) {
-                //         wspm.log(true, "Yes, we will create offer here!");
-                //     }
-                // });
 
                 wspm.log(true, order_type_1.TakerPays, order_type_1.TakerGets,
                     order_type_2.TakerPays, order_type_2.TakerGets,
                     "profit:" + profit, "price1:" + order_type_1.quality, "price2:" + order_type_2.quality);
             }
-            return profit < 1;
+            return profit < profit_rate;
         });
     });
 
