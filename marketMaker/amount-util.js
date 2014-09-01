@@ -42,7 +42,8 @@ function setValue(src_amount, dst_amount) {
     return Amount.from_json(src_amount_json);
 }
 
+exports.Amount = Amount;
+exports.setValue = setValue;
 exports.minAmount = minAmount;
 exports.getIssuer = getIssuer;
 exports.getCurrency = getCurrency;
-exports.setValue = setValue;

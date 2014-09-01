@@ -5,7 +5,9 @@ var qbLogger = new Logger('query-book');
 
 var io = require('socket.io').listen(3000);
 var fpio = io.of('/fp');
-var tfio = io.of('/tf');
+
+var ioc = require('socket.io-client');
+var wsio = ioc.connect('http://localhost:3003/ws');
 
 var math = require('mathjs');
 var _ = require('underscore');
@@ -66,7 +68,6 @@ function decrypt(encrypted) {
         remoteConnect();
     });
 }
-
 
 var profit_rate = config.profitRate;
 var currency_unit = config.currency_unit;
@@ -132,10 +133,6 @@ function checkIfHaveProfit(alt, type) {
 
             altMap = {};
 
-            setTimeout(function() {
-                goNext(elements[0], elements[1]);
-            }, 2000);
-
             return;
 
         }
@@ -150,41 +147,25 @@ function goNext(currency1, currency2) {
     var dest_amount_2 = buildDestAmount(currency2);
     var src_currencies_2 = [buildSrcCurrencies(currency1)];
 
-    var noPathFound = false;
-
     var pathFind1 = new PathFind(remote, account, account, Amount.from_json(dest_amount_1), src_currencies_1);
     pathFind1.on('update', function(res) {
         var raw = res.alternatives[0];
         if (raw) {
             handleAlt(dest_amount_1, raw);
         } else {
-            addNoPathPair(currency1, currency2);
-            noPathFound = true;
+            pathFind1.close();
         }
-        pathFind1.close();
     });
-    pathFind1.on('error', function(err) {
-        fpLogger.error(true, err);
-        noPathFound = true;
-    })
 
     var pathFind2 = new PathFind(remote, account, account, Amount.from_json(dest_amount_2), src_currencies_2);
     pathFind2.on('update', function(res) {
         var raw = res.alternatives[0];
-        if (noPathFound || !raw) {
-            addNoPathPair(currency1, currency2);
-            goNext();
-            return;
+        if (raw) {
+            handleAlt(dest_amount_2, raw);
+        } else {
+            pathFind2.close();
         }
-        handleAlt(dest_amount_2, raw);
-
-        pathFind2.close();
     });
-    pathFind2.on('error', function(err) {
-        fpLogger.error(true, err);
-        goNext();
-        return;
-    })
     pathFind1.create();
     pathFind2.create();
 }
@@ -225,8 +206,6 @@ function handleAlt(dest_amount, raw) {
     checkIfHaveProfit(alt, type);
 }
 
-var offers;
-
 function remoteConnect() {
     console.log("step3:connect to remote!")
     remote.connect(function() {
@@ -234,18 +213,6 @@ function remoteConnect() {
             console.log("no account!!!");
             process.exit(1);
         }
-
-        osjs = new OfferService(remote, account, secret);
-        osjs.getOffers();
-
-        tls = new TrustLineService(remote, account);
-        tls.getLines(function(lines) {
-            console.log("step4:prepare currencies!")
-            prepareCurrencies(lines);
-
-            console.log("step5:query find path!");
-            goNext();
-        });
 
         remote.on('error', function(error) {
             throw new Error("remote error!");
@@ -255,261 +222,13 @@ function remoteConnect() {
             remote = new ripple.Remote(getRemoteOption());
             remoteConnect();
         });
-
-        listenAccountTx();
     });
 }
 
-var books = [];
-var account_balances = {};
-
-function listenAccountTx() {
-    var a = remote.addAccount(account);
-
-    a.on('transaction', function(tx) {
-        if (tx.transaction.TransactionType != 'Payment') {
-            return;
-        }
-
-        var src_currency;
-        var src_issuer;
-        var src_value;
-        var src_balance;
-        var src_issuers = [];
-
-        var dst_currency;
-        var dst_issuer;
-        var dst_value;
-        var dst_balance;
-        var dst_issuers = [];
-
-        var getAmount = tx.transaction.Amount;
-        var hash = tx.transaction.hash;
-        if (typeof getAmount == "string") {
-            dst_currency = "XRP";
-            dst_issuer = "rrrrrrrrrrrrrrrrrrrrrhoLvTp";
-            dst_value = getAmount;
-        } else {
-            dst_currency = getAmount.currency;
-            dst_value = getAmount.value;
-        }
-
-        var payAmount = tx.transaction.SendMax;
-        if (typeof payAmount == "string") {
-            src_currency = "XRP";
-            src_issuer = "rrrrrrrrrrrrrrrrrrrrrhoLvTp";
-            src_value = payAmount;
-        } else {
-            src_currency = payAmount.currency;
-            src_value = payAmount.value;
-        }
-
-        _.each(tx.meta.AffectedNodes, function(affectedNode) {
-            var modifiedNode = affectedNode.ModifiedNode;
-            if (!modifiedNode) {
-                return;
-            }
-
-            if (modifiedNode.LedgerEntryType == "AccountRoot") {
-                var finalFields = modifiedNode.FinalFields;
-                if (finalFields && finalFields.Account == account) {
-                    if (src_currency == "XRP") {
-                        src_balance = finalFields.Balance;
-                    }
-                    if (dst_currency == "XRP") {
-                        dst_balance = finalFields.Balance;
-                    }
-                }
-            }
-
-            if (modifiedNode.LedgerEntryType == "RippleState") {
-                //here is the rule: finalFields and previsousField always relate LowLimit issuer;
-                var finalFields = modifiedNode.FinalFields;
-                if (finalFields && finalFields.HighLimit.issuer == account) {
-                    if (finalFields.Balance.currency == src_currency) {
-                        src_balance = 0 - finalFields.Balance.value + "";
-                    }
-                    if (finalFields.Balance.currency == dst_currency) {
-                        dst_balance = 0 - finalFields.Balance.value + "";
-                    }
-
-                    if (src_currency == finalFields.LowLimit.currency) {
-                        src_issuer = finalFields.LowLimit.issuer;
-                        if (!_.contains(src_issuers, src_issuer)) {
-                            src_issuers.push(src_issuer);
-                        }
-                    }
-
-                    if (dst_currency == finalFields.LowLimit.currency) {
-                        dst_issuer = finalFields.LowLimit.issuer;
-                        if (!_.contains(dst_issuers, dst_issuer)) {
-                            dst_issuers.push(dst_issuer);
-                        }
-                    }
-                }
-
-                if (finalFields && finalFields.LowLimit.issuer == account) {
-                    if (finalFields.Balance.currency == src_currency) {
-                        src_balance = finalFields.Balance.value;
-                    } else if (finalFields.Balance.currency == dst_currency) {
-                        dst_balance = finalFields.Balance.value;
-                    }
-
-                    if (src_currency == finalFields.HighLimit.currency) {
-                        src_issuer = finalFields.HighLimit.issuer;
-                        if (!_.contains(src_issuers, src_issuer)) {
-                            src_issuers.push(src_issuer);
-                        }
-                    };
-                    if (dst_currency == finalFields.HighLimit.currency) {
-                        dst_issuer = finalFields.HighLimit.issuer;
-                        if (!_.contains(dst_issuers, dst_issuer)) {
-                            dst_issuers.push(dst_issuer);
-                        }
-                    };
-                }
-            }
-        });
-
-        books.push({
-            dst_currency: dst_currency,
-            dst_issuer: dst_issuer,
-            src_currency: src_currency,
-            src_issuer: src_issuer
-        });
-
-        if (src_issuer) {
-            if (src_currency == "XRP") {
-                account_balances[src_currency] = Amount.from_json(src_balance);
-            } else {
-                account_balances[src_currency + src_issuer] = Amount.from_json({
-                    currency: src_currency,
-                    value: src_balance,
-                    issuer: src_issuer
-                });
-            }
-        }
-        if (dst_issuer) {
-            if (dst_currency == "XRP") {
-                account_balances[dst_currency] = Amount.from_json(dst_balance);
-            } else {
-                account_balances[dst_currency + dst_issuer] = Amount.from_json({
-                    currency: dst_currency,
-                    value: dst_balance,
-                    issuer: dst_issuer
-                });
-            }
-        }
-
-
-        if (books.length % 2 == 0 && books.length > 1) {
-            checkProfit();
-        }
-
-        latLogger.log(true, {
-            src_currency: src_currency,
-            src_issuer: src_issuer,
-            src_value: src_value,
-            src_balance: src_balance,
-            dst_currency: dst_currency,
-            dst_issuer: dst_issuer,
-            dst_value: dst_value,
-            dst_value: dst_balance
-        }, {
-            "src_issuers": src_issuers,
-            "dst_issuers": dst_issuers,
-            "hash": hash,
-            "mutil_issuers": src_issuers.length > 1 || dst_issuers.length > 1
-        });
+function listenProfitCurrencyPair() {
+    console.log("step5:listen to profit socket!");
+    wsio.on('po', function(currency1, currency2) {
+        console.log("new data arrived!");
+        goNext(currency1, currency2);
     });
-}
-
-function checkProfit() {
-    var b1 = books[0];
-    var b2 = books[1];
-
-    books = _.rest(books, 2);
-
-    if (!b1.src_issuer || !b1.dst_issuer || !b2.src_issuer || !b2.dst_issuer) {
-        return;
-    }
-
-    if (b1.src_currency != b2.dst_currency || b1.dst_currency != b2.src_currency) {
-        return;
-    }
-
-    var bi1;
-    var bi2;
-
-    queryBook(remote, b1.dst_currency, b1.dst_issuer, b1.src_currency, b1.src_issuer, account, qbLogger, function(bi) {
-        bi1 = bi;
-        if (bi1 && bi2) {
-            createOffer(b1, bi1, b2, bi2);
-        }
-    });
-    queryBook(remote, b2.dst_currency, b2.dst_issuer, b2.src_currency, b2.src_issuer, account, qbLogger, function(bi) {
-        bi2 = bi;
-        if (bi1 && bi2) {
-            createOffer(b1, bi1, b2, bi2);
-        }
-    });
-}
-
-function getAccountBalance(amount) {
-    var c = amount.currency().to_json();
-    var i = "";
-    if (c != "XRP") {
-        i = amount.issuer().to_json();
-    }
-
-    return account_balances[c + i];
-}
-
-function createOffer(b1, bi1, b2, bi2) {
-    if (bi1.price * bi2.price < 1) {
-        rippleInfo.saveProfitBookPath({
-            books: [b1, b2]
-        });
-
-        var bi1_tp_ab = getAccountBalance(bi1.taker_pays);
-        var bi1_tg_ab = getAccountBalance(bi1.taker_gets);
-
-        if (!bi1_tp_ab || !bi1_tg_ab) {
-            return;
-        }
-
-        var min_taker_pays = minAmount([bi1.taker_pays, bi2.taker_gets, bi1_tp_ab]);
-        var min_taker_gets = minAmount([bi1.taker_gets, bi2.taker_pays, bi1_tg_ab]);
-        qbLogger.log(true, "before", "profit:" + bi1.price * bi2.price,
-            bi1.taker_pays.to_text_full(), bi1.taker_gets.to_text_full(),
-            bi2.taker_pays.to_text_full(), bi2.taker_gets.to_text_full(),
-            min_taker_pays.to_text_full(), min_taker_gets.to_text_full());
-
-        var times = min_taker_gets.ratio_human(bi1.taker_gets).to_human().replace(',', '');
-        times = math.round(times - 0, 6);
-        if (min_taker_pays.compareTo(bi1.taker_pays.product_human(times)) == 1) {
-            bi1.taker_gets = min_taker_gets;
-            bi1.taker_pays = bi1.taker_pays.product_human(times);
-
-            times = min_taker_gets.ratio_human(bi2.taker_pays).to_human().replace(',', '');
-            times = math.round(times - 0, 6);
-            bi2.taker_pays = min_taker_gets;
-            bi2.taker_gets = bi2.taker_gets.product_human(times);
-        } else {
-            times = min_taker_pays.ratio_human(bi1.taker_pays).to_human().replace(',', '');
-            times = math.round(times - 0, 6);
-            bi1.taker_pays = min_taker_pays;
-            bi1.taker_gets = bi1.taker_gets.product_human(times);
-
-            times = min_taker_pays.ratio_human(bi2.taker_gets).to_human().replace(',', '');
-            times = math.round(times - 0, 6);
-            bi2.taker_gets = min_taker_pays;
-            bi2.taker_pays = bi2.taker_gets.product_human(times);
-        }
-
-        qbLogger.log(true, "after", "profit:" + bi1.price * bi2.price,
-            bi1.taker_pays.to_text_full(), bi1.taker_gets.to_text_full(),
-            bi2.taker_pays.to_text_full(), bi2.taker_gets.to_text_full(),
-            bi1_tp_ab.to_text_full(), bi1_tg_ab.to_text_full());
-    }
 }

@@ -7,6 +7,7 @@ var wsio = io.connect('http://localhost:3003/ws');
 var math = require('mathjs');
 var WebSocket = require('ws');
 var _ = require('underscore');
+var events = require('events');
 var config = require('./config.js');
 var aujs = require('./amount-util.js');
 var ripple = require('../src/js/ripple');
@@ -70,8 +71,6 @@ function remoteConnect() {
     });
 }
 
-var processing = false;
-
 function listenProfitOrder() {
     console.log("step5:listen to profit socket!");
     wsio.on('po', function(order1, order2) {
@@ -84,14 +83,18 @@ function listenProfitOrder() {
 
         queryBookByOrder(remote, order2, function(nodiff) {
             if (needCreate && nodiff) {
-                wsoLogger.log(true, "Yes, we will create offer here!");
-                createOffer(order1, order2);
+                emitter.emit('createOffer', order1, order2);
             }
         });
     });
 }
 
+var emitter = new events.EventEmitter();
+emitter.on('createOffer', createOffer);
+
 function createOffer(order1, order2) {
+    console.log("Yeah, nodiff, start to create offer!");
+
     var order1_taker_pays = Amount.from_json(order1.TakerPays);
     var order1_taker_gets = Amount.from_json(order1.TakerGets);
     var order2_taker_pays = Amount.from_json(order2.TakerPays);
@@ -104,6 +107,10 @@ function createOffer(order1, order2) {
 
     var min_taker_pays = minAmount([order1_taker_pays, order2_taker_gets, order1_pays_balance, order2_gets_balance]);
     var min_taker_gets = minAmount([order1_taker_gets, order2_taker_pays, order1_gets_balance, order2_pays_balance]);
+
+    if (min_taker_gets.is_zero() || min_taker_pays.is_zero()) {
+        return;
+    }
 
     var times = min_taker_gets.ratio_human(order1_taker_gets).to_human().replace(',', '');
     times = math.round(times - 0, 6);
@@ -127,16 +134,17 @@ function createOffer(order1, order2) {
         order2_taker_pays = order2_taker_pays.product_human(times);
     }
 
-    order1_taker_pays = order1_taker_pays.product_human("1.00001");
-    order2_taker_pays = order2_taker_pays.product_human("1.00001");
-
-    console.log(order1_taker_pays.to_json(), order1_taker_gets.to_json());
-    console.log("");
-    console.log(order2_taker_pays.to_json(), order2_taker_gets.to_json());
+    order1_taker_pays = order1_taker_pays.product_human("1.0001");
+    order2_taker_pays = order2_taker_pays.product_human("1.0001");
 
     wsoLogger.log(true, order1_taker_pays.to_json(), order1_taker_gets.to_json(),
         order2_taker_pays.to_json(), order2_taker_gets.to_json());
 
-    // osjs.createOffer(order1_taker_gets.to_json(), order1_taker_pays.to_json(), wsoLogger);
-    // osjs.createOffer(order2_taker_gets.to_json(), order2_taker_pays.to_json(), wsoLogger);
+    if (osjs.ifOfferExist(order1_taker_gets.to_json(), order1_taker_pays.to_json()) ||
+        osjs.ifOfferExist(order2_taker_gets.to_json(), order2_taker_pays.to_json())) {
+        return;
+    }
+
+    // osjs.createOffer(order1_taker_gets.to_json(), order1_taker_pays.to_json(), wsoLogger, false);
+    // osjs.createOffer(order2_taker_gets.to_json(), order2_taker_pays.to_json(), wsoLogger, false);
 }

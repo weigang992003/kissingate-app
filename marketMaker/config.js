@@ -73,3 +73,9 @@ exports.delayWhenFailure = 60000;
 exports.ratio = 1.2;
 
 exports.xrpIssuer = "rrrrrrrrrrrrrrrrrrrrrhoLvTp";
+
+
+//websocket port map (server)
+//3003 web-socket-polling-monitor
+//3004 listen-account-util
+//3005 offer-service

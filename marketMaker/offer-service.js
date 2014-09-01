@@ -1,6 +1,7 @@
 var _ = require('underscore');
 var math = require('mathjs');
 var aim = require('./account-info-manager.js');
+var Amount = require('./amount-util.js').Amount;
 
 function OfferService(r, a, s) {
     this.remote = r;
@@ -49,12 +50,24 @@ OfferService.prototype.ifOfferExist = function(pays, gets) {
     return false;
 }
 
-OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, createHB) {
+OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, createHB, callback) {
     var self = this;
     var remote = this.remote;
     var secret = this.secret;
     var accountId = this.accountId;
     var offers = this.offers;
+
+    if (self.ifOfferExist(taker_pays, taker_gets)) {
+        console.log("offer already exist!!!!");
+        return;
+    }
+
+    self.offers.push({
+        'taker_pays': taker_pays,
+        'taker_gets': taker_gets
+    });
+
+    console.log("start to create offer!!!");
 
     var tx = remote.transaction();
     if (secret) {
@@ -63,6 +76,7 @@ OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, cr
         return;
     }
 
+    console.log("we are create offer here", "taker_pays", taker_pays, "taker_gets", taker_gets);
     if (logger)
         logger.log(true, "we are create offer here", "taker_pays", taker_pays, "taker_gets", taker_gets);
 
@@ -83,11 +97,12 @@ OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, cr
         }
     });
 
-    tx2.on('proposed', function(res) {
-        self.offers.push({
-            'taker_pays': taker_pays,
-            'taker_gets': taker_gets
-        })
+    tx.on('proposed', function(res) {
+        console.log("tx success!!!!");
+
+        if (callback) {
+            callback();
+        }
     });
 
     tx.on("error", function(res) {
