@@ -92,6 +92,13 @@ var accountIncomeSchema = mongoose.Schema({
     collection: 'accountIncome'
 });
 
+var envSchema = mongoose.Schema({
+    env: String,
+    wspm: String
+}, {
+    collection: 'env'
+});
+
 var crypto = tf.model('crypto', cryptoSchema);
 var counters = tf.model('counters', countersSchema);
 var accountLinesHistory = tf.model('accountLinesHistory', accountLinesHistorySchema);
@@ -101,6 +108,7 @@ var failedTransaction = tf.model('failedTransaction', failedTransactionSchema);
 var raccounts = tf.model('raccounts', raccountsSchema);
 var siteCookie = tf.model('siteCookie', siteCookieSchema);
 var accountIncome = tf.model('accountIncome', accountIncomeSchema);
+var env = tf.model('env', envSchema);
 
 function getCryptoOption(callback) {
     crypto.findOne({
@@ -252,6 +260,14 @@ function saveAccountIncome(record) {
     });
 }
 
+function getEnv(callback) {
+    env.findOne({}, function(err, result) {
+        if (err) return handleError(err);
+        callback(result);
+    });
+}
+
+exports.getEnv = getEnv;
 exports.getCookie = getCookie;
 exports.getAccount = getAccount;
 exports.getCryptoOption = getCryptoOption;

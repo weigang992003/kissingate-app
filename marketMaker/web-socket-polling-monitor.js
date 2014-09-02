@@ -1,5 +1,5 @@
 var Logger = require('./new-logger.js').Logger;
-var wspm = new Logger('web-socket-polling-monitor');
+var wspmLogger = new Logger('web-socket-polling-monitor');
 
 var io = require('socket.io').listen(3003);
 var wsio = io.of('/ws');
@@ -13,7 +13,7 @@ var ripple = require('../src/js/ripple');
 var crypto = require('./crypto-util.js');
 var rsjs = require('./remote-service.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
-var theFuture = require('./the-future-manager.js');
+var tfm = require('./the-future-manager.js');
 var rippleInfo = require('./ripple-info-manager.js');
 
 var Loop = require('./loop-util.js').Loop;
@@ -28,24 +28,7 @@ var getCurrency = aujs.getCurrency;
 var tls;
 var osjs;
 
-var ws = new WebSocket('ws://localhost:7890');
-var wsConnected = false;
-ws.on('open', function() {
-    wsConnected = true;
-});
-ws.on('message', function(data, flags) {
-    console.log("data received!");
-    var books = JSON.parse(data);
-    var orders = _.flatten(books);
-    checkOrders(orders);
-});
-ws.on('close', function() {
-    wsConnected = false;
-    ws.close();
-});
-
 var Amount = ripple.Amount;
-var remote = new ripple.Remote(rsjs.getRemoteOption());
 
 var drops = config.drops;
 var profit_rate = config.profitRate;
@@ -105,7 +88,7 @@ function checkOrders(orders) {
                 wsio.emit('po', order_type_1, order_type_2);
                 wsio.emit('pc', currency1, currency2);
 
-                wspm.log(true, order_type_1.TakerPays, order_type_1.TakerGets,
+                wspmLogger.log(true, order_type_1.TakerPays, order_type_1.TakerGets,
                     order_type_2.TakerPays, order_type_2.TakerGets,
                     "profit:" + profit, "price1:" + order_type_1.quality, "price2:" + order_type_2.quality);
             }
@@ -131,28 +114,66 @@ function getPrice(order, pays_currency, gets_currency) {
     }
 }
 
-function remoteConnect() {
-    console.log("step3:connect to remote!")
-    remote.connect(function() {
-        osjs = new OfferService(remote, account, secret);
-        osjs.getOffers();
 
-        tls = new TrustLineService(remote, account);
-        tls.getLines(function(lines) {
-            console.log("step4:prepare currencies!")
-            prepareCurrencies(lines);
+var wsConnected = false;
+var ws;
 
-            console.log("step5:query find path!");
+function connectWS(uri) {
+    ws = new WebSocket(uri);
+    ws.on('open', function() {
+        wsConnected = true;
+    });
+    ws.on('message', function(data, flags) {
+        var books = JSON.parse(data);
+        var orders = _.flatten(books);
+        if (orders.length == 0 || orders.length == 1) {
+            cIndexSet = cLoop.next(cIndexSet, currencySize);
             goNext();
-        });
+            return;
+        } else {
+            checkOrders(orders);
+        }
+    });
+    ws.on('close', function() {
+        wsConnected = false;
+        ws.close();
+    });
+}
 
-        remote.on('error', function(error) {
-            throw new Error("remote error!");
-        });
+var remote;
 
-        remote.on('disconnect', function() {
-            remote = new ripple.Remote(rsjs.getRemoteOption());
-            remoteConnect();
+function remoteConnect(env) {
+    rsjs.getRemote(env, function(r) {
+        console.log("start to connect ws!!!");
+
+        remote = r;
+        console.log("step3:connect to remote!");
+        if (!remote) {
+            console.log("we don't get remote object!");
+            return;
+        }
+
+        remote.connect(function() {
+            osjs = new OfferService(remote, account, secret);
+            osjs.getOffers();
+
+            tls = new TrustLineService(remote, account);
+            tls.getLines(function(lines) {
+                console.log("step4:prepare currencies!")
+                prepareCurrencies(lines);
+
+                console.log("step5:query find path!");
+                goNext();
+            });
+
+            remote.on('error', function(error) {
+                throw new Error("remote error!");
+            });
+
+            remote.on('disconnect', function() {
+                remote = new ripple.Remote(rsjs.getRemoteOption());
+                remoteConnect();
+            });
         });
     });
 }
@@ -190,8 +211,6 @@ function goNext() {
     var currency1 = currencies[cIndexSet[0]];
     var currency2 = currencies[cIndexSet[1]];
 
-    console.log(currency1 + ":" + currency2);
-
     if (wsConnected) {
         var req = {
             "src_currency": currency1,
@@ -210,7 +229,7 @@ function goNext() {
 var account;
 var secret;
 console.log("step1:getAccount!")
-theFuture.getAccount(config.marketMaker, function(result) {
+tfm.getAccount(config.marketMaker, function(result) {
     account = result.account;
     secret = result.secret;
     decrypt(secret);
@@ -220,7 +239,10 @@ function decrypt(encrypted) {
     console.log("step2:decrypt secret!")
     crypto.decrypt(encrypted, function(result) {
         secret = result;
-        remoteConnect();
+        tfm.getEnv(function(result) {
+            connectWS(result.wspm);
+            remoteConnect(result.env);
+        })
     });
 }
 
