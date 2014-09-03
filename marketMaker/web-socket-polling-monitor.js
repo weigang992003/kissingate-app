@@ -32,6 +32,7 @@ var Amount = ripple.Amount;
 
 var drops = config.drops;
 var profit_rate = config.profitRate;
+var transfer_rates = config.transfer_rates;
 
 function checkOrders(orders) {
     var currency1 = currencies[cIndexSet[0]];
@@ -98,6 +99,10 @@ function checkOrders(orders) {
 
     cIndexSet = cLoop.next(cIndexSet, currencySize);
     goNext();
+}
+
+function getProfitRate() {
+
 }
 
 function isSameIssuers(order1, order2) {

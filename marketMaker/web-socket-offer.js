@@ -101,6 +101,14 @@ function listenProfitOrder() {
     });
 }
 
+setInterval(checkIfHasListener, 1000 * 10);
+
+function checkIfHasListener() {
+    if (emitter.listeners('createOffer').length == 0) {
+        emitter.once('createOffer', createOffer);
+    }
+}
+
 var emitter = new events.EventEmitter();
 emitter.once('createOffer', createOffer);
 
@@ -121,6 +129,7 @@ function createOffer(order1, order2) {
     var min_taker_gets = minAmount([order1_taker_gets, order2_taker_pays, order1_gets_balance, order2_pays_balance]);
 
     if (min_taker_gets.is_zero() || min_taker_pays.is_zero()) {
+        console.log("lack of currency balance:", min_taker_gets.to_json(), min_taker_pays.to_json());
         emitter.once('createOffer', createOffer);
         return;
     }
