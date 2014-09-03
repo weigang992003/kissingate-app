@@ -1,3 +1,4 @@
+var _ = require('underscore');
 var aim = require('./account-info-manager');
 var io = require('socket.io').listen(3004);
 var abio = io.of('/ab'); //account balance io

@@ -67,7 +67,7 @@ function remoteConnect(env) {
             });
 
             laujs = new AccountListener(remote, account);
-            laujs.listenOffer();
+            // laujs.listenOffer();
 
             remote.on('error', function(error) {
                 throw new Error("remote error!");
