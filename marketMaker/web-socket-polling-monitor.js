@@ -79,7 +79,7 @@ function checkOrders(orders) {
     orders_type_1.every(function(order_type_1) {
         orders_type_2.every(function(order_type_2) {
             if (isSameIssuers(order_type_1, order_type_2)) {
-                return;
+                return true;
             }
 
             var profit = order_type_1.quality * order_type_2.quality;
