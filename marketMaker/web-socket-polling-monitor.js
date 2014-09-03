@@ -203,8 +203,8 @@ function goNext() {
         console.log("query done!");
         cLoop = new Loop([1, 0]);
         cIndexSet = [1, 0];
-        console.log("next round would be start in 20 seconds!");
-        setTimeout(goNext, 1000 * 20);
+        console.log("next round would be start in 5 seconds!");
+        setTimeout(goNext, 1000 * 5);
         return;
     }
 

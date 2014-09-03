@@ -51,11 +51,11 @@ exports.currency_unit = {
 };
 
 exports.transfer_rates = {
-    'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B': 0.2,
-    'r9Dr5xwkeLegBeXq6ujinjSBLQzQ1zQGjH': 0.2,
+    'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B': 0.002,
+    'r9Dr5xwkeLegBeXq6ujinjSBLQzQ1zQGjH': 0.002,
     'rPDXxSZcuVL3ZWoyU82bcde3zwvmShkRyF': 0.025,
-    'rNPRNzBB92BVpAhhZr4iXDTveCgV5Pofm9': 0.2,
-    'rfYv1TXnwgDDK4WQNbFALykYuEBnrR4pDX': 0.15
+    'rNPRNzBB92BVpAhhZr4iXDTveCgV5Pofm9': 0.002,
+    'rfYv1TXnwgDDK4WQNbFALykYuEBnrR4pDX': 0.0015
 }
 
 exports.same_currency_profit = ["CNY"];

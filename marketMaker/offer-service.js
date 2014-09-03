@@ -17,7 +17,7 @@ OfferService.prototype.getOffers = function(callback) {
 
     remote.requestAccountOffers(accountId, function(err, result) {
         self.offers = result.offers;
-        console.log(self.offers);
+        console.log("get offers success");
 
         if (callback) {
             callback(self.offers);
@@ -101,7 +101,7 @@ OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, cr
         console.log("tx success!!!!");
 
         if (callback) {
-            callback();
+            callback("success");
         }
     });
 

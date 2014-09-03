@@ -14,7 +14,7 @@ var ripple = require('../src/js/ripple');
 var crypto = require('./crypto-util.js');
 var rsjs = require('./remote-service.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
-var theFuture = require('./the-future-manager.js');
+var tfm = require('./the-future-manager.js');
 var rippleInfo = require('./ripple-info-manager.js');
 
 var Loop = require('./loop-util.js').Loop;
@@ -34,7 +34,7 @@ var remote = rsjs.getRemote();
 var account;
 var secret;
 console.log("step1:getAccount!")
-theFuture.getAccount(config.marketMaker, function(result) {
+tfm.getAccount(config.marketMaker, function(result) {
     account = result.account;
     secret = result.secret;
     decrypt(secret);
@@ -44,29 +44,36 @@ function decrypt(encrypted) {
     console.log("step2:decrypt secret!")
     crypto.decrypt(encrypted, function(result) {
         secret = result;
-        remoteConnect();
+        tfm.getEnv(function(result) {
+            remoteConnect(result.env);
+        })
     });
 }
 
-function remoteConnect() {
+function remoteConnect(env) {
     console.log("step3:connect to remote!")
-    remote.connect(function() {
-        osjs = new OfferService(remote, account, secret);
-        osjs.getOffers();
+    rsjs.getRemote(env, function(r) {
+        remote = r;
 
-        tls = new TrustLineService(remote, account);
-        tls.getLines();
+        remote.connect(function() {
+            osjs = new OfferService(remote, account, secret);
+            osjs.getOffers();
 
-        listenProfitOrder();
+            tls = new TrustLineService(remote, account);
+            tls.getLines(function() {
+                listenProfitOrder();
+            });
 
-        remote.on('error', function(error) {
-            throw new Error("remote error!");
-        });
 
-        remote.on('disconnect', function() {
-            remoteConnect = false;
-            remote = new ripple.Remote(rsjs.getRemoteOption());
-            remoteConnect();
+            remote.on('error', function(error) {
+                throw new Error("remote error!");
+            });
+
+            remote.on('disconnect', function() {
+                remoteConnect = false;
+                remote = new ripple.Remote(rsjs.getRemoteOption());
+                remoteConnect();
+            });
         });
     });
 }
@@ -74,23 +81,28 @@ function remoteConnect() {
 function listenProfitOrder() {
     console.log("step5:listen to profit socket!");
     wsio.on('po', function(order1, order2) {
-        console.log("new data arrived!");
+        console.log("new data arrived!", order1, order2);
 
-        var needCreate = true;
-        queryBookByOrder(remote, order1, function(nodiff) {
-            if (!nodiff) needCreate = false;
-        });
+        emitter.emit('createOffer', order1, order2);
 
-        queryBookByOrder(remote, order2, function(nodiff) {
-            if (needCreate && nodiff) {
-                emitter.emit('createOffer', order1, order2);
-            }
-        });
+
+        // var needCreate = true;
+        // queryBookByOrder(remote, order1, function(nodiff) {
+        //     console.log("order1 nodiff:" + nodiff);
+        //     if (!nodiff) needCreate = false;
+        // });
+
+        // queryBookByOrder(remote, order2, function(nodiff) {
+        //     console.log("order2 nodiff:" + nodiff);
+        //     if (needCreate && nodiff) {
+        //         emitter.emit('createOffer', order1, order2);
+        //     }
+        // });
     });
 }
 
 var emitter = new events.EventEmitter();
-emitter.on('createOffer', createOffer);
+emitter.once('createOffer', createOffer);
 
 function createOffer(order1, order2) {
     console.log("Yeah, nodiff, start to create offer!");
@@ -109,6 +121,7 @@ function createOffer(order1, order2) {
     var min_taker_gets = minAmount([order1_taker_gets, order2_taker_pays, order1_gets_balance, order2_pays_balance]);
 
     if (min_taker_gets.is_zero() || min_taker_pays.is_zero()) {
+        emitter.once('createOffer', createOffer);
         return;
     }
 
@@ -145,6 +158,9 @@ function createOffer(order1, order2) {
         return;
     }
 
-    // osjs.createOffer(order1_taker_gets.to_json(), order1_taker_pays.to_json(), wsoLogger, false);
-    // osjs.createOffer(order2_taker_gets.to_json(), order2_taker_pays.to_json(), wsoLogger, false);
+    osjs.createOffer(order1_taker_gets.to_json(), order1_taker_pays.to_json(), wsoLogger, false);
+    osjs.createOffer(order2_taker_gets.to_json(), order2_taker_pays.to_json(), wsoLogger, false, function(status) {
+        console.log("restart to get profit order!!!");
+        emitter.once('createOffer', createOffer);
+    });
 }
