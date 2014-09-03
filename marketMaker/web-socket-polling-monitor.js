@@ -85,7 +85,13 @@ function checkOrders(orders) {
 
             var profit = order_type_1.quality * order_type_2.quality;
             console.log(profit);
-            if (profit < profit_rate) {
+            var pr = getProfitRate(order_type_1, profit_rate);
+            pr = getProfitRate(order_type_2, pr);
+            if (pr != profit_rate) {
+                console.log("profit_rate:" + pr);
+            }
+
+            if (profit < pr) {
                 wsio.emit('po', order_type_1, order_type_2);
                 wsio.emit('pc', currency1, currency2);
 
@@ -101,8 +107,17 @@ function checkOrders(orders) {
     goNext();
 }
 
-function getProfitRate() {
-
+function getProfitRate(order, profitRate) {
+    var pr = profitRate;
+    var transfer_rate = transfer_rates[getIssuer(order.TakerGets)];
+    if (transfer_rate) {
+        pr = pr - transfer_rate;
+    }
+    var transfer_rate = transfer_rates[getIssuer(order.TakerPays)];
+    if (transfer_rate) {
+        pr = pr - transfer_rate;
+    }
+    return pr;
 }
 
 function isSameIssuers(order1, order2) {

@@ -23,7 +23,7 @@
      local_signing: true,
      local_fee: true,
      fee_cushion: 1.5,
-     max_fee: 100,
+     max_fee: 1000,
      servers: [{
          host: 's-west.ripple.com',
          port: 443,
