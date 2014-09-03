@@ -8,6 +8,7 @@ function AccountListener(remote, accountId) {
 }
 
 AccountListener.prototype.listenOffer = function() {
+    console.log("start to listen account Offer");
     var remote = this.remote;
     var accountId = this.accountId;
 

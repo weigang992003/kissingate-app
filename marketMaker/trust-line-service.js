@@ -61,6 +61,10 @@ TrustLineService.prototype.getLines = function(callback) {
 
 TrustLineService.prototype.getBalance = function(issuer, currency) {
     var value = this.account_balances[issuer + currency];
+    if (value && currency == "XRP") {
+        return Amount.from_json(value + "");
+    }
+
     if (value) {
         return Amount.from_json({
             'issuer': issuer,
@@ -81,6 +85,7 @@ TrustLineService.prototype.getIssuers = function(currency) {
 TrustLineService.prototype.listenBalanceUpdate = function() {
     var self = this;
     abio.on('ab', function(issuer, currency, balance) {
+        console.log(issuer, currency, balance);
         self.setBalance(issuer, currency, balance);
     });
 };

@@ -20,6 +20,7 @@ var rippleInfo = require('./ripple-info-manager.js');
 var Loop = require('./loop-util.js').Loop;
 var OfferService = require('./offer-service.js').OfferService;
 var queryBookByOrder = require('./query-book.js').queryBookByOrder;
+var AccountListener = require('./listen-account-util.js').AccountListener;
 var TrustLineService = require('./trust-line-service.js').TrustLineService;
 
 var minAmount = aujs.minAmount;
@@ -28,6 +29,7 @@ var getCurrency = aujs.getCurrency;
 
 var tls;
 var osjs;
+var laujs;
 var Amount = ripple.Amount;
 var remote = rsjs.getRemote();
 
@@ -64,15 +66,15 @@ function remoteConnect(env) {
                 listenProfitOrder();
             });
 
+            laujs = new AccountListener(remote, account);
+            laujs.listenOffer();
 
             remote.on('error', function(error) {
                 throw new Error("remote error!");
             });
 
             remote.on('disconnect', function() {
-                remoteConnect = false;
-                remote = new ripple.Remote(rsjs.getRemoteOption());
-                remoteConnect();
+                remoteConnect(env);
             });
         });
     });
@@ -101,13 +103,13 @@ function listenProfitOrder() {
     });
 }
 
-setInterval(checkIfHasListener, 1000 * 10);
+// setInterval(checkIfHasListener, 1000 * 10);
 
-function checkIfHasListener() {
-    if (emitter.listeners('createOffer').length == 0) {
-        emitter.once('createOffer', createOffer);
-    }
-}
+// function checkIfHasListener() {
+//     if (emitter.listeners('createOffer').length == 0) {
+//         emitter.once('createOffer', createOffer);
+//     }
+// }
 
 var emitter = new events.EventEmitter();
 emitter.once('createOffer', createOffer);
@@ -170,6 +172,19 @@ function createOffer(order1, order2) {
     osjs.createOffer(order1_taker_gets.to_json(), order1_taker_pays.to_json(), wsoLogger, false);
     osjs.createOffer(order2_taker_gets.to_json(), order2_taker_pays.to_json(), wsoLogger, false, function(status) {
         console.log("restart to get profit order!!!");
-        emitter.once('createOffer', createOffer);
+        tls.getLines(function() {
+            emitter.once('createOffer', createOffer);
+        })
     });
+}
+
+setTimeout(prepareRestart, 1000 * 60 * 10);
+
+function prepareRestart() {
+    emitter.removeAllListeners('createOffer');
+    setTimeout(throwDisconnectError, 1000 * 30);
+}
+
+function throwDisconnectError() {
+    throw new Error('we are disconnect with ripple network!!!');
 }
