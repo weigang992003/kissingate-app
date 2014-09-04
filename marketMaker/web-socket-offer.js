@@ -1,5 +1,6 @@
 var Logger = require('./new-logger.js').Logger;
-var wsoLogger = new Logger('web-socket-offer');
+var wsoLogger;
+// var wsoLogger = new Logger('web-socket-offer');
 
 var io = require('socket.io-client');
 var wsio = io.connect('http://localhost:3003/ws');
@@ -83,17 +84,17 @@ function remoteConnect(env) {
 function listenProfitOrder() {
     console.log("step5:listen to profit socket!");
     wsio.on('po', function(order1, order2) {
-        console.log("new data arrived!", order1, order2);
+        console.log(order1, order2);
 
-        emitter.emit('createOffer', order1, order2);
+        emitter.emit('makeProfit', order1, order2);
     });
 }
 
 var emitter = new events.EventEmitter();
-emitter.once('createOffer', createOffer);
+emitter.once('makeProfit', makeProfit);
 
-function createOffer(order1, order2) {
-    console.log("Yeah, nodiff, start to create offer!");
+function makeProfit(order1, order2) {
+    console.log("new data arrived!");
 
     var order1_taker_pays = Amount.from_json(order1.TakerPays);
     var order1_taker_gets = Amount.from_json(order1.TakerGets);
@@ -110,7 +111,7 @@ function createOffer(order1, order2) {
 
     if (min_taker_gets.is_zero() || min_taker_pays.is_zero()) {
         console.log("lack of currency balance:", min_taker_gets.to_json(), min_taker_pays.to_json());
-        emitter.once('createOffer', createOffer);
+        emitter.once('makeProfit', makeProfit);
         return;
     }
 
@@ -139,9 +140,6 @@ function createOffer(order1, order2) {
     order1_taker_pays = order1_taker_pays.product_human("1.0001");
     order2_taker_pays = order2_taker_pays.product_human("1.0001");
 
-    wsoLogger.log(true, order1_taker_pays.to_json(), order1_taker_gets.to_json(),
-        order2_taker_pays.to_json(), order2_taker_gets.to_json());
-
     if (osjs.ifOfferExist(order1_taker_gets.to_json(), order1_taker_pays.to_json()) ||
         osjs.ifOfferExist(order2_taker_gets.to_json(), order2_taker_pays.to_json())) {
         return;
@@ -149,14 +147,15 @@ function createOffer(order1, order2) {
 
     osjs.createOffer(order1_taker_gets.to_json(), order1_taker_pays.to_json(), wsoLogger, false, function(status) {
         console.log("tx1", status);
-        wsoLogger.log(true, "tx1", status);
+        wsoLogger.log(true, "tx1", status, order1_taker_gets.to_json(), order1_taker_pays.to_json());
     });
     osjs.createOffer(order2_taker_gets.to_json(), order2_taker_pays.to_json(), wsoLogger, false, function(status) {
         console.log("tx2", status);
-        wsoLogger.log(true, "tx2", status);
+        wsoLogger.log(true, "tx2", status, order2_taker_gets.to_json(), order2_taker_pays.to_json());
 
         tls.getLines(function() {
-            emitter.once('createOffer', createOffer);
+            console.log("re-listen profit order!!!");
+            emitter.once('makeProfit', makeProfit);
         })
     });
 }
@@ -164,7 +163,7 @@ function createOffer(order1, order2) {
 setTimeout(prepareRestart, 1000 * 60 * 10);
 
 function prepareRestart() {
-    emitter.removeAllListeners('createOffer');
+    emitter.removeAllListeners('makeProfit');
     setTimeout(throwDisconnectError, 1000 * 30);
 }
 
