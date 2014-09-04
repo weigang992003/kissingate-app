@@ -6,43 +6,19 @@ var config = require('./config.js');
 var ripple = require('../src/js/ripple');
 var crypto = require('./crypto-util.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
-var mongodbManager = require('./the-future-manager.js');
-var Logger = require('./the-future-logger.js').TFLogger;
-Logger.getNewLog("keep-currency-balance-solution-1");
+var tfm = require('./the-future-manager.js');
+var rsjs = require('./remote-service.js');
 
 var emitter = new events.EventEmitter();
 emitter.once('decrypt', decrypt);
 emitter.once('remoteConnect', remoteConnect);
 emitter.on('createOffer', createOffer);
 
-var remote_options = remote_options = {
-    // see the API Reference for available options
-    // trace: true,
-    trusted: true,
-    local_signing: true,
-    local_fee: true,
-    fee_cushion: 1.5,
-    max_fee: 100,
-    servers: [{
-        host: 's-east.ripple.com',
-        port: 443,
-        secure: true
-    }, {
-        host: 's-west.ripple.com',
-        port: 443,
-        secure: true
-    }, {
-        host: 's1.ripple.com',
-        port: 443,
-        secure: true
-    }]
-};
 
-var remote = new ripple.Remote(remote_options);
-
+var remote;
 var account;
 var secret;
-mongodbManager.getAccount(config.mother, function(result) {
+tfm.getAccount(config.mother, function(result) {
     account = result.account;
     secret = result.secret;
     emitter.emit('decrypt', secret);
@@ -54,20 +30,28 @@ var orders = [];
 function decrypt(encrypted) {
     crypto.decrypt(encrypted, function(result) {
         secret = result;
-        emitter.emit('remoteConnect');
+        tfm.getEnv(function(result) {
+            remoteConnect(result.env);
+        })
     });
 }
 
-function remoteConnect() {
-    remote.connect(function() {
-        remote.requestAccountOffers(account, function() {
-            offers = arguments[1].offers;
-            remote.requestAccountLines(account, function(err, result) {
-                if (err) console.log(err);
-                averageBalance(result.lines);
+function remoteConnect(env) {
+    console.log("connect to remote!")
+    rsjs.getRemote(env, function(r) {
+        remote = r;
+
+        remote.connect(function() {
+            remote.requestAccountOffers(account, function() {
+                offers = arguments[1].offers;
+                remote.requestAccountLines(account, function(err, result) {
+                    if (err) console.log(err);
+                    averageBalance(result.lines);
+                });
             });
         });
     });
+
 }
 
 function averageBalance(lines) {
@@ -158,7 +142,7 @@ function createOffer(taker_pays, taker_gets) {
         return;
     }
 
-    Logger.log(true, "we are create offer here", "taker_pays", taker_pays, "taker_gets", taker_gets);
+    console.log(true, "we are create offer here", "taker_pays", taker_pays, "taker_gets", taker_gets);
 
     tx.offerCreate(account, taker_pays, taker_gets);
     tx.on("success", function(res) {
