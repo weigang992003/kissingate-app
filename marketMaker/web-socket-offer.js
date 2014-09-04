@@ -83,7 +83,7 @@ function remoteConnect(env) {
 
 function listenProfitOrder() {
     console.log("step5:listen to profit socket!");
-    wsio.on('po', function(order1, order2) {
+    wsio.on('dcp', function(order1, order2) {
         console.log(order1, order2);
 
         emitter.emit('makeProfit', order1, order2);

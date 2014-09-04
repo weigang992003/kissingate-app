@@ -33,8 +33,30 @@ var Amount = ripple.Amount;
 var drops = config.drops;
 var profit_rate = config.profitRate;
 var transfer_rates = config.transfer_rates;
+var same_currency_profit = config.same_currency_profit;
 
-function checkOrders(orders) {
+function checkOrdersForSameCurrency(orders) {
+    var currency = currencies[cIndexSet[0]];
+    if (!_.contains(same_currency_profit, currency)) {
+        return;
+    }
+    var cur_issuers = tls.getIssuers(currency);
+
+    _.each(orders, function(order) {
+        var gets_issuer = getIssuer(order.TakerGets);
+        var pays_issuer = getIssuer(order.TakerPays);
+
+        if (_.contains(cur_issuers, pays_issuer) && _.contains(cur_issuers, gets_issuer)) {
+            console.log(order.quality, pays_issuer, gets_issuer);
+            if (order.quality - 0 < 0.999) {
+                wspmLogger.log(true, "same currency profit", order);
+                wsio.emit('scp', order);
+            }
+        }
+    });
+}
+
+function checkOrdersForDiffCurrency(orders) {
     var currency1 = currencies[cIndexSet[0]];
     var currency2 = currencies[cIndexSet[1]];
     var cur1_issuers = tls.getIssuers(currency1);
@@ -92,8 +114,7 @@ function checkOrders(orders) {
             }
 
             if (profit < pr) {
-                wsio.emit('po', order_type_1, order_type_2);
-                wsio.emit('pc', currency1, currency2);
+                wsio.emit('dcp', order_type_1, order_type_2);
 
                 wspmLogger.log(true, order_type_1.TakerPays, order_type_1.TakerGets,
                     order_type_2.TakerPays, order_type_2.TakerGets,
@@ -102,6 +123,18 @@ function checkOrders(orders) {
             return profit < 1;
         });
     });
+
+}
+
+function checkOrders(orders) {
+    var currency1 = currencies[cIndexSet[0]];
+    var currency2 = currencies[cIndexSet[1]];
+
+    if (currency1 == currency2) {
+        checkOrdersForSameCurrency(orders);
+    } else {
+        checkOrdersForDiffCurrency(orders);
+    }
 
     cIndexSet = cLoop.next(cIndexSet, currencySize);
     goNext();
@@ -209,8 +242,10 @@ function prepareCurrencies(lines) {
     return currencies;
 }
 
-var cLoop = new Loop([1, 0]);
-var cIndexSet = [1, 0];
+var cLoop = new Loop([0, 0]);
+cLoop.allowSameIndex(true);
+
+var cIndexSet = [0, 0];
 var currencySize;
 var currencies;
 
@@ -221,8 +256,9 @@ function goNext() {
 
     if (cLoop.isCycle()) {
         console.log("query done!");
-        cLoop = new Loop([1, 0]);
-        cIndexSet = [1, 0];
+        cLoop = new Loop([0, 0]);
+        cLoop.allowSameIndex(true);
+        cIndexSet = [0, 0];
         console.log("next round would be start in 5 seconds!");
         setTimeout(goNext, 1000 * 5);
         return;

@@ -3,12 +3,17 @@ var _ = require('underscore');
 function Loop(init_set) {
     this.init_set = init_set;
     this.cycle = false;
+    this.allowSame = false;
 }
 
 Loop.prototype.next = function(indexSet, size) {
     var self = this;
 
-    indexSet = nextIndexSet(indexSet, size);
+    if (self.allowSame) {
+        indexSet = simpleNext(indexSet, size);
+    } else {
+        indexSet = nextIndexSet(indexSet, size);
+    }
 
     var len = indexSet.length;
     if (self.init_set.length == len) {
@@ -35,6 +40,10 @@ Loop.prototype.isCycle = function() {
 
 Loop.prototype.reset = function() {
     this.cycle = false;
+}
+
+Loop.prototype.allowSameIndex = function(allow) {
+    this.allowSame = allow;
 }
 
 function nextIndexSet(indexSet, size) {
@@ -65,12 +74,33 @@ function nextIndexSet(indexSet, size) {
     return _.union([first], rest);
 }
 
+function simpleNext(indexSet, size) {
+    if (!indexSet || !size) {
+        return;
+    }
+    var first = _.first(indexSet);
+    var rest = _.rest(indexSet);
+
+    first = (first + 1) % size;
+    if (rest.length == 0) {
+        return [first];
+    }
+
+    if (first == 0) {
+        rest = simpleNext(rest, size);
+    }
+
+    return _.flatten([first, rest]);
+}
+
+
 exports.Loop = Loop;
 
-// var loop = new Loop([1, 0]);
-// var is = [1, 0];
-// _.each(_.range(6), function() {
-//     is = loop.next(is, 3);
+// var loop = new Loop([1, 0, 0]);
+// loop.allowSameIndex(true);
+// var is = [1, 0, 0];
+// _.each(_.range(100), function() {
+//     is = loop.next(is, 4);
 //     console.log(is);
 //     console.log(loop.isCycle());
 // })
