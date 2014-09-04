@@ -70,11 +70,6 @@ TrustLineService.prototype.getBalance = function(issuer, currency) {
     }
 
     if (value) {
-        var limit = this.account_limit[issuer + currency];
-        if(limit){
-            value = limit - value > 0 ? limit - value + "" : "0";
-        }
-        
         return Amount.from_json({
             'issuer': issuer,
             'currency': currency,
@@ -97,6 +92,20 @@ TrustLineService.prototype.listenBalanceUpdate = function() {
         console.log(issuer, currency, balance);
         self.setBalance(issuer, currency, balance);
     });
+};
+
+TrustLineService.prototype.overLimit = function(issuer, currency) {
+    if (currency == "XRP") {
+        return false;
+    }
+
+    var limit = this.account_limit[issuer + currency];
+    var value = this.account_balances[issuer + currency];
+    if (limit && value) {
+        return value - limit >= 0;
+    }
+
+    return true;
 };
 
 exports.TrustLineService = TrustLineService;

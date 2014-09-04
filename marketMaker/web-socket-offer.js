@@ -169,9 +169,24 @@ function createOffer(order1, order2) {
         return;
     }
 
-    osjs.createOffer(order1_taker_gets.to_json(), order1_taker_pays.to_json(), wsoLogger, false);
+    var order1_taker_gets_json = order1_taker_gets.to_json();
+    var order2_taker_gets_json = order2_taker_gets.to_json();
+    if (tls.overLimit(getIssuer(order1_taker_gets_json), getCurrency(order1_taker_gets_json))) {
+        return;
+    }
+    if (tls.overLimit(getIssuer(order2_taker_gets_json), getCurrency(order2_taker_gets_json))) {
+        return;
+    }
+
+
+    osjs.createOffer(order1_taker_gets.to_json(), order1_taker_pays.to_json(), wsoLogger, false, function(status) {
+        console.log("tx1", status);
+        wsoLogger.log(true, "tx1", status);
+    });
     osjs.createOffer(order2_taker_gets.to_json(), order2_taker_pays.to_json(), wsoLogger, false, function(status) {
-        console.log("restart to get profit order!!!");
+        console.log("tx2", status);
+        wsoLogger.log(true, "tx2", status);
+
         tls.getLines(function() {
             emitter.once('createOffer', createOffer);
         })
