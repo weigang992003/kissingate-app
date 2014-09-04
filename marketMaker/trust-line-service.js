@@ -11,6 +11,7 @@ function TrustLineService(r, a) {
     this.remote = r;
     this.accountId = a;
     this.lines = [];
+    this.account_limits = {};
     this.account_balances = {};
     this.issuerMap = {};
 
@@ -22,6 +23,7 @@ TrustLineService.prototype.getLines = function(callback) {
     var remote = this.remote;
     var accountId = this.accountId;
     var issuerMap = this.issuerMap;
+    var account_limits = this.account_limits;
     var account_balances = this.account_balances;
 
     remote.requestAccountBalance(accountId, function(err, balance) {
@@ -37,6 +39,7 @@ TrustLineService.prototype.getLines = function(callback) {
                     return;
                 }
 
+                account_limits[line.account + line.currency] = line.limit;
                 account_balances[line.account + line.currency] = line.balance;
 
                 var issuers = issuerMap[line.currency];
@@ -50,6 +53,7 @@ TrustLineService.prototype.getLines = function(callback) {
             });
 
             self.issuerMap = issuerMap;
+            self.account_limits = account_limits;
             self.account_balances = account_balances;
 
             if (callback) {
@@ -66,6 +70,11 @@ TrustLineService.prototype.getBalance = function(issuer, currency) {
     }
 
     if (value) {
+        var limit = this.account_limit[issuer + currency];
+        if(limit){
+            value = limit - value > 0 ? limit - value + "" : "0";
+        }
+        
         return Amount.from_json({
             'issuer': issuer,
             'currency': currency,
