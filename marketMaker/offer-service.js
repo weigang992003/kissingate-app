@@ -98,16 +98,15 @@ OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, cr
     });
 
     tx.on('proposed', function(res) {
-        console.log("tx success!!!!");
-
         if (callback) {
             callback("success");
         }
     });
 
     tx.on("error", function(res) {
-        console.log(res);
-        throw new Error(res);
+        if (callback) {
+            callback(res);
+        }
     });
 
     tx.submit();
