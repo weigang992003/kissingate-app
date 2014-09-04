@@ -86,30 +86,8 @@ function listenProfitOrder() {
         console.log("new data arrived!", order1, order2);
 
         emitter.emit('createOffer', order1, order2);
-
-
-        // var needCreate = true;
-        // queryBookByOrder(remote, order1, function(nodiff) {
-        //     console.log("order1 nodiff:" + nodiff);
-        //     if (!nodiff) needCreate = false;
-        // });
-
-        // queryBookByOrder(remote, order2, function(nodiff) {
-        //     console.log("order2 nodiff:" + nodiff);
-        //     if (needCreate && nodiff) {
-        //         emitter.emit('createOffer', order1, order2);
-        //     }
-        // });
     });
 }
-
-// setInterval(checkIfHasListener, 1000 * 10);
-
-// function checkIfHasListener() {
-//     if (emitter.listeners('createOffer').length == 0) {
-//         emitter.once('createOffer', createOffer);
-//     }
-// }
 
 var emitter = new events.EventEmitter();
 emitter.once('createOffer', createOffer);
@@ -123,12 +101,12 @@ function createOffer(order1, order2) {
     var order2_taker_gets = Amount.from_json(order2.TakerGets);
     //step 1 get account's balance by currency
     var order1_pays_balance = tls.getBalance(aujs.getIssuer(order1.TakerPays), aujs.getCurrency(order1.TakerPays));
-    var order1_gets_balance = tls.getBalance(aujs.getIssuer(order1.TakerGets), aujs.getCurrency(order1.TakerGets));
+    var order1_gets_capacity = tls.getCapacity(aujs.getIssuer(order1.TakerGets), aujs.getCurrency(order1.TakerGets));
     var order2_pays_balance = tls.getBalance(aujs.getIssuer(order2.TakerPays), aujs.getCurrency(order2.TakerPays));
-    var order2_gets_balance = tls.getBalance(aujs.getIssuer(order2.TakerGets), aujs.getCurrency(order2.TakerGets));
+    var order2_gets_capacity = tls.getCapacity(aujs.getIssuer(order2.TakerGets), aujs.getCurrency(order2.TakerGets));
 
-    var min_taker_pays = minAmount([order1_taker_pays, order2_taker_gets, order1_pays_balance, order2_gets_balance]);
-    var min_taker_gets = minAmount([order1_taker_gets, order2_taker_pays, order1_gets_balance, order2_pays_balance]);
+    var min_taker_pays = minAmount([order1_taker_pays, order2_taker_gets, order2_gets_capacity, order1_pays_balance]);
+    var min_taker_gets = minAmount([order1_taker_gets, order1_gets_capacity, order2_taker_pays, order2_pays_balance]);
 
     if (min_taker_gets.is_zero() || min_taker_pays.is_zero()) {
         console.log("lack of currency balance:", min_taker_gets.to_json(), min_taker_pays.to_json());
@@ -168,16 +146,6 @@ function createOffer(order1, order2) {
         osjs.ifOfferExist(order2_taker_gets.to_json(), order2_taker_pays.to_json())) {
         return;
     }
-
-    var order1_taker_gets_json = order1_taker_gets.to_json();
-    var order2_taker_gets_json = order2_taker_gets.to_json();
-    if (tls.overLimit(getIssuer(order1_taker_gets_json), getCurrency(order1_taker_gets_json))) {
-        return;
-    }
-    if (tls.overLimit(getIssuer(order2_taker_gets_json), getCurrency(order2_taker_gets_json))) {
-        return;
-    }
-
 
     osjs.createOffer(order1_taker_gets.to_json(), order1_taker_pays.to_json(), wsoLogger, false, function(status) {
         console.log("tx1", status);

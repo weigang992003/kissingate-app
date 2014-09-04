@@ -56,6 +56,8 @@ TrustLineService.prototype.getLines = function(callback) {
             self.account_limits = account_limits;
             self.account_balances = account_balances;
 
+            console.log("account_limits:", account_limits);
+
             if (callback) {
                 callback(lines);
             }
@@ -107,5 +109,28 @@ TrustLineService.prototype.overLimit = function(issuer, currency) {
 
     return true;
 };
+
+TrustLineService.prototype.getCapacity = function(issuer, currency) {
+    if (currency == "XRP") {
+        return Amount.from_json("1000000000000000000000");
+    }
+
+    var limit = this.account_limits[issuer + currency];
+    var value = this.account_balances[issuer + currency];
+
+    if (limit && value && limit - value > 0) {
+        return Amount.from_json({
+            'issuer': issuer,
+            'currency': currency,
+            'value': limit - value + ""
+        });
+    }
+
+    return Amount.from_json({
+        'issuer': issuer,
+        'currency': currency,
+        'value': "0"
+    });;
+}
 
 exports.TrustLineService = TrustLineService;
