@@ -1,6 +1,6 @@
 var Logger = require('./new-logger.js').Logger;
-var scpLogger = new Logger('web-socket-polling-monitor');
-var dcpLogger = new Logger('web-socket-polling-monitor');
+var scpLogger = new Logger('same-currency-profit-monitor');
+var dcpLogger = new Logger('diff-currency-profit-monitor');
 
 var io = require('socket.io').listen(3003);
 var wsio = io.of('/ws');
