@@ -88,10 +88,35 @@ function listenProfitOrder() {
 
         emitter.emit('makeProfit', order1, order2);
     });
+
+    wsio.on('scp', function(order) {
+        console.log(order);
+        emitter.emit('makeSameCurrencyProfit', order);
+
+    });
+}
+
+function makeSameCurrencyProfit(order) {
+    var order_taker_pays = Amount.from_json(order.TakerPays);
+    var order_taker_gets = Amount.from_json(order.TakerGets);
+
+    order_taker_pays = order_taker_pays.product_human("1.0001");
+
+    if (osjs.ifOfferExist(order_taker_gets.to_json(), order_taker_pays.to_json())) {
+        emitter.once('makeSameCurrencyProfit', makeSameCurrencyProfit);
+        return;
+    }
+
+    osjs.createOffer(order_taker_gets.to_json(), order_taker_pays.to_json(), wsoLogger, false, function(status) {
+        console.log("same currency tx:", status);
+        wsoLogger.log(true, "same currency tx", status, order_taker_gets.to_json(), order_taker_pays.to_json());
+        emitter.once('makeSameCurrencyProfit', makeSameCurrencyProfit);
+    });
 }
 
 var emitter = new events.EventEmitter();
 emitter.once('makeProfit', makeProfit);
+emitter.once('makeSameCurrencyProfit', makeSameCurrencyProfit);
 
 function makeProfit(order1, order2) {
     console.log("new data arrived!");
@@ -164,6 +189,7 @@ setTimeout(prepareRestart, 1000 * 60 * 10);
 
 function prepareRestart() {
     emitter.removeAllListeners('makeProfit');
+    emitter.removeAllListeners('makeSameCurrencyProfit');
     setTimeout(throwDisconnectError, 1000 * 30);
 }
 
