@@ -1,5 +1,6 @@
 var Logger = require('./new-logger.js').Logger;
-var wspmLogger = new Logger('web-socket-polling-monitor');
+var scpLogger = new Logger('web-socket-polling-monitor');
+var dcpLogger = new Logger('web-socket-polling-monitor');
 
 var io = require('socket.io').listen(3003);
 var wsio = io.of('/ws');
@@ -49,7 +50,7 @@ function checkOrdersForSameCurrency(orders) {
         if (_.contains(cur_issuers, pays_issuer) && _.contains(cur_issuers, gets_issuer)) {
             console.log(order.quality, pays_issuer, gets_issuer);
             if (order.quality - 0 < 0.999) {
-                wspmLogger.log(true, "same currency profit", order);
+                scpLogger.log(true, "same currency profit", order);
                 wsio.emit('scp', order);
             }
         }
@@ -116,7 +117,7 @@ function checkOrdersForDiffCurrency(orders) {
             if (profit < pr) {
                 wsio.emit('dcp', order_type_1, order_type_2);
 
-                wspmLogger.log(true, order_type_1.TakerPays, order_type_1.TakerGets,
+                dcpLogger.log(true, order_type_1.TakerPays, order_type_1.TakerGets,
                     order_type_2.TakerPays, order_type_2.TakerGets,
                     "profit:" + profit, "price1:" + order_type_1.quality, "price2:" + order_type_2.quality);
             }

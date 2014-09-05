@@ -1,6 +1,6 @@
 var Logger = require('./new-logger.js').Logger;
 var wsoLogger;
-// var wsoLogger = new Logger('web-socket-offer');
+var wsoLogger = new Logger('web-socket-offer');
 
 var io = require('socket.io-client');
 var wsio = io.connect('http://localhost:3003/ws');
