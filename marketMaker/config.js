@@ -58,6 +58,12 @@ exports.transfer_rates = {
     'rfYv1TXnwgDDK4WQNbFALykYuEBnrR4pDX': 0.0015
 }
 
+exports.same_currency_issuers = {
+    'CNY': ['rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y', 'razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA', 'rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK'],
+    'USD': ['rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q', 'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B'],
+    'BTC': ['rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q', 'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B']
+}
+
 exports.same_currency_profit = ["CNY"];
 exports.same_issuer_profit = ["rNPRNzBB92BVpAhhZr4iXDTveCgV5Pofm9"];
 

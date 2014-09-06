@@ -1,38 +1,15 @@
 var WebSocket = require('ws');
 var _ = require('underscore');
-var rsjs = require('./remote-service.js');
-var remote = rsjs.getRemote();
+var tfm = require('./the-future-manager.js');
 
-var queryBookByOrder = require('./query-book.js').queryBookByOrder;
-
-remote.connect(function() {
-    var ws = new WebSocket('ws://localhost:7890');
+tfm.getEnv(function(result) {
+    var ws = new WebSocket(result.wspm);
     ws.on('open', function() {
-        ws.send('{"src_currency":"USD","dst_currency":"CNY","limit":1}');
+        ws.send('{"src_currency":"EUR","dst_currency":"CNY","limit":1}');
     });
     ws.on('message', function(data, flags) {
         var books = JSON.parse(data);
         var orders = _.flatten(books);
-        checkOrders(orders);
+        console.log(orders);
     });
 });
-
-function checkOrders(orders) {
-    orderQueue = orderQueue.concat(orders);
-
-    isOrderNewest();
-}
-
-var orderQueue = [];
-var nextOrder = 0;
-
-function isOrderNewest() {
-    if (orderQueue.length > nextOrder) {
-        queryBookByOrder(remote, orderQueue[nextOrder], function() {
-            nextOrder++;
-            isOrderNewest();
-        });
-    } else {
-        console.log("check done!");
-    }
-}

@@ -35,13 +35,17 @@ var drops = config.drops;
 var profit_rate = config.profitRate;
 var transfer_rates = config.transfer_rates;
 var same_currency_profit = config.same_currency_profit;
+var same_currency_issuers = config.same_currency_issuers;
 
 function checkOrdersForSameCurrency(orders) {
     var currency = currencies[cIndexSet[0]];
-    if (!_.contains(same_currency_profit, currency)) {
+    var same_currency_allow = _.keys(same_currency_issuers);
+
+    if (!_.contains(same_currency_allow, currency)) {
         return;
     }
-    var cur_issuers = tls.getIssuers(currency);
+
+    var cur_issuers = same_currency_issuers[currency];
 
     _.each(orders, function(order) {
         if (order.Account == account) {
@@ -53,7 +57,9 @@ function checkOrdersForSameCurrency(orders) {
 
         if (_.contains(cur_issuers, pays_issuer) && _.contains(cur_issuers, gets_issuer)) {
             console.log(order.quality, pays_issuer, gets_issuer);
-            if (order.quality - 0 < 0.999) {
+
+            var pr = getProfitRate(order, profit_rate);
+            if (order.quality - 0 < pr) {
                 scpLogger.log(true, "same currency profit", order);
                 wsio.emit('scp', order);
             }
