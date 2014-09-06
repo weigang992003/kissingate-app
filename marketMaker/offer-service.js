@@ -129,6 +129,28 @@ OfferService.prototype.cancelOfferUnderSameBook = function(pays, gets) {
     });
 }
 
+OfferService.prototype.allExist = function(offers) {
+    var self = this;
+    var allIsExist = true;
 
+    offers.every(function(offer) {
+        allIsExist = self.ifOfferExist(offer.TakerPays, offer.TakerGets);
+        return allIsExist;
+    })
+
+    return allIsExist;
+}
+
+OfferService.prototype.atLeastExistOne = function(offers) {
+    var self = this;
+    var existOne = false;
+
+    offers.every(function(offer) {
+        existOne = self.ifOfferExist(offer.TakerPays, offer.TakerGets);
+        return !existOne;
+    })
+
+    return existOne;
+}
 
 exports.OfferService = OfferService;

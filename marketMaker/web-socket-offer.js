@@ -84,15 +84,12 @@ function remoteConnect(env) {
 function listenProfitOrder() {
     console.log("step5:listen to profit socket!");
     wsio.on('dcp', function(order1, order2) {
-        console.log(order1, order2);
-
         emitter.emit('makeProfit', order1, order2);
     });
 
     wsio.on('scp', function(order) {
         console.log(order);
         emitter.emit('makeSameCurrencyProfit', order);
-
     });
 }
 
@@ -119,13 +116,13 @@ emitter.once('makeProfit', makeProfit);
 emitter.once('makeSameCurrencyProfit', makeSameCurrencyProfit);
 
 function makeProfit(order1, order2) {
-    console.log("new data arrived!");
+    console.log("new data arrived!", order1, order2);
 
     var order1_taker_pays = Amount.from_json(order1.TakerPays);
     var order1_taker_gets = Amount.from_json(order1.TakerGets);
     var order2_taker_pays = Amount.from_json(order2.TakerPays);
     var order2_taker_gets = Amount.from_json(order2.TakerGets);
-    //step 1 get account's balance by currency
+
     var order1_pays_balance = tls.getBalance(aujs.getIssuer(order1.TakerPays), aujs.getCurrency(order1.TakerPays));
     var order1_gets_capacity = tls.getCapacity(aujs.getIssuer(order1.TakerGets), aujs.getCurrency(order1.TakerGets));
     var order2_pays_balance = tls.getBalance(aujs.getIssuer(order2.TakerPays), aujs.getCurrency(order2.TakerPays));
@@ -165,8 +162,17 @@ function makeProfit(order1, order2) {
     order1_taker_pays = order1_taker_pays.product_human("1.0001");
     order2_taker_pays = order2_taker_pays.product_human("1.0001");
 
+    if (osjs.atLeastExistOne([order1, order2])) {
+        console.log("at Least Exist One!!!!!");
+        emitter.once('makeProfit', makeProfit);
+        return;
+    }
+
+    //TODO will remove when atLeastExistOne method works.
     if (osjs.ifOfferExist(order1_taker_gets.to_json(), order1_taker_pays.to_json()) ||
         osjs.ifOfferExist(order2_taker_gets.to_json(), order2_taker_pays.to_json())) {
+        console.log("same order already exist!!!");
+        emitter.once('makeProfit', makeProfit);
         return;
     }
 
@@ -184,6 +190,17 @@ function makeProfit(order1, order2) {
         })
     });
 }
+
+// setInterval(checkIfHasListener, 1000 * 30);
+
+// function checkIfHasListener() {
+//     if (emitter.listeners('makeProfit').length == 0) {
+//         emitter.once('makeProfit', makeProfit);
+//     }
+//     if (emitter.listeners('makeSameCurrencyProfit').length == 0) {
+//         emitter.once('makeSameCurrencyProfit', makeSameCurrencyProfit);
+//     }
+// }
 
 setTimeout(prepareRestart, 1000 * 60 * 10);
 

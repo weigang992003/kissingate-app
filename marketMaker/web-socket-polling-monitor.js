@@ -44,6 +44,10 @@ function checkOrdersForSameCurrency(orders) {
     var cur_issuers = tls.getIssuers(currency);
 
     _.each(orders, function(order) {
+        if (order.Account == account) {
+            return;
+        }
+
         var gets_issuer = getIssuer(order.TakerGets);
         var pays_issuer = getIssuer(order.TakerPays);
 
@@ -70,6 +74,10 @@ function checkOrdersForDiffCurrency(orders) {
         var gets_issuer = getIssuer(order.TakerGets);
         var pays_currency = getCurrency(order.TakerPays);
         var pays_issuer = getIssuer(order.TakerPays);
+
+        if (order.Account == account) {
+            return;
+        }
 
         if (gets_currency == currency1 && _.contains(cur1_issuers, gets_issuer) &&
             pays_currency == currency2 && _.contains(cur2_issuers, pays_issuer)) {
