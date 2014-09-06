@@ -162,8 +162,9 @@ function makeProfit(order1, order2) {
     order1_taker_pays = order1_taker_pays.product_human("1.0001");
     order2_taker_pays = order2_taker_pays.product_human("1.0001");
 
-    if (osjs.atLeastExistOne([order1, order2])) {
-        console.log("at Least Exist One!!!!!");
+    var reserved = true;
+    if (osjs.atLeastExistOne([order1, order2], reserved)) {
+        console.log("same order already exist!!");
         emitter.once('makeProfit', makeProfit);
         return;
     }

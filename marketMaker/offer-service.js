@@ -141,12 +141,16 @@ OfferService.prototype.allExist = function(offers) {
     return allIsExist;
 }
 
-OfferService.prototype.atLeastExistOne = function(offers) {
+OfferService.prototype.atLeastExistOne = function(offers, reversed) {
     var self = this;
     var existOne = false;
 
     offers.every(function(offer) {
-        existOne = self.ifOfferExist(offer.TakerPays, offer.TakerGets);
+        if (reversed) {
+            existOne = self.ifOfferExist(offer.TakerGets, offer.TakerPays);
+        } else {
+            existOne = self.ifOfferExist(offer.TakerPays, offer.TakerGets);
+        }
         return !existOne;
     })
 
