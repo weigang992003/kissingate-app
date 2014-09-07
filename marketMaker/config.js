@@ -67,6 +67,21 @@ exports.same_currency_issuers = {
 exports.same_currency_profit = ["CNY"];
 exports.same_issuer_profit = ["rNPRNzBB92BVpAhhZr4iXDTveCgV5Pofm9"];
 
+exports.first_order_currencies = ["CNY", "JPY"];
+exports.first_order_allow_volumns = {
+    "CNY": "500",
+    "JPY": "10000"
+}
+exports.profit_min_volumns = {
+    "XRP": "20000000",
+    "BTC": "0.0002",
+    "USD": "1",
+    "JPY": "20",
+    "CNY": "2",
+    "FMM": "2",
+    "EUR": "0.8"
+}
+
 exports.mother = -1;
 exports.newAccount = 0;
 exports.tradeFailed = 1;

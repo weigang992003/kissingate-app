@@ -76,11 +76,6 @@ var siteCookieSchema = mongoose.Schema({
     collection: 'siteCookie'
 });
 
-// var incomeSchema = mongoose.Schema({
-//     currency: String,
-//     income: String
-// })
-
 var accountIncomeSchema = mongoose.Schema({
     account: String,
     ledger_index_start: Number,
@@ -99,16 +94,119 @@ var envSchema = mongoose.Schema({
     collection: 'env'
 });
 
+var firstOrderSchema = mongoose.Schema({
+    seq: String,
+    status: String,
+    account: String,
+    quality: String,
+    src_currency: String,
+    dst_currency: String,
+    ledger_index: Number
+}, {
+    collection: 'firstOrder'
+});
+
+var env = tf.model('env', envSchema);
 var crypto = tf.model('crypto', cryptoSchema);
 var counters = tf.model('counters', countersSchema);
-var accountLinesHistory = tf.model('accountLinesHistory', accountLinesHistorySchema);
-var gatewayInfo = tf.model('gatewayInfo', gatewayInfoSchema);
-var orderToXrp = tf.model('orderToXrp', orderToXrpSchema);
-var failedTransaction = tf.model('failedTransaction', failedTransactionSchema);
 var raccounts = tf.model('raccounts', raccountsSchema);
 var siteCookie = tf.model('siteCookie', siteCookieSchema);
+var orderToXrp = tf.model('orderToXrp', orderToXrpSchema);
+var firstOrder = tf.model('firstOrder', firstOrderSchema);
+var gatewayInfo = tf.model('gatewayInfo', gatewayInfoSchema);
 var accountIncome = tf.model('accountIncome', accountIncomeSchema);
-var env = tf.model('env', envSchema);
+var failedTransaction = tf.model('failedTransaction', failedTransactionSchema);
+var accountLinesHistory = tf.model('accountLinesHistory', accountLinesHistorySchema);
+
+function TheFutureManager() {}
+
+TheFutureManager.prototype.getFirstOrders = function(account, callback) {
+    firstOrder.find({
+        'account': account,
+        'status': 'live'
+    }, function(err, results) {
+        if (err) {
+            console.log("err to get firstOrders");
+            return;
+        }
+
+        handleResults(results, callback);
+    });
+}
+
+TheFutureManager.prototype.getFOByCurrency = function(src_currency, dst_currency, callback) {
+    firstOrder.find({
+        src_currency: src_currency,
+        dst_currency: dst_currency
+    }, function(err, results) {
+        if (err) {
+            console.log("err to get getFOByCurrency");
+            return;
+        }
+
+        handleResults(results, callback);
+    });
+}
+
+TheFutureManager.prototype.removeFirstOrder = function(record, callback) {
+    firstOrder.remove(record, function(err, count) {
+        if (err) {
+            console.log(err);
+            return;
+        }
+        if (callback) {
+            callback(count);
+        }
+    });
+}
+
+TheFutureManager.prototype.setFirstOrderDead = function(record, callback) {
+    firstOrder.update(record, {
+        status: "dead"
+    }, {
+        multi: true
+    }, function(err, count, res) {
+        if (err) {
+            console.log(err);
+            return;
+        }
+        if (callback) {
+            callback(count);
+        }
+    })
+}
+
+TheFutureManager.prototype.saveFirstOrder = function(record, callback) {
+    var row = new firstOrder(record);
+    row.save(function(err) {
+        if (err) {
+            console.log(err);
+            return;
+        }
+
+        if (callback) {
+            callback();
+        }
+    });
+}
+
+TheFutureManager.prototype.getAccount = function(status, callback) {
+    getAccount(status, callback);
+}
+
+TheFutureManager.prototype.getEnv = function(callback) {
+    getEnv(callback);
+}
+
+function handleResults(results, callback) {
+    if (results && callback) {
+        callback(results);
+    }
+
+    if (!results && callback) {
+        callback([]);
+    }
+}
 
 function getCryptoOption(callback) {
     crypto.findOne({
@@ -273,9 +371,10 @@ exports.getAccount = getAccount;
 exports.getCryptoOption = getCryptoOption;
 exports.getNextSequence = getNextSequence;
 exports.getAccountIncome = getAccountIncome;
+exports.TheFutureManager = TheFutureManager;
+exports.saveAccountLines = saveAccountLines;
 exports.getAccountIncomes = getAccountIncomes;
 exports.saveAccountIncome = saveAccountIncome;
-exports.saveAccountLines = saveAccountLines;
 exports.findAllGatewayInfo = findAllGatewayInfo;
 exports.updateOrderCurrencies = updateOrderCurrencies;
 exports.saveFailedTransaction = saveFailedTransaction;

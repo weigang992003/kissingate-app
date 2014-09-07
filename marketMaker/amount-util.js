@@ -1,7 +1,62 @@
+var math = require('mathjs');
 var _ = require('underscore');
+var drops = require('./config.js').drops;
+var Amount = require('../src/js/ripple').Amount;
+var profit_min_volumns = require('./config.js').profit_min_volumns;
 
-var ripple = require('../src/js/ripple');
-var Amount = ripple.Amount;
+
+function AmountUtil() {}
+
+AmountUtil.prototype.calPrice = function(pays, gets) {
+    if (getCurrency(pays) == "XRP") {
+        return math.round(pays / (drops * gets.value), 15);
+    }
+    if (getCurrency(gets) == "XRP") {
+        return math.round(pays.value * drops / gets, 15);
+    }
+    return math.round(pays.value / gets.value, 15);
+};
+
+AmountUtil.prototype.isVolumnAllowed = function(amount) {
+    if (amount instanceof Amount) {
+        if (amount.is_zero()) {
+            return false;
+        }
+        amount = amount.to_json();
+    }
+
+    var currency = getCurrency(amount);
+
+    if (_.contains(profit_min_volumns, currency)) {
+        if (currency == "XRP") {
+            return profit_min_volumns[currency] - amount > 0;
+        } else {
+            return profit_min_volumns[currency] - amount.value > 0;
+        }
+    }
+
+    return true;
+}
+
+AmountUtil.prototype.minAmount = function(amounts) {
+    return minAmount(amounts);
+}
+
+AmountUtil.prototype.getIssuer = function(amountJson) {
+    return getIssuer(amountJson);
+};
+
+AmountUtil.prototype.getPrice = function(order, pays_currency, gets_currency) {
+    return getPrice(order, pays_currency, gets_currency);
+}
+
+AmountUtil.prototype.getCurrency = function(amountJson) {
+    return getCurrency(amountJson);
+}
+
+AmountUtil.prototype.setValue = function(src_amount, dst_amount) {
+    return setValue(src_amount, dst_amount);
+}
 
 function minAmount(amounts) {
     if (!amounts || amounts.length == 0) {
@@ -42,8 +97,20 @@ function setValue(src_amount, dst_amount) {
     return Amount.from_json(src_amount_json);
 }
 
+function getPrice(order, pays_currency, gets_currency) {
+    if (gets_currency == "XRP") {
+        return math.round(order.quality * drops, 15) + "";
+    } else if (pays_currency == "XRP") {
+        return math.round(order.quality / drops, 15) + "";
+    } else {
+        return math.round(order.quality - 0, 15) + "";
+    }
+}
+
 exports.Amount = Amount;
 exports.setValue = setValue;
+exports.getPrice = getPrice;
 exports.minAmount = minAmount;
 exports.getIssuer = getIssuer;
+exports.AmountUtil = AmountUtil;
 exports.getCurrency = getCurrency;

@@ -2,6 +2,11 @@ var _ = require('underscore');
 var math = require('mathjs');
 var aim = require('./account-info-manager.js');
 var Amount = require('./amount-util.js').Amount;
+var AmountUtil = require('./amount-util.js').AmountUtil;
+var FirstOrderUtil = require('./first-order-util.js').FirstOrderUtil;
+
+var au = new AmountUtil();
+var fou = new FirstOrderUtil();
 
 function OfferService(r, a, s) {
     this.remote = r;
@@ -16,7 +21,11 @@ OfferService.prototype.getOffers = function(callback) {
     var accountId = this.accountId;
 
     remote.requestAccountOffers(accountId, function(err, result) {
-        self.offers = result.offers;
+        _.each(result.offers, function(offer) {
+            offer.quality = au.calPrice(offer.taker_pays, offer.taker_gets);
+            self.offers.push(offer);
+        });
+
         console.log("get offers success");
 
         if (callback) {
@@ -26,6 +35,18 @@ OfferService.prototype.getOffers = function(callback) {
 };
 
 OfferService.prototype.ifOfferExist = function(pays, gets) {
+    var offers = this.offers;
+
+    var result = findOffer(pays, gets);
+
+    if (result.length > 0) {
+        return true;
+    }
+
+    return false;
+}
+
+function findOffer(pays, gets) {
     var offers = this.offers;
 
     if (offers.length == 0) {
@@ -43,14 +64,10 @@ OfferService.prototype.ifOfferExist = function(pays, gets) {
         return offer.taker_pays.currency == pays.currency && offer.taker_pays.issuer == pays.issuer && offer.taker_gets.currency == gets.currency && offer.taker_gets.issuer == gets.issuer;
     });
 
-    if (result.length > 0) {
-        return true;
-    }
-
-    return false;
+    return result;
 }
 
-OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, createHB, callback) {
+OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, createFO, callback) {
     var self = this;
     var remote = this.remote;
     var secret = this.secret;
@@ -83,16 +100,16 @@ OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, cr
     tx.offerCreate(accountId, taker_pays, taker_gets);
     tx.on("success", function(res) {
         self.getOffers();
-        if (createHB) {
-            var price = taker_pays.ratio_human(taker_gets).to_human().replace(',', '');
-            price = math.round(price * 1, 6);
-            aim.saveHB({
-                'hash': res.transaction.hash,
-                'sequence': res.transaction.Sequence,
-                'account': accountId,
-                'price': price,
-                'dst_amount': taker_pays.product_human("0").to_text_full(),
-                'src_amount': taker_gets.product_human("0").to_text_full()
+        if (createFO) {
+            var quality = au.calPrice(taker_pays, taker_gets);
+            fou.createFirstOffer({
+                status: 'live',
+                quality: quality,
+                seq: res.transaction.Sequence,
+                ledger_index: res.ledger_index,
+                account: res.transaction.Account,
+                src_currency: au.getCurrency(taker_gets),
+                dst_currency: au.getCurrency(taker_pays),
             });
         }
     });
@@ -110,6 +127,36 @@ OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, cr
     });
 
     tx.submit();
+}
+
+OfferService.prototype.createFirstOffer = function(taker_pays, taker_gets, removeOld, logger, callback) {
+    var result = findOffer(taker_pays, taker_gets);
+    if (result) {
+        if (fou.isFirstOrder(result[0]) && removeOld) {
+            cancelOffer(result[0], function() {
+                createOffer(taker_pays, taker_gets, logger, false, callback);
+            });
+        } else {
+            createOffer(taker_pays, taker_gets, logger, false, callback);
+        }
+    } else {
+        createOffer(taker_pays, taker_gets, logger, false, callback);
+    }
+}
+
+function cancelOffer(offer, callback) {
+    remote.transaction().offerCancel(accountId, offer.seq).secret(secret).on('success', function() {
+        console.log('offerCancel', offer.taker_pays, offer.taker_gets);
+
+        fou.setFirstOrderDead({
+            'seq': offer.seq,
+            'account': accountId
+        }, function() {
+            if (callback) {
+                callback();
+            }
+        });
+    }).submit();
 }
 
 OfferService.prototype.cancelOfferUnderSameBook = function(pays, gets) {

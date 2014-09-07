@@ -10,34 +10,36 @@ var WebSocket = require('ws');
 var _ = require('underscore');
 var events = require('events');
 var config = require('./config.js');
-var aujs = require('./amount-util.js');
 var ripple = require('../src/js/ripple');
 var crypto = require('./crypto-util.js');
 var rsjs = require('./remote-service.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
-var tfm = require('./the-future-manager.js');
+var tfmjs = require('./the-future-manager.js');
 var rippleInfo = require('./ripple-info-manager.js');
 
 var Loop = require('./loop-util.js').Loop;
+var AmountUtil = require('./amount-util.js').AmountUtil;
 var OfferService = require('./offer-service.js').OfferService;
 var queryBookByOrder = require('./query-book.js').queryBookByOrder;
+var FirstOrderUtil = require('./first-order-util.js').FirstOrderUtil;
 var AccountListener = require('./listen-account-util.js').AccountListener;
 var TrustLineService = require('./trust-line-service.js').TrustLineService;
 
-var minAmount = aujs.minAmount;
-var getIssuer = aujs.getIssuer;
-var getCurrency = aujs.getCurrency;
+var au = new AmountUtil();
+var fou = new FirstOrderUtil();
+var tfm = new tfmjs.TheFutureManager();
 
 var tls;
 var osjs;
-var laujs;
 var Amount = ripple.Amount;
 var remote = rsjs.getRemote();
+
+var transfer_rates = config.transfer_rates;
 
 var account;
 var secret;
 console.log("step1:getAccount!")
-tfm.getAccount(config.marketMaker, function(result) {
+tfmjs.getAccount(config.marketMaker, function(result) {
     account = result.account;
     secret = result.secret;
     decrypt(secret);
@@ -47,7 +49,7 @@ function decrypt(encrypted) {
     console.log("step2:decrypt secret!")
     crypto.decrypt(encrypted, function(result) {
         secret = result;
-        tfm.getEnv(function(result) {
+        tfmjs.getEnv(function(result) {
             remoteConnect(result.env);
         })
     });
@@ -66,9 +68,6 @@ function remoteConnect(env) {
             tls.getLines(function() {
                 listenProfitOrder();
             });
-
-            laujs = new AccountListener(remote, account);
-            // laujs.listenOffer();
 
             remote.on('error', function(error) {
                 throw new Error("remote error!");
@@ -91,6 +90,17 @@ function listenProfitOrder() {
         console.log(order);
         emitter.emit('makeSameCurrencyProfit', order);
     });
+
+    wsio.on('fos', function(order) {});
+}
+
+function makeFirstOrder(order) {
+    if (fou.canCreate(order)) {
+        var removeOld = true;
+        osjs.createFirstOffer(order.TakerPays, order.TakerGets, removeOld, wsoLogger, function() {
+
+        });
+    }
 }
 
 function makeSameCurrencyProfit(order) {
@@ -123,13 +133,19 @@ function makeProfit(order1, order2) {
     var order2_taker_pays = Amount.from_json(order2.TakerPays);
     var order2_taker_gets = Amount.from_json(order2.TakerGets);
 
-    var order1_pays_balance = tls.getBalance(aujs.getIssuer(order1.TakerPays), aujs.getCurrency(order1.TakerPays));
-    var order1_gets_capacity = tls.getCapacity(aujs.getIssuer(order1.TakerGets), aujs.getCurrency(order1.TakerGets));
-    var order2_pays_balance = tls.getBalance(aujs.getIssuer(order2.TakerPays), aujs.getCurrency(order2.TakerPays));
-    var order2_gets_capacity = tls.getCapacity(aujs.getIssuer(order2.TakerGets), aujs.getCurrency(order2.TakerGets));
+    var order1_pays_balance = tls.getBalance(au.getIssuer(order1.TakerPays), au.getCurrency(order1.TakerPays));
+    var order1_gets_capacity = tls.getCapacity(au.getIssuer(order1.TakerGets), au.getCurrency(order1.TakerGets));
+    var order2_pays_balance = tls.getBalance(au.getIssuer(order2.TakerPays), au.getCurrency(order2.TakerPays));
+    var order2_gets_capacity = tls.getCapacity(au.getIssuer(order2.TakerGets), au.getCurrency(order2.TakerGets));
 
     var min_taker_pays = minAmount([order1_taker_pays, order2_taker_gets, order2_gets_capacity, order1_pays_balance]);
     var min_taker_gets = minAmount([order1_taker_gets, order1_gets_capacity, order2_taker_pays, order2_pays_balance]);
+
+    if (!au.isVolumnAllowed(min_taker_pays) || !au.isVolumnAllowed(min_taker_gets)) {
+        console.log("the volumn is too small to trade", min_taker_gets.to_json(), min_taker_pays.to_json());
+        emitter.once('makeProfit', makeProfit);
+        return;
+    }
 
     if (min_taker_gets.is_zero() || min_taker_pays.is_zero()) {
         console.log("lack of currency balance:", min_taker_gets.to_json(), min_taker_pays.to_json());
@@ -140,22 +156,22 @@ function makeProfit(order1, order2) {
     var times = min_taker_gets.ratio_human(order1_taker_gets).to_human().replace(',', '');
     times = math.round(times - 0, 6);
     if (min_taker_pays.compareTo(order1_taker_pays.product_human(times)) == 1) {
-        order1_taker_gets = aujs.setValue(order1_taker_gets, min_taker_gets);
+        order1_taker_gets = au.setValue(order1_taker_gets, min_taker_gets);
         order1_taker_pays = order1_taker_pays.product_human(times);
 
         times = min_taker_gets.ratio_human(order2_taker_pays).to_human().replace(',', '');
         times = math.round(times - 0, 6);
-        order2_taker_pays = aujs.setValue(order2_taker_pays, min_taker_gets);
+        order2_taker_pays = au.setValue(order2_taker_pays, min_taker_gets);
         order2_taker_gets = order2_taker_gets.product_human(times);
     } else {
         times = min_taker_pays.ratio_human(order1_taker_pays).to_human().replace(',', '');
         times = math.round(times - 0, 6);
-        order1_taker_pays = aujs.setValue(order1_taker_pays, min_taker_pays);
+        order1_taker_pays = au.setValue(order1_taker_pays, min_taker_pays);
         order1_taker_gets = order1_taker_gets.product_human(times);
 
         times = min_taker_pays.ratio_human(order2_taker_gets).to_human().replace(',', '');
         times = math.round(times - 0, 6);
-        order2_taker_gets = aujs.setValue(order2_taker_gets, min_taker_pays);
+        order2_taker_gets = au.setValue(order2_taker_gets, min_taker_pays);
         order2_taker_pays = order2_taker_pays.product_human(times);
     }
 

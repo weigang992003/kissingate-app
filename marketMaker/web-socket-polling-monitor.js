@@ -9,33 +9,41 @@ var math = require('mathjs');
 var WebSocket = require('ws');
 var _ = require('underscore');
 var config = require('./config.js');
-var aujs = require('./amount-util.js');
 var ripple = require('../src/js/ripple');
 var crypto = require('./crypto-util.js');
 var rsjs = require('./remote-service.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
-var tfm = require('./the-future-manager.js');
+var tfmjs = require('./the-future-manager.js');
 var rippleInfo = require('./ripple-info-manager.js');
 
+var tfm = new tfmjs.TheFutureManager();
+var firstOrders;
+tfm.getFirstOrders(function(fos) {
+    firstOrders = fos;
+});
+
 var Loop = require('./loop-util.js').Loop;
+var ProfitUtil = require('./profit-util.js').ProfitUtil;
+var AmountUtil = require('./amount-util.js').AmountUtil;
 var OfferService = require('./offer-service.js').OfferService;
 var queryBookByOrder = require('./query-book.js').queryBookByOrder;
 var TrustLineService = require('./trust-line-service.js').TrustLineService;
 
-var minAmount = aujs.minAmount;
-var getIssuer = aujs.getIssuer;
-var getCurrency = aujs.getCurrency;
+var au = new AmountUtil();
 
 var tls;
 var osjs;
-
-var Amount = ripple.Amount;
+var pu = new ProfitUtil();
 
 var drops = config.drops;
 var profit_rate = config.profitRate;
 var transfer_rates = config.transfer_rates;
+var profit_min_volumns = config.profit_min_volumns;
 var same_currency_profit = config.same_currency_profit;
 var same_currency_issuers = config.same_currency_issuers;
+var first_order_currencies = config.first_order_currencies;
+
+var noAvailablePair = [];
 
 function checkOrdersForSameCurrency(orders) {
     var currency = currencies[cIndexSet[0]];
@@ -52,14 +60,14 @@ function checkOrdersForSameCurrency(orders) {
             return;
         }
 
-        var gets_issuer = getIssuer(order.TakerGets);
-        var pays_issuer = getIssuer(order.TakerPays);
+        var gets_issuer = au.getIssuer(order.TakerGets);
+        var pays_issuer = au.getIssuer(order.TakerPays);
 
         if (_.contains(cur_issuers, pays_issuer) && _.contains(cur_issuers, gets_issuer)) {
             console.log(order.quality, pays_issuer, gets_issuer);
 
-            var pr = getProfitRate(order, profit_rate);
-            if (order.quality - 0 < pr) {
+            var expect_profit = pu.getProfitRate(order, profit_rate);
+            if (order.quality - 0 < expect_profit) {
                 scpLogger.log(true, "same currency profit", order);
                 wsio.emit('scp', order);
             }
@@ -76,10 +84,10 @@ function checkOrdersForDiffCurrency(orders) {
     var orders_type_1 = [];
     var orders_type_2 = [];
     _.each(orders, function(order) {
-        var gets_currency = getCurrency(order.TakerGets);
-        var gets_issuer = getIssuer(order.TakerGets);
-        var pays_currency = getCurrency(order.TakerPays);
-        var pays_issuer = getIssuer(order.TakerPays);
+        var gets_currency = au.getCurrency(order.TakerGets);
+        var gets_issuer = au.getIssuer(order.TakerGets);
+        var pays_currency = au.getCurrency(order.TakerPays);
+        var pays_issuer = au.getIssuer(order.TakerPays);
 
         if (order.Account == account) {
             return;
@@ -87,32 +95,30 @@ function checkOrdersForDiffCurrency(orders) {
 
         if (gets_currency == currency1 && _.contains(cur1_issuers, gets_issuer) &&
             pays_currency == currency2 && _.contains(cur2_issuers, pays_issuer)) {
-            order.quality = getPrice(order, pays_currency, gets_currency);
+            order.quality = au.getPrice(order, pays_currency, gets_currency);
             orders_type_1.push(order);
         }
 
         if (gets_currency == currency2 && _.contains(cur2_issuers, gets_issuer) &&
             pays_currency == currency1 && _.contains(cur1_issuers, pays_issuer)) {
-            order.quality = getPrice(order, pays_currency, gets_currency);
+            order.quality = au.getPrice(order, pays_currency, gets_currency);
             orders_type_2.push(order);
         }
     });
+
+    if (orders_type_1.length == 0 || orders_type_2.length == 0) {
+        noAvailablePair.push(currency1 + currency2);
+        noAvailablePair.push(currency2 + currency1);
+        return;
+    }
 
     orders_type_1 = _.sortBy(orders_type_1, function(order) {
         return order.quality;
     });
 
-    if (orders_type_1.length == 0) {
-        console.log("orders_type_1 is empty!");
-    }
-
     orders_type_2 = _.sortBy(orders_type_2, function(order) {
         return order.quality;
     });
-
-    if (orders_type_2.length == 0) {
-        console.log("orders_type_2 is empty!");
-    }
 
     orders_type_1.every(function(order_type_1) {
         orders_type_2.every(function(order_type_2) {
@@ -120,25 +126,28 @@ function checkOrdersForDiffCurrency(orders) {
                 return true;
             }
 
-            var profit = order_type_1.quality * order_type_2.quality;
-            console.log(profit);
-            var pr = getProfitRate(order_type_1, profit_rate);
-            pr = getProfitRate(order_type_2, pr);
-            if (pr != profit_rate) {
-                console.log("profit_rate:" + pr);
+            var real_profit = order_type_1.quality * order_type_2.quality;
+            console.log("real profit rate:", real_profit);
+            var expect_profit = pu.getProfitRate(order_type_1, profit_rate);
+            expect_profit = pu.getProfitRate(order_type_2, expect_profit);
+            if (expect_profit != profit_rate) {
+                console.log("expect profit rate:" + expect_profit);
             }
 
-            if (profit < pr) {
+            if (real_profit < expect_profit) {
                 wsio.emit('dcp', order_type_1, order_type_2);
 
                 dcpLogger.log(true, order_type_1.TakerPays, order_type_1.TakerGets,
                     order_type_2.TakerPays, order_type_2.TakerGets,
-                    "profit:" + profit, "price1:" + order_type_1.quality, "price2:" + order_type_2.quality);
+                    "profit:" + real_profit, "price1:" + order_type_1.quality, "price2:" + order_type_2.quality);
+            } else if (real_profit > 1) {
+                if (_.contains(first_order_currencies, currency1) && _.contains(first_order_currencies, currency2)) {
+                    wsio.emit('fos', [order_type_1, order_type_2], currency1, currency2);
+                }
             }
-            return profit < 1;
+            return real_profit < 1;
         });
     });
-
 }
 
 function checkOrders(orders) {
@@ -155,33 +164,9 @@ function checkOrders(orders) {
     goNext();
 }
 
-function getProfitRate(order, profitRate) {
-    var pr = profitRate;
-    var transfer_rate = transfer_rates[getIssuer(order.TakerGets)];
-    if (transfer_rate) {
-        pr = pr - transfer_rate;
-    }
-    var transfer_rate = transfer_rates[getIssuer(order.TakerPays)];
-    if (transfer_rate) {
-        pr = pr - transfer_rate;
-    }
-    return pr;
-}
-
 function isSameIssuers(order1, order2) {
     return order1.TakerPays.issuer == order2.TakerGets.issuer && order1.TakerGets.issuer == order2.TakerPays.issuer;
 }
-
-function getPrice(order, pays_currency, gets_currency) {
-    if (gets_currency == "XRP") {
-        return math.round(order.quality * drops, 15) + "";
-    } else if (pays_currency == "XRP") {
-        return math.round(order.quality / drops, 15) + "";
-    } else {
-        return math.round(order.quality - 0, 15) + "";
-    }
-}
-
 
 var wsConnected = false;
 var ws;
@@ -282,6 +267,12 @@ function goNext() {
     var currency1 = currencies[cIndexSet[0]];
     var currency2 = currencies[cIndexSet[1]];
 
+    if (_.contains(noAvailablePair, currency1 + currency2)) {
+        cIndexSet = cLoop.next(cIndexSet, currencySize);
+        goNext();
+        return;
+    }
+
     if (wsConnected) {
         var req = {
             "src_currency": currency1,
@@ -300,7 +291,7 @@ function goNext() {
 var account;
 var secret;
 console.log("step1:getAccount!")
-tfm.getAccount(config.marketMaker, function(result) {
+tfmjs.getAccount(config.marketMaker, function(result) {
     account = result.account;
     secret = result.secret;
     decrypt(secret);
@@ -310,7 +301,7 @@ function decrypt(encrypted) {
     console.log("step2:decrypt secret!")
     crypto.decrypt(encrypted, function(result) {
         secret = result;
-        tfm.getEnv(function(result) {
+        tfmjs.getEnv(function(result) {
             connectWS(result.wspm);
             remoteConnect(result.env);
         })
