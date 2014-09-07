@@ -138,8 +138,8 @@ function makeProfit(order1, order2) {
     var order2_pays_balance = tls.getBalance(au.getIssuer(order2.TakerPays), au.getCurrency(order2.TakerPays));
     var order2_gets_capacity = tls.getCapacity(au.getIssuer(order2.TakerGets), au.getCurrency(order2.TakerGets));
 
-    var min_taker_pays = minAmount([order1_taker_pays, order2_taker_gets, order2_gets_capacity, order1_pays_balance]);
-    var min_taker_gets = minAmount([order1_taker_gets, order1_gets_capacity, order2_taker_pays, order2_pays_balance]);
+    var min_taker_pays = au.minAmount([order1_taker_pays, order2_taker_gets, order2_gets_capacity, order1_pays_balance]);
+    var min_taker_gets = au.minAmount([order1_taker_gets, order1_gets_capacity, order2_taker_pays, order2_pays_balance]);
 
     if (!au.isVolumnAllowed(min_taker_pays) || !au.isVolumnAllowed(min_taker_gets)) {
         console.log("the volumn is too small to trade", min_taker_gets.to_json(), min_taker_pays.to_json());
