@@ -114,6 +114,24 @@ function makeSameCurrencyProfit(order) {
         return;
     }
 
+    var order_pays_balance = tls.getBalance(au.getIssuer(order.TakerPays), au.getCurrency(order.TakerPays));
+    var order_gets_capacity = tls.getCapacity(au.getIssuer(order.TakerGets), au.getCurrency(order.TakerGets));
+
+    var min_taker_pays = au.minAmount([order_taker_pays, order_pays_balance]);
+    var min_taker_gets = au.minAmount([order_taker_gets, order_gets_capacity]);
+
+    if (!au.isVolumnAllowed(min_taker_pays) || !au.isVolumnAllowed(min_taker_gets)) {
+        console.log("the volumn is too small to trade", min_taker_gets.to_json(), min_taker_pays.to_json());
+        emitter.once('makeSameCurrencyProfit', makeProfit);
+        return;
+    }
+
+    if (min_taker_gets.is_zero() || min_taker_pays.is_zero()) {
+        console.log("lack of currency balance:", min_taker_gets.to_json(), min_taker_pays.to_json());
+        emitter.once('makeSameCurrencyProfit', makeProfit);
+        return;
+    }
+
     osjs.createOffer(order_taker_gets.to_json(), order_taker_pays.to_json(), wsoLogger, false, function(status) {
         console.log("same currency tx:", status);
         wsoLogger.log(true, "same currency tx", status, order_taker_gets.to_json(), order_taker_pays.to_json());

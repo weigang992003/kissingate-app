@@ -3,7 +3,7 @@ var _ = require('underscore');
 var crypto = require('./crypto-util.js');
 var ripple = require('../src/js/ripple');
 var jsbn = require('../src/js/jsbn/jsbn.js');
-var config = require('../marketMarker/config.js');
+var config = require('./config.js');
 var mongodbManager = require('./the-future-manager.js');
 
 var Remote = ripple.Remote;
