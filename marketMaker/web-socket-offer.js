@@ -87,7 +87,6 @@ function listenProfitOrder() {
     });
 
     wsio.on('scp', function(order) {
-        console.log(order);
         emitter.emit('makeSameCurrencyProfit', order);
     });
 
@@ -121,14 +120,8 @@ function makeSameCurrencyProfit(order) {
     var min_taker_gets = au.minAmount([order_taker_gets, order_gets_capacity]);
 
     if (!au.isVolumnAllowed(min_taker_pays) || !au.isVolumnAllowed(min_taker_gets)) {
-        console.log("the volumn is too small to trade", min_taker_gets.to_json(), min_taker_pays.to_json());
-        emitter.once('makeSameCurrencyProfit', makeProfit);
-        return;
-    }
-
-    if (min_taker_gets.is_zero() || min_taker_pays.is_zero()) {
-        console.log("lack of currency balance:", min_taker_gets.to_json(), min_taker_pays.to_json());
-        emitter.once('makeSameCurrencyProfit', makeProfit);
+        console.log("the volumn is too small to trade for same currency profit");
+        emitter.once('makeSameCurrencyProfit', makeSameCurrencyProfit);
         return;
     }
 
