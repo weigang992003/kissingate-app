@@ -27,11 +27,13 @@ AmountUtil.prototype.isVolumnAllowed = function(amount) {
 
     var currency = getCurrency(amount);
 
-    if (_.contains(profit_min_volumns, currency)) {
+    var min_volumn = profit_min_volumns[currency];
+
+    if (min_volumn) {
         if (currency == "XRP") {
-            return profit_min_volumns[currency] - amount > 0;
+            return min_volumn - amount < 0;
         } else {
-            return profit_min_volumns[currency] - amount.value > 0;
+            return min_volumn - amount.value < 0;
         }
     }
 

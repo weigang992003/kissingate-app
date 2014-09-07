@@ -37,7 +37,7 @@ OfferService.prototype.getOffers = function(callback) {
 OfferService.prototype.ifOfferExist = function(pays, gets) {
     var offers = this.offers;
 
-    var result = findOffer(pays, gets);
+    var result = findOffer(offers, pays, gets);
 
     if (result.length > 0) {
         return true;
@@ -46,11 +46,9 @@ OfferService.prototype.ifOfferExist = function(pays, gets) {
     return false;
 }
 
-function findOffer(pays, gets) {
-    var offers = this.offers;
-
+function findOffer(offers, pays, gets) {
     if (offers.length == 0) {
-        return false;
+        return [];
     }
 
     if (pays instanceof Amount) {
