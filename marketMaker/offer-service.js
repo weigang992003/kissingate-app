@@ -37,7 +37,7 @@ OfferService.prototype.getOffers = function(callback) {
 OfferService.prototype.ifOfferExist = function(pays, gets) {
     var offers = this.offers;
 
-    var result = findOffer(offers, pays, gets);
+    var result = findSameBookOffer(offers, pays, gets);
 
     if (result.length > 0) {
         return true;
@@ -46,7 +46,7 @@ OfferService.prototype.ifOfferExist = function(pays, gets) {
     return false;
 }
 
-function findOffer(offers, pays, gets) {
+function findSameBookOffer(offers, pays, gets) {
     if (offers.length == 0) {
         return [];
     }
@@ -98,25 +98,25 @@ OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, cr
     tx.offerCreate(accountId, taker_pays, taker_gets);
     tx.on("success", function(res) {
         self.getOffers();
-        if (createFO) {
-            var quality = au.calPrice(taker_pays, taker_gets);
-            fou.createFirstOffer({
-                status: 'live',
-                quality: quality,
-                seq: res.transaction.Sequence,
-                ledger_index: res.ledger_index,
-                account: res.transaction.Account,
-                src_currency: au.getCurrency(taker_gets),
-                dst_currency: au.getCurrency(taker_pays),
-            });
-        }
-    });
+        // if (createFO) {
+        //     var quality = au.calPrice(taker_pays, taker_gets);
+        //     fou.createFirstOffer({
+        //         status: 'live',
+        //         quality: quality,
+        //         seq: res.transaction.Sequence,
+        //         ledger_index: res.ledger_index,
+        //         account: res.transaction.Account,
+        //         src_currency: au.getCurrency(taker_gets),
+        //         dst_currency: au.getCurrency(taker_pays),
+        //     });
+        // }
 
-    tx.on('proposed', function(res) {
         if (callback) {
             callback("success");
         }
     });
+
+    tx.on('proposed', function(res) {});
 
     tx.on("error", function(res) {
         if (callback) {
@@ -128,27 +128,45 @@ OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, cr
 }
 
 OfferService.prototype.createFirstOffer = function(taker_pays, taker_gets, removeOld, logger, callback) {
-    var result = findOffer(taker_pays, taker_gets);
-    if (result) {
-        if (fou.isFirstOrder(result[0]) && removeOld) {
-            cancelOffer(result[0], function() {
-                createOffer(taker_pays, taker_gets, logger, false, callback);
+    var self = this;
+
+    var results = findSameBookOffer(self.offers, taker_pays, taker_gets);
+    if (results && results.length > 0) {
+        if (removeOld) {
+            self.cancelOffers(results, 0, function() {
+                self.createOffer(taker_pays, taker_gets, logger, true, callback);
             });
-        } else {
-            createOffer(taker_pays, taker_gets, logger, false, callback);
         }
+    }
+    self.createOffer(taker_pays, taker_gets, logger, true, callback);
+}
+
+OfferService.prototype.cancelOffers = function(offersToCancel, i, callback) {
+    var self = this;
+
+    if (offersToCancel.length > i) {
+        self.cancelOffer(offersToCancel[i], function() {
+            i = i + 1;
+            self.cancelOffers(offersToCancel, i, callback);
+            return;
+        });
     } else {
-        createOffer(taker_pays, taker_gets, logger, false, callback);
+        if (callback) {
+            callback();
+        }
     }
 }
 
-function cancelOffer(offer, callback) {
-    remote.transaction().offerCancel(accountId, offer.seq).secret(secret).on('success', function() {
+OfferService.prototype.cancelOffer = function(offer, callback) {
+    var self = this;
+
+    console.log("start to cancel offer!!!!");
+    self.remote.transaction().offerCancel(self.accountId, offer.seq).secret(self.secret).on('success', function() {
         console.log('offerCancel', offer.taker_pays, offer.taker_gets);
 
         fou.setFirstOrderDead({
             'seq': offer.seq,
-            'account': accountId
+            'account': self.accountId
         }, function() {
             if (callback) {
                 callback();

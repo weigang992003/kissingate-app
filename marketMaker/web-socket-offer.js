@@ -35,6 +35,7 @@ var Amount = ripple.Amount;
 var remote = rsjs.getRemote();
 
 var transfer_rates = config.transfer_rates;
+var first_order_allow_volumns = config.first_order_allow_volumns;
 
 var account;
 var secret;
@@ -90,16 +91,50 @@ function listenProfitOrder() {
         emitter.emit('makeSameCurrencyProfit', order);
     });
 
-    wsio.on('fos', function(order) {});
+    wsio.on('fos', function(orders) {
+        // emitter.emit('makeFirstOrderProfit', orders, 0);
+    });
 }
 
-function makeFirstOrder(order) {
+function makeFirstOrderProfit(orders, i) {
+    var order = orders[i];
     if (fou.canCreate(order)) {
         var removeOld = true;
-        osjs.createFirstOffer(order.TakerPays, order.TakerGets, removeOld, wsoLogger, function() {
+        order = rebuildFirstOrder(order);
+        osjs.createFirstOffer(order.TakerPays, order.TakerGets, removeOld, wsoLogger, function(res) {
+            console.log("create first order:", res);
 
+            if (res == "success") {
+                i = i + 1;
+                if (orders.length > i) {
+                    makeFirstOrderProfit(orders, i);
+                } else {
+                    emitter.once('makeFirstOrderProfit', makeFirstOrderProfit);
+                }
+            }
         });
     }
+}
+
+function rebuildFirstOrder(order) {
+    var gets_currency = au.getCurrency(order.TakerGets);
+    var gets_value = first_order_allow_volumns[gets_currency];
+
+    if (order.TakerGets.value) {
+        order.TakerGets.value = gets_value;
+    } else {
+        order.TakerGets = gets_value;
+    }
+
+    if (order.TakerPays.value) {
+        order.TakerPays.value = gets_value * order.quality + "";
+    } else {
+        order.TakerPays = gets_value * order.quality + "";
+    }
+
+    au.product(order.TakerGets, 1.000001);
+
+    return order;
 }
 
 function makeSameCurrencyProfit(order) {
@@ -134,6 +169,7 @@ function makeSameCurrencyProfit(order) {
 
 var emitter = new events.EventEmitter();
 emitter.once('makeProfit', makeProfit);
+emitter.once('makeFirstOrderProfit', makeFirstOrderProfit);
 emitter.once('makeSameCurrencyProfit', makeSameCurrencyProfit);
 
 function makeProfit(order1, order2) {

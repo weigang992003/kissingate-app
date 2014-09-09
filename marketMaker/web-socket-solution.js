@@ -14,9 +14,14 @@ tfm.getEnv(function(result) {
     var ws = new WebSocket(result.wspm);
     ws.on('open', function() {
         var req = {
-            "src_currency": currency1,
-            "dst_currency": currency2,
-            "limit": 1
+            "cmd": "book",
+            "params": {
+                "CNY": ["rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y", "razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA", "rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK"],
+                "USD": ["rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q", "rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B"]
+            },
+            "limit": 1,
+            "filter": 0,
+            "cache": 0
         }
         ws.send(JSON.stringify(req));
     });
@@ -24,7 +29,8 @@ tfm.getEnv(function(result) {
     ws.on('message', function(data, flags) {
         var books = JSON.parse(data);
         var orders = _.flatten(books);
-        checkOrdersForDiffCurrency(orders);
+        console.log(orders);
+        // checkOrdersForDiffCurrency(orders);
     });
 });
 

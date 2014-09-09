@@ -1,7 +1,6 @@
 var Logger = require('./new-logger.js').Logger;
 var scpLogger = new Logger('same-currency-profit-monitor');
 var dcpLogger = new Logger('diff-currency-profit-monitor');
-
 var io = require('socket.io').listen(3003);
 var wsio = io.of('/ws');
 
@@ -42,6 +41,7 @@ var profit_min_volumns = config.profit_min_volumns;
 var same_currency_profit = config.same_currency_profit;
 var same_currency_issuers = config.same_currency_issuers;
 var first_order_currencies = config.first_order_currencies;
+var first_order_allow_issuers = config.first_order_allow_issuers;
 
 var noAvailablePair = [];
 
@@ -128,26 +128,38 @@ function checkOrdersForDiffCurrency(orders) {
 
             var real_profit = order_type_1.quality * order_type_2.quality;
             console.log("real profit rate:", real_profit);
-            var expect_profit = pu.getProfitRate(order_type_1, profit_rate);
-            expect_profit = pu.getProfitRate(order_type_2, expect_profit);
-            if (expect_profit != profit_rate) {
-                console.log("expect profit rate:" + expect_profit);
-            }
+
+            var expect_profit = pu.getMultiProfitRate([order_type_1, order_type_2], profit_rate);
+            console.log("expect profit rate:" + expect_profit);
 
             if (real_profit < expect_profit) {
                 wsio.emit('dcp', order_type_1, order_type_2);
 
-                dcpLogger.log(true, order_type_1.TakerPays, order_type_1.TakerGets,
-                    order_type_2.TakerPays, order_type_2.TakerGets,
+                dcpLogger.log(true, "sell", order_type_1.TakerPays, "buy", order_type_1.TakerGets,
+                    "sell", order_type_2.TakerPays, "buy", order_type_2.TakerGets,
                     "profit:" + real_profit, "price1:" + order_type_1.quality, "price2:" + order_type_2.quality);
             } else if (real_profit > 1) {
                 if (_.contains(first_order_currencies, currency1) && _.contains(first_order_currencies, currency2)) {
-                    wsio.emit('fos', [order_type_1, order_type_2], currency1, currency2);
+                    if (isFirstOrderIssuerAllow(order_type_1) && isFirstOrderIssuerAllow(order_type_2)) {
+                        console.log("found a first order!!!!");
+                        wsio.emit('fos', [order_type_1, order_type_2]);
+                    }
                 }
             }
             return real_profit < 1;
         });
     });
+}
+
+function isFirstOrderIssuerAllow(order) {
+    var gets_currency = au.getCurrency(order.TakerGets);
+    var gets_issuer = au.getIssuer(order.TakerGets);
+    var pays_currency = au.getCurrency(order.TakerPays);
+    var pays_issuer = au.getIssuer(order.TakerPays);
+
+    return _.contains(first_order_allow_issuers[gets_currency], gets_issuer) &&
+        _.contains(first_order_allow_issuers[pays_currency], pays_issuer);
+
 }
 
 function checkOrders(orders) {
@@ -266,6 +278,8 @@ function goNext() {
 
     var currency1 = currencies[cIndexSet[0]];
     var currency2 = currencies[cIndexSet[1]];
+    var cur1_issuers = tls.getIssuers(currency1);
+    var cur2_issuers = tls.getIssuers(currency2);
 
     if (_.contains(noAvailablePair, currency1 + currency2)) {
         cIndexSet = cLoop.next(cIndexSet, currencySize);
@@ -275,12 +289,26 @@ function goNext() {
 
     if (wsConnected) {
         var req = {
-            "src_currency": currency1,
-            "dst_currency": currency2,
-            "limit": 1
+            "cmd": "book",
+            "params": {},
+            "limit": 1,
+            "filter": 1,
+            "cache": 1
         }
 
-        console.log(req);
+        if (currency1 == currency2) {
+            req.filter = 0;
+        }
+
+        req.params[currency1] = cur1_issuers;
+        req.params[currency2] = cur2_issuers;
+
+        // var req = {
+        //     "src_currency": currency1,
+        //     "dst_currency": currency2,
+        //     "limit": 2
+        // }
+        console.log(currency1, currency2);
 
         ws.send(JSON.stringify(req));
     } else {

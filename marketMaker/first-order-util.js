@@ -21,6 +21,14 @@ FirstOrderUtil.prototype.canCreate = function(order) {
     var dst_currency = au.getCurrency(order.TakerGets);
     var src_currency = au.getCurrency(order.TakerPays);
 
+    if (!firstOrders) {
+        throw new Error("we may not get firstOrders correctly!");
+    }
+
+    if (firstOrders.length == 0) {
+        return true;
+    }
+
     var orders = _.filter(firstOrders, function(o) {
         return src_currency == o.dst_currency && dst_currency == o.src_currency;
     });
@@ -42,6 +50,23 @@ FirstOrderUtil.prototype.isFirstOrder = function(order) {
     });
 
     return result ? true : false;
+};
+
+FirstOrderUtil.prototype.findFirstOrder = function(orders) {
+    var result;
+
+    orders.every(function(order) {
+        var result = _.find(firstOrders, function(o) {
+            return o.seq == order.seq;
+        });
+
+        if (!result) {
+            result = order;
+        }
+        return !result;
+    });
+
+    return result;
 };
 
 FirstOrderUtil.prototype.removeFirstOffer = function(offer, callback) {
@@ -67,6 +92,10 @@ FirstOrderUtil.prototype.createFirstOffer = function(record, callback) {
             callback();
         }
     });
+}
+
+FirstOrderUtil.prototype.setFirstOrderDead = function(record, callback) {
+    tfm.setFirstOrderDead(record, callback);
 }
 
 exports.FirstOrderUtil = FirstOrderUtil;

@@ -60,6 +60,50 @@ AmountUtil.prototype.setValue = function(src_amount, dst_amount) {
     return setValue(src_amount, dst_amount);
 }
 
+AmountUtil.prototype.product = function(amount, factor) {
+    if (amount instanceof Amount) {
+        return amount.product_human(factor);
+    }
+
+    if (typeof amount == "string") {
+        return amount * factor + "";
+    }
+
+    if (typeof amount == "number") {
+        return amount * factor + "";
+    }
+
+    if (amount.value) {
+        amount.value = amount.value * factor + "";
+        return amount;
+    }
+}
+
+AmountUtil.prototype.ratio = function(src_amount, dst_amount) {
+    if (src_amount instanceof Amount && dst_amount instanceof Amount) {
+        var times = dst_amount.ratio_human(src_amount).to_human().replace(',', '');
+        return math.round(times - 0, 6);
+    }
+
+    if (typeof src_amount == "string" && typeof dst_amount == "string") {
+        return math.round(dst_amount / src_amount, 6);
+    }
+
+    if (typeof src_amount == "number" && typeof dst_amount == "number") {
+        return math.round(dst_amount / src_amount, 6);
+    }
+
+    if (src_amount.value && dst_amount.value) {
+        return math.round(dst_amount.value / src_amount.value, 6);
+    }
+}
+
+AmountUtil.prototype.zoom = function(old_one, new_one, zoom_object) {
+    var times = this.ratio(old_one, new_old);
+    return this.product(zoom_object, times);
+}
+
+
 function minAmount(amounts) {
     if (!amounts || amounts.length == 0) {
         return;
