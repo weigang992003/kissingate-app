@@ -69,9 +69,9 @@ exports.same_issuer_profit = ["rNPRNzBB92BVpAhhZr4iXDTveCgV5Pofm9"];
 
 exports.first_order_currencies = ["CNY", "JPY", "USD"];
 exports.first_order_allow_volumns = {
-    "CNY": "100",
-    "JPY": "1000",
-    "USD": "20"
+    "CNY": "10",
+    "JPY": "100",
+    "USD": "2"
 }
 exports.first_order_allow_issuers = {
     'CNY': ['rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y', 'razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA', 'rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK'],

@@ -84,23 +84,36 @@ function remoteConnect(env) {
 function listenProfitOrder() {
     console.log("step5:listen to profit socket!");
     wsio.on('dcp', function(order1, order2) {
-        emitter.emit('makeProfit', order1, order2);
+        // emitter.emit('makeProfit', order1, order2);
     });
 
     wsio.on('scp', function(order) {
-        emitter.emit('makeSameCurrencyProfit', order);
+        // emitter.emit('makeSameCurrencyProfit', order);
     });
 
     wsio.on('fos', function(orders) {
-        // emitter.emit('makeFirstOrderProfit', orders, 0);
+        emitter.emit('makeFirstOrderProfit', orders, 0);
     });
 }
 
 function makeFirstOrderProfit(orders, i) {
     var order = orders[i];
     if (fou.canCreate(order)) {
-        var removeOld = true;
         order = rebuildFirstOrder(order);
+
+        var order_gets_balance = tls.getBalance(au.getIssuer(order.TakerGets), au.getCurrency(order.TakerGets));
+        if (order_gets_balance.is_zero()) {
+            console.log("lack of money to create first order!!!", order);
+            if (orders.length == i + 1) {
+                emitter.once('makeFirstOrderProfit', makeFirstOrderProfit);
+                return;
+            } else {
+                i = i + 1;
+                makeFirstOrderProfit(orders, i);
+            }
+        }
+
+        var removeOld = true;
         osjs.createFirstOffer(order.TakerPays, order.TakerGets, removeOld, wsoLogger, function(res) {
             console.log("create first order:", res);
 

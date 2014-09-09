@@ -53,24 +53,15 @@ function checkOrdersForSameCurrency(orders) {
         return;
     }
 
-    var cur_issuers = same_currency_issuers[currency];
-
     _.each(orders, function(order) {
         if (order.Account == account) {
             return;
         }
 
-        var gets_issuer = au.getIssuer(order.TakerGets);
-        var pays_issuer = au.getIssuer(order.TakerPays);
-
-        if (_.contains(cur_issuers, pays_issuer) && _.contains(cur_issuers, gets_issuer)) {
-            console.log(order.quality, pays_issuer, gets_issuer);
-
-            var expect_profit = pu.getProfitRate(order, profit_rate);
-            if (order.quality - 0 < expect_profit) {
-                scpLogger.log(true, "same currency profit", order);
-                wsio.emit('scp', order);
-            }
+        var expect_profit = pu.getProfitRate(order, profit_rate);
+        if (order.quality - 0 < expect_profit) {
+            scpLogger.log(true, "same currency profit", order);
+            wsio.emit('scp', order);
         }
     });
 }
@@ -78,8 +69,6 @@ function checkOrdersForSameCurrency(orders) {
 function checkOrdersForDiffCurrency(orders) {
     var currency1 = currencies[cIndexSet[0]];
     var currency2 = currencies[cIndexSet[1]];
-    var cur1_issuers = tls.getIssuers(currency1);
-    var cur2_issuers = tls.getIssuers(currency2);
 
     var orders_type_1 = [];
     var orders_type_2 = [];
@@ -93,14 +82,12 @@ function checkOrdersForDiffCurrency(orders) {
             return;
         }
 
-        if (gets_currency == currency1 && _.contains(cur1_issuers, gets_issuer) &&
-            pays_currency == currency2 && _.contains(cur2_issuers, pays_issuer)) {
+        if (gets_currency == currency1 && pays_currency == currency2) {
             order.quality = au.getPrice(order, pays_currency, gets_currency);
             orders_type_1.push(order);
         }
 
-        if (gets_currency == currency2 && _.contains(cur2_issuers, gets_issuer) &&
-            pays_currency == currency1 && _.contains(cur1_issuers, pays_issuer)) {
+        if (gets_currency == currency2 && pays_currency == currency1) {
             order.quality = au.getPrice(order, pays_currency, gets_currency);
             orders_type_2.push(order);
         }
@@ -303,11 +290,6 @@ function goNext() {
         req.params[currency1] = cur1_issuers;
         req.params[currency2] = cur2_issuers;
 
-        // var req = {
-        //     "src_currency": currency1,
-        //     "dst_currency": currency2,
-        //     "limit": 2
-        // }
         console.log(currency1, currency2);
 
         ws.send(JSON.stringify(req));
