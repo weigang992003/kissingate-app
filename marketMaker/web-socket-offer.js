@@ -114,19 +114,49 @@ function makeFirstOrderProfit(orders, i) {
         }
 
         var removeOld = true;
-        osjs.createFirstOffer(order.TakerPays, order.TakerGets, removeOld, wsoLogger, function(res) {
+
+        osjs.createFirstOffer(order.TakerPays, order.TakerGets, removeOld, buildCmd(order), wsoLogger, function(res) {
             console.log("create first order:", res);
 
             if (res == "success") {
                 i = i + 1;
                 if (orders.length > i) {
                     makeFirstOrderProfit(orders, i);
+                    return;
                 } else {
+                    console.log("create first offer done! go next round!!!");
                     emitter.once('makeFirstOrderProfit', makeFirstOrderProfit);
                 }
             }
         });
     }
+}
+
+function buildCmd(order) {
+    var pays_issuer = au.getIssuer(order.TakerPays);
+    var pays_currency = au.getCurrency(order.TakerPays);
+    var gets_issuer = au.getIssuer(order.TakerGets);
+    var gets_currency = au.getCurrency(order.TakerGets);
+
+    var cmd = {
+        "cmd": "book",
+        "params": {},
+        "limit": 1,
+        "filter": 1,
+        "cache": 0
+    }
+
+    if (pays_currency == gets_currency) {
+        cmd.filter = 0;
+        cmd.params[pays_currency] = [pays_issuer, gets_issuer];
+    } else {
+        cmd.params[pays_currency] = [pays_issuer];
+        cmd.params[gets_currency] = [gets_issuer];
+    }
+
+    console.log(cmd);
+
+    return cmd;
 }
 
 function rebuildFirstOrder(order) {

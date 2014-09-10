@@ -56,7 +56,7 @@ TrustLineService.prototype.getLines = function(callback) {
             self.account_limits = account_limits;
             self.account_balances = account_balances;
 
-            console.log("account_limits:", account_limits);
+            console.log("get account_limits success!!");
 
             if (callback) {
                 callback(lines);

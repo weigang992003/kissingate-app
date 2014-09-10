@@ -26,7 +26,7 @@ tfm.getEnv(function(result) {
         ws.send(JSON.stringify(req));
     });
 
-    ws.on('message', function(data, flags) {
+    ws.once('message', function(data, flags) {
         var books = JSON.parse(data);
         var orders = _.flatten(books);
         console.log(orders);

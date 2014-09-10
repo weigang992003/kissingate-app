@@ -3,6 +3,7 @@ var math = require('mathjs');
 var aim = require('./account-info-manager.js');
 var Amount = require('./amount-util.js').Amount;
 var AmountUtil = require('./amount-util.js').AmountUtil;
+var exeCmd = require('./web-socket-book-util.js').exeCmd;
 var FirstOrderUtil = require('./first-order-util.js').FirstOrderUtil;
 
 var au = new AmountUtil();
@@ -29,7 +30,7 @@ OfferService.prototype.getOffers = function(callback) {
         console.log("get offers success");
 
         if (callback) {
-            callback(self.offers);
+            callback("success");
         }
     });
 };
@@ -97,7 +98,7 @@ OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, cr
 
     tx.offerCreate(accountId, taker_pays, taker_gets);
     tx.on("success", function(res) {
-        self.getOffers();
+        self.getOffers(callback);
         // if (createFO) {
         //     var quality = au.calPrice(taker_pays, taker_gets);
         //     fou.createFirstOffer({
@@ -110,10 +111,6 @@ OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, cr
         //         dst_currency: au.getCurrency(taker_pays),
         //     });
         // }
-
-        if (callback) {
-            callback("success");
-        }
     });
 
     tx.on('proposed', function(res) {});
@@ -127,18 +124,36 @@ OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, cr
     tx.submit();
 }
 
-OfferService.prototype.createFirstOffer = function(taker_pays, taker_gets, removeOld, logger, callback) {
+OfferService.prototype.createFirstOffer = function(taker_pays, taker_gets, removeOld, cmd, logger, callback) {
     var self = this;
 
-    var results = findSameBookOffer(self.offers, taker_pays, taker_gets);
-    if (results && results.length > 0) {
-        if (removeOld) {
-            self.cancelOffers(results, 0, function() {
-                self.createOffer(taker_pays, taker_gets, logger, true, callback);
-            });
-        }
+    if (removeOld) {
+        exeCmd(cmd, function(cmdResult) {
+            if (cmdResult.length == 0) {
+                console.log("it is weird we get empty book!!!");
+                return;
+            }
+
+            if (cmdResult[0].Account != self.accountId) {
+                console.log("first order owner is ", cmdResult[0].Account);
+                var results = findSameBookOffer(self.offers, taker_pays, taker_gets);
+                if (results && results.length > 0) {
+                    console.log("find same book offers:", results.length);
+                    self.cancelOffers(results, 0, function() {
+                        console.log("we have clean all non-first offers, now we create new offer.");
+                        self.createOffer(taker_pays, taker_gets, logger, true, callback);
+                    });
+                } else {
+                    self.createOffer(taker_pays, taker_gets, logger, true, callback);
+                }
+            } else {
+                console.log("our offer already in the first place. we don't need to create another!!!");
+                return;
+            }
+        });
+    } else {
+        self.createOffer(taker_pays, taker_gets, logger, true, callback);
     }
-    self.createOffer(taker_pays, taker_gets, logger, true, callback);
 }
 
 OfferService.prototype.cancelOffers = function(offersToCancel, i, callback) {
@@ -151,6 +166,7 @@ OfferService.prototype.cancelOffers = function(offersToCancel, i, callback) {
             return;
         });
     } else {
+        console.log("cancel offers done!!!!");
         if (callback) {
             callback();
         }
@@ -162,16 +178,29 @@ OfferService.prototype.cancelOffer = function(offer, callback) {
 
     console.log("start to cancel offer!!!!");
     self.remote.transaction().offerCancel(self.accountId, offer.seq).secret(self.secret).on('success', function() {
-        console.log('offerCancel', offer.taker_pays, offer.taker_gets);
+        console.log('offer Cancel success!!!', offer);
 
-        fou.setFirstOrderDead({
-            'seq': offer.seq,
-            'account': self.accountId
-        }, function() {
+        console.log("offers length:", self.offers.length);
+        self.offers = _.without(self.offers, _.findWhere(self.offers, {
+            'seq': offer.seq
+        }));
+        console.log("offers length:", self.offers.length);
+
+
+        self.getOffers(function() {
             if (callback) {
                 callback();
             }
-        });
+        })
+
+        // fou.setFirstOrderDead({
+        //     'seq': offer.seq,
+        //     'account': self.accountId
+        // }, function() {
+        //     if (callback) {
+        //         callback();
+        //     }
+        // });
     }).submit();
 }
 
