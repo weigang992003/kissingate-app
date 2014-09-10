@@ -148,7 +148,9 @@ OfferService.prototype.createFirstOffer = function(taker_pays, taker_gets, remov
                 }
             } else {
                 console.log("our offer already in the first place. we don't need to create another!!!");
-                return;
+                if (callback) {
+                    callback("success");
+                }
             }
         });
     } else {
