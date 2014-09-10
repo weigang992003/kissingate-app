@@ -22,6 +22,7 @@ OfferService.prototype.getOffers = function(callback) {
     var accountId = this.accountId;
 
     remote.requestAccountOffers(accountId, function(err, result) {
+        self.offers = [];
         _.each(result.offers, function(offer) {
             offer.quality = au.calPrice(offer.taker_pays, offer.taker_gets);
             self.offers.push(offer);
@@ -77,11 +78,6 @@ OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, cr
         console.log("offer already exist!!!!");
         return;
     }
-
-    self.offers.push({
-        'taker_pays': taker_pays,
-        'taker_gets': taker_gets
-    });
 
     console.log("start to create offer!!!");
 
