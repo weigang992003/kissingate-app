@@ -84,15 +84,15 @@ function remoteConnect(env) {
 function listenProfitOrder() {
     console.log("step5:listen to profit socket!");
     wsio.on('dcp', function(order1, order2) {
-        // emitter.emit('makeProfit', order1, order2);
+        emitter.emit('makeProfit', order1, order2);
     });
 
     wsio.on('scp', function(order) {
-        // emitter.emit('makeSameCurrencyProfit', order);
+        emitter.emit('makeSameCurrencyProfit', order);
     });
 
     wsio.on('fos', function(orders) {
-        emitter.emit('makeFirstOrderProfit', orders, 0);
+        // emitter.emit('makeFirstOrderProfit', orders, 0);
     });
 }
 
