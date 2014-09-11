@@ -201,7 +201,7 @@ OfferService.prototype.cancelOffers = function(offersToCancel, i, callback) {
 OfferService.prototype.cancelOffer = function(offer, callback) {
     var self = this;
 
-    console.log("start to cancel offer!!!!");
+    console.log("start to cancel offer:" + offer.seq);
     self.remote.transaction().offerCancel(self.accountId, offer.seq).secret(self.secret).on('success', function() {
         console.log('offer Cancel success!!!', offer);
 
