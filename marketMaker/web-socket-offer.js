@@ -84,21 +84,21 @@ function remoteConnect(env) {
 function listenProfitOrder() {
     console.log("step5:listen to profit socket!");
     wsio.on('dcp', function(order1, order2) {
-        emitter.emit('makeProfit', order1, order2);
+        // emitter.emit('makeProfit', order1, order2);
     });
 
     wsio.on('scp', function(order) {
-        emitter.emit('makeSameCurrencyProfit', order);
+        // emitter.emit('makeSameCurrencyProfit', order);
     });
 
     wsio.on('fos', function(orders) {
-        // emitter.emit('makeFirstOrderProfit', orders, 0);
+        emitter.emit('makeFirstOrderProfit', orders, 0);
     });
 }
 
 function makeFirstOrderProfit(orders, i) {
     var order = orders[i];
-    if (fou.canCreate(order)) {
+    if (osjs.canCreate(order)) {
         order = rebuildFirstOrder(order);
 
         var order_gets_balance = tls.getBalance(au.getIssuer(order.TakerGets), au.getCurrency(order.TakerGets));
@@ -140,7 +140,10 @@ function buildCmd(order) {
 
     var cmd = {
         "cmd": "book",
-        "params": {},
+        "params": {
+            "pays_currency": [pays_currency],
+            "gets_currency": [gets_currency]
+        },
         "limit": 1,
         "filter": 1,
         "cache": 0

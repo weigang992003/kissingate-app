@@ -25,29 +25,27 @@ function connect(callback) {
 
 function exeCmd(cmd, callback) {
     if (wsConnected) {
-        ws.once('message', function(data, flags) {
-            var books = JSON.parse(data);
-            var orders = _.flatten(books);
-            console.log("message received!! order number is", orders.length);
-
-            callback(orders);
-        });
-
-        ws.send(JSON.stringify(cmd));
+        exe(cmd, callback);
     } else {
         connect(function() {
-            ws.once('message', function(data, flags) {
-
-                var books = JSON.parse(data);
-                var orders = _.flatten(books);
-                console.log("message received!! order number is", orders.length);
-
-                callback(orders);
-            });
-
-            ws.send(JSON.stringify(cmd));
+            exe(cmd, callback);
         });
     }
+}
+
+function exe(cmd, callback) {
+    ws.once('message', function(data, flags) {
+
+        var books = JSON.parse(data);
+        var orders = _.flatten(books);
+        console.log("message received!! order number is", orders.length);
+
+        callback(orders);
+    });
+
+    console.log("send request!!");
+
+    ws.send(JSON.stringify(cmd));
 }
 
 exports.exeCmd = exeCmd;
@@ -60,7 +58,7 @@ exports.exeCmd = exeCmd;
 //     },
 //     "limit": 1,
 //     "filter": 0,
-//     "cache": 1
+//     "cache": 0
 // }, function(orders) {
 //     console.log(orders);
 // })

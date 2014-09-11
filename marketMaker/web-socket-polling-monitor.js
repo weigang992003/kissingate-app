@@ -59,6 +59,7 @@ function checkOrdersForSameCurrency(orders) {
         }
 
         var expect_profit = pu.getProfitRate(order, profit_rate);
+        console.log(currency + " real_profit:" + order.quality, order.TakerPays.issuer, order.TakerGets.issuer);
         if (order.quality - 0 < expect_profit) {
             scpLogger.log(true, "same currency profit", order);
             wsio.emit('scp', order);

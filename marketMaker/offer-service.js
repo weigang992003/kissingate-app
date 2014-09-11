@@ -154,6 +154,33 @@ OfferService.prototype.createFirstOffer = function(taker_pays, taker_gets, remov
     }
 }
 
+
+OfferService.prototype.canCreate = function(order) {
+    var self = this;
+    var firstOrders = self.offers;
+    var dst_currency = au.getCurrency(order.TakerGets);
+    var src_currency = au.getCurrency(order.TakerPays);
+
+    if (firstOrders.length == 0) {
+        return true;
+    }
+
+    var orders = _.filter(firstOrders, function(o) {
+        return src_currency == o.dst_currency && dst_currency == o.src_currency;
+    });
+
+    var hasProfit = false;
+    orders.every(function(o) {
+        if (o.quality * order.quality < 1) {
+            hasProfit = true;
+        }
+        return !hasProfit;
+    });
+
+    return !hasProfit;
+};
+
+
 OfferService.prototype.cancelOffers = function(offersToCancel, i, callback) {
     var self = this;
 

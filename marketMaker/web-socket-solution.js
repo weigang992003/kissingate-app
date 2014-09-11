@@ -14,14 +14,16 @@ tfm.getEnv(function(result) {
     var ws = new WebSocket(result.wspm);
     ws.on('open', function() {
         var req = {
-            "cmd": "book",
-            "params": {
-                "CNY": ["rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y", "razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA", "rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK"],
-                "USD": ["rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q", "rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B"]
+            cmd: 'book',
+            params: {
+                pays_currency: ['JPY'],
+                gets_currency: ['CNY'],
+                JPY: ['rMAz5ZnK73nyNUL4foAvaxdreczCkG3vA6'],
+                CNY: ['razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA']
             },
-            "limit": 1,
-            "filter": 0,
-            "cache": 0
+            limit: 1,
+            filter: 1,
+            cache: 0
         }
         ws.send(JSON.stringify(req));
     });

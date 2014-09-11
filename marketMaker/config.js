@@ -75,7 +75,7 @@ exports.first_order_allow_volumns = {
 }
 exports.first_order_allow_issuers = {
     'CNY': ['rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y', 'razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA', 'rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK'],
-    'USD': ['rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q', 'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B'],
+    'USD': ['rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q'],
     'JPY': ['rMAz5ZnK73nyNUL4foAvaxdreczCkG3vA6']
 
 }
