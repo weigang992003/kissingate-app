@@ -3,7 +3,8 @@ var wsoLogger;
 var wsoLogger = new Logger('web-socket-offer');
 
 var io = require('socket.io-client');
-var wsio = io.connect('http://localhost:3003/ws');
+var pows = io.connect('http://localhost:3003/ws');
+var fows = io.connect('http://localhost:3006/ws');
 
 var math = require('mathjs');
 var WebSocket = require('ws');
@@ -83,18 +84,69 @@ function remoteConnect(env) {
 
 function listenProfitOrder() {
     console.log("step5:listen to profit socket!");
-    wsio.on('dcp', function(order1, order2) {
-        // emitter.emit('makeProfit', order1, order2);
+    pows.on('dcp', function(order1, order2) {
+        emitter.emit('makeProfit', order1, order2);
     });
 
-    wsio.on('scp', function(order) {
-        // emitter.emit('makeSameCurrencyProfit', order);
+    pows.on('scp', function(order) {
+        emitter.emit('makeSameCurrencyProfit', order);
     });
 
-    wsio.on('fos', function(orders) {
-        emitter.emit('makeFirstOrderProfit', orders, 0);
+    fows.on('fos', function(orders, key) {
+        var oldOne = _.findWhere(firstOrderMap, {
+            'key': key
+        });
+
+        firstOrderMap = _.without(firstOrderMap, oldOne);
+
+        if (!oldOne) {
+            firstOrderMap.push({
+                'key': key,
+                'orders': orders,
+                'handled': false
+            })
+            return;
+        }
+
+        oldOne.orders = orders;
+        if (!hasListenerForFirstOrder()) {
+            console.log("we don't have listener for first order right now!");
+            firstOrderMap.push(oldOne);
+            return;
+        }
+
+        if (!oldOne.handled) {
+            console.log("handle key:", oldOne.key);
+            oldOne.handled = true;
+            firstOrderMap.push(oldOne);
+            // emitter.emit('makeFirstOrderProfit', oldOne.orders, 0);
+            return;
+        }
+
+        firstOrderMap.push(oldOne);
+
+        var needHandle = _.findWhere(firstOrderMap, {
+            'handled': false
+        });
+
+        if (needHandle) {
+            console.log("handle key:", needHandle.key);
+            firstOrderMap = _.without(firstOrderMap, needHandle);
+            needHandle.handled = true;
+            firstOrderMap.push(needHandle);
+            // emitter.emit('makeFirstOrderProfit', needHandle.orders, 0);
+        } else {
+            console.log("all are handled!! go next round!!");
+            firstOrderMap = {};
+        }
     });
 }
+
+function hasListenerForFirstOrder() {
+    return emitter.listeners('makeFirstOrderProfit').length > 0;
+}
+
+var firstOrderMap = [];
 
 function makeFirstOrderProfit(orders, i) {
     var order = orders[i];

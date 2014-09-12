@@ -1,5 +1,6 @@
 var _ = require('underscore');
 var AmountUtil = require('./amount-util.js').AmountUtil;
+var exeCmd = require('./web-socket-book-util.js').exeCmd;
 var TheFutureManager = require('./the-future-manager.js').TheFutureManager;
 
 var au = new AmountUtil();
@@ -96,6 +97,36 @@ FirstOrderUtil.prototype.createFirstOffer = function(record, callback) {
 
 FirstOrderUtil.prototype.setFirstOrderDead = function(record, callback) {
     tfm.setFirstOrderDead(record, callback);
+}
+
+function buildCmd(order) {
+    var pays_issuer = au.getIssuer(order.taker_pays);
+    var pays_currency = au.getCurrency(order.taker_pays);
+    var gets_issuer = au.getIssuer(order.taker_gets);
+    var gets_currency = au.getCurrency(order.taker_gets);
+
+    var cmd = {
+        "cmd": "book",
+        "params": {
+            "pays_currency": [pays_currency],
+            "gets_currency": [gets_currency]
+        },
+        "limit": 1,
+        "filter": 1,
+        "cache": 0
+    }
+
+    if (pays_currency == gets_currency) {
+        cmd.filter = 0;
+        cmd.params[pays_currency] = [pays_issuer, gets_issuer];
+    } else {
+        cmd.params[pays_currency] = [pays_issuer];
+        cmd.params[gets_currency] = [gets_issuer];
+    }
+
+    console.log(cmd);
+
+    return cmd;
 }
 
 exports.FirstOrderUtil = FirstOrderUtil;

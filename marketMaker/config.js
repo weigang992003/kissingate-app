@@ -67,15 +67,17 @@ exports.same_currency_issuers = {
 exports.same_currency_profit = ["CNY"];
 exports.same_issuer_profit = ["rNPRNzBB92BVpAhhZr4iXDTveCgV5Pofm9"];
 
-exports.first_order_currencies = ["CNY", "JPY", "USD"];
+exports.first_order_currencies = ["CNY", "JPY", "XRP"];
 exports.first_order_allow_volumns = {
     "CNY": "10",
     "JPY": "100",
-    "USD": "2"
+    "USD": "2",
+    "XRP": "200000000"
 }
 exports.first_order_allow_issuers = {
     'CNY': ['rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y', 'razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA', 'rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK'],
-    // 'USD': ['rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q'],
+    'XRP': ['rrrrrrrrrrrrrrrrrrrrrhoLvTp'],
+    'USD': ['rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q'],
     'JPY': ['rMAz5ZnK73nyNUL4foAvaxdreczCkG3vA6']
 
 }
@@ -87,6 +89,13 @@ exports.profit_min_volumns = {
     "CNY": "2",
     "FMM": "2",
     "EUR": "0.8"
+}
+
+exports.currencies_no = {
+    "XRP": 2,
+    "CNY": 3,
+    "JPY": 5,
+    "USD": 7
 }
 
 exports.mother = -1;
@@ -107,3 +116,4 @@ exports.xrpIssuer = "rrrrrrrrrrrrrrrrrrrrrhoLvTp";
 //3003 web-socket-polling-monitor
 //3004 listen-account-util
 //3005 offer-service
+//3006 first-order-polling-monitor

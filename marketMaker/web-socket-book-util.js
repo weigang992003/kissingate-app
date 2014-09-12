@@ -24,6 +24,10 @@ function connect(callback) {
 }
 
 function exeCmd(cmd, callback) {
+    if (timer) {
+        clearTimeout(timer);
+    }
+
     if (wsConnected) {
         exe(cmd, callback);
     } else {
@@ -33,8 +37,13 @@ function exeCmd(cmd, callback) {
     }
 }
 
+var timer;
+
 function exe(cmd, callback) {
     ws.once('message', function(data, flags) {
+        if (timer) {
+            clearTimeout(timer);
+        }
 
         var books = JSON.parse(data);
         var orders = _.flatten(books);
@@ -46,6 +55,11 @@ function exe(cmd, callback) {
     console.log("send request!!");
 
     ws.send(JSON.stringify(cmd));
+
+    timer = setTimeout(function() {
+        ws.removeAllListeners('message');
+        exeCmd(cmd, callback);
+    }, 3000);
 }
 
 exports.exeCmd = exeCmd;

@@ -16,6 +16,37 @@ function OfferService(r, a, s) {
     this.offers = [];
 }
 
+
+function buildCmd(offer) {
+    var pays_issuer = au.getIssuer(offer.taker_pays);
+    var pays_currency = au.getCurrency(offer.taker_pays);
+    var gets_issuer = au.getIssuer(offer.taker_gets);
+    var gets_currency = au.getCurrency(offer.taker_gets);
+
+    var cmd = {
+        "cmd": "book",
+        "params": {
+            "pays_currency": [pays_currency],
+            "gets_currency": [gets_currency]
+        },
+        "limit": 1,
+        "filter": 1,
+        "cache": 0
+    }
+
+    if (pays_currency == gets_currency) {
+        cmd.filter = 0;
+        cmd.params[pays_currency] = [pays_issuer, gets_issuer];
+    } else {
+        cmd.params[pays_currency] = [pays_issuer];
+        cmd.params[gets_currency] = [gets_issuer];
+    }
+
+    console.log(cmd);
+
+    return cmd;
+}
+
 OfferService.prototype.getOffers = function(callback) {
     var self = this;
     var remote = this.remote;
@@ -79,8 +110,6 @@ OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, cr
         return;
     }
 
-    console.log("start to create offer!!!");
-
     var tx = remote.transaction();
     if (secret) {
         tx.secret(secret);
@@ -88,7 +117,7 @@ OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, cr
         return;
     }
 
-    console.log("we are create offer here", "taker_pays", taker_pays, "taker_gets", taker_gets);
+    console.log("create offer:", "taker_pays", taker_pays, "taker_gets", taker_gets);
     if (logger)
         logger.log(true, "we are create offer here", "taker_pays", taker_pays, "taker_gets", taker_gets);
 
@@ -126,8 +155,7 @@ OfferService.prototype.createFirstOffer = function(taker_pays, taker_gets, remov
     if (removeOld) {
         exeCmd(cmd, function(cmdResult) {
             if (cmdResult.length == 0) {
-                console.log("it is weird we get empty book!!!");
-                return;
+                throw new Error("it is weird we get empty book!!!");
             }
 
             if (cmdResult[0].Account != self.accountId) {
@@ -136,7 +164,7 @@ OfferService.prototype.createFirstOffer = function(taker_pays, taker_gets, remov
                 if (results && results.length > 0) {
                     console.log("find same book offers:", results.length);
                     self.cancelOffers(results, 0, function() {
-                        console.log("we have clean all non-first offers, now we create new offer.");
+                        console.log("we have cleaned all non-first offers, now we create new offer.");
                         self.createOffer(taker_pays, taker_gets, logger, true, callback);
                     });
                 } else {
@@ -191,7 +219,6 @@ OfferService.prototype.cancelOffers = function(offersToCancel, i, callback) {
             return;
         });
     } else {
-        console.log("cancel offers done!!!!");
         if (callback) {
             callback();
         }
@@ -205,18 +232,13 @@ OfferService.prototype.cancelOffer = function(offer, callback) {
     self.remote.transaction().offerCancel(self.accountId, offer.seq).secret(self.secret).on('success', function() {
         console.log('offer Cancel success!!!', offer);
 
-        console.log("offers length:", self.offers.length);
         self.offers = _.without(self.offers, _.findWhere(self.offers, {
             'seq': offer.seq
         }));
-        console.log("offers length:", self.offers.length);
 
-
-        self.getOffers(function() {
-            if (callback) {
-                callback();
-            }
-        })
+        if (callback) {
+            callback();
+        }
 
         // fou.setFirstOrderDead({
         //     'seq': offer.seq,

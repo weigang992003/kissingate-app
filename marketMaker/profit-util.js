@@ -21,6 +21,7 @@ ProfitUtil.prototype.getProfitRate = function(order, profitRate) {
     return finalProfit;
 };
 
+
 ProfitUtil.prototype.getMultiProfitRate = function(orders, init_profit_rate) {
     var self = this;
     var finalProfit = init_profit_rate;
@@ -29,6 +30,25 @@ ProfitUtil.prototype.getMultiProfitRate = function(orders, init_profit_rate) {
     });
 
     return finalProfit;
+}
+
+ProfitUtil.prototype.getGap = function(order, initGap) {
+    var finalGap = initGap;
+    var transfer_rate = transfer_rates[au.getIssuer(order.TakerGets)];
+    if (transfer_rate) {
+        finalGap = finalGap + transfer_rate;
+    }
+    return finalGap;
+};
+
+ProfitUtil.prototype.getMultiGap = function(orders, initGap) {
+    var self = this;
+    var finalGap = initGap;
+    _.each(orders, function(order) {
+        finalGap = self.getGap(order, finalGap);
+    });
+
+    return finalGap;
 }
 
 exports.ProfitUtil = ProfitUtil;

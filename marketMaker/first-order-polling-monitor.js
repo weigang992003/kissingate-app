@@ -1,7 +1,7 @@
 var Logger = require('./new-logger.js').Logger;
-var scpLogger = new Logger('same-currency-profit-monitor');
-var dcpLogger = new Logger('diff-currency-profit-monitor');
-var io = require('socket.io').listen(3003);
+var fopmLogger = new Logger('web-socket-offer');;
+
+var io = require('socket.io').listen(3006);
 var wsio = io.of('/ws');
 
 var math = require('mathjs');
@@ -36,14 +36,13 @@ var pu = new ProfitUtil();
 
 var drops = config.drops;
 var profit_rate = config.profitRate;
+var currencies_no = config.currencies_no;
 var transfer_rates = config.transfer_rates;
 var profit_min_volumns = config.profit_min_volumns;
 var same_currency_profit = config.same_currency_profit;
 var same_currency_issuers = config.same_currency_issuers;
 var first_order_currencies = config.first_order_currencies;
 var first_order_allow_issuers = config.first_order_allow_issuers;
-
-var noAvailablePair = [];
 
 function checkOrdersForSameCurrency(orders) {
     var currency = currencies[cIndexSet[0]];
@@ -68,8 +67,10 @@ function checkOrdersForSameCurrency(orders) {
 }
 
 function checkOrdersForDiffCurrency(orders) {
-    var currency1 = currencies[cIndexSet[0]];
-    var currency2 = currencies[cIndexSet[1]];
+    console.log("get orders number:", orders.length);
+
+    var currency1 = first_order_currencies[cIndexSet[0]];
+    var currency2 = first_order_currencies[cIndexSet[1]];
 
     var orders_type_1 = [];
     var orders_type_2 = [];
@@ -78,10 +79,6 @@ function checkOrdersForDiffCurrency(orders) {
         var gets_issuer = au.getIssuer(order.TakerGets);
         var pays_currency = au.getCurrency(order.TakerPays);
         var pays_issuer = au.getIssuer(order.TakerPays);
-
-        if (order.Account == account) {
-            return;
-        }
 
         if (gets_currency == currency1 && pays_currency == currency2) {
             order.quality = au.getPrice(order, pays_currency, gets_currency);
@@ -94,12 +91,6 @@ function checkOrdersForDiffCurrency(orders) {
         }
     });
 
-    if (orders_type_1.length == 0 || orders_type_2.length == 0) {
-        noAvailablePair.push(currency1 + currency2);
-        noAvailablePair.push(currency2 + currency1);
-        return;
-    }
-
     orders_type_1 = _.sortBy(orders_type_1, function(order) {
         return order.quality;
     });
@@ -108,47 +99,58 @@ function checkOrdersForDiffCurrency(orders) {
         return order.quality;
     });
 
-    orders_type_1.every(function(order_type_1) {
-        orders_type_2.every(function(order_type_2) {
-            if (isSameIssuers(order_type_1, order_type_2)) {
-                return true;
-            }
 
-            var real_profit = order_type_1.quality * order_type_2.quality;
-            console.log("real profit rate:", real_profit);
+    var firstOrders = buildFirstOrders(orders_type_1, orders_type_2, 0, 0);
 
-            var expect_profit = pu.getMultiProfitRate([order_type_1, order_type_2], profit_rate);
-            console.log("expect profit rate:" + expect_profit);
-
-            if (real_profit < expect_profit) {
-                wsio.emit('dcp', order_type_1, order_type_2);
-
-                dcpLogger.log(true, "sell", order_type_1.TakerPays, "buy", order_type_1.TakerGets,
-                    "sell", order_type_2.TakerPays, "buy", order_type_2.TakerGets,
-                    "profit:" + real_profit, "price1:" + order_type_1.quality, "price2:" + order_type_2.quality);
-            }
-
-            return real_profit < 1;
-        });
+    firstOrders = _.filter(firstOrders, function(o) {
+        return o.Account != account;
     });
+
+    if (firstOrders.length > 0) {
+        var key = currencies_no[currency1] * currencies_no[currency2];
+        console.log("first order number:", firstOrders.length, " key:", key);
+        wsio.emit('fos', firstOrders, key);
+    }
+}
+
+function buildFirstOrders(orders_type_1, orders_type_2, i, j) {
+    var order_type_1;
+    var order_type_2;
+
+    if (i >= orders_type_1.length && j >= orders_type_2.length) {
+        return [];
+    }
+
+    order_type_1 = orders_type_1[i % orders_type_1.length];
+    order_type_2 = orders_type_2[j % orders_type_2.length];
+
+    var real_gap = order_type_1.quality * order_type_2.quality;
+    console.log("real profit gap:", real_gap);
+
+    var expect_gap = pu.getMultiGap([order_type_1, order_type_2], 1.0005);
+    console.log("expect min profit gap:" + expect_gap);
+
+    if (real_gap - expect_gap > 0) {
+        return _.union(_.rest(orders_type_1, i), _.rest(orders_type_2, j));
+    } else {
+        j = j + 1;
+        if (j % orders_type_2.length == 0) {
+            i = i + 1;
+        }
+        buildFirstOrders(orders_type_1, orders_type_2, i, j);
+    }
 }
 
 function checkOrders(orders) {
-    var currency1 = currencies[cIndexSet[0]];
-    var currency2 = currencies[cIndexSet[1]];
+    var currency1 = first_order_currencies[cIndexSet[0]];
+    var currency2 = first_order_currencies[cIndexSet[1]];
 
-    if (currency1 == currency2) {
-        checkOrdersForSameCurrency(orders);
-    } else {
+    if (currency1 != currency2) {
         checkOrdersForDiffCurrency(orders);
     }
 
-    cIndexSet = cLoop.next(cIndexSet, currencySize);
+    cIndexSet = cLoop.next(cIndexSet, first_offer_currency_size);
     goNext();
-}
-
-function isSameIssuers(order1, order2) {
-    return order1.TakerPays.issuer == order2.TakerGets.issuer && order1.TakerGets.issuer == order2.TakerPays.issuer;
 }
 
 var wsConnected = false;
@@ -158,12 +160,13 @@ function connectWS(uri) {
     ws = new WebSocket(uri);
     ws.on('open', function() {
         wsConnected = true;
+        goNext();
     });
     ws.on('message', function(data, flags) {
         var books = JSON.parse(data);
         var orders = _.flatten(books);
         if (orders.length == 0 || orders.length == 1) {
-            cIndexSet = cLoop.next(cIndexSet, currencySize);
+            cIndexSet = cLoop.next(cIndexSet, first_offer_currency_size);
             goNext();
             return;
         } else {
@@ -173,90 +176,34 @@ function connectWS(uri) {
     ws.on('close', function() {
         wsConnected = false;
         ws.close();
+        connectWS(uri);
     });
-}
-
-var remote;
-
-function remoteConnect(env) {
-    rsjs.getRemote(env, function(r) {
-        console.log("start to connect ws!!!");
-
-        remote = r;
-        console.log("step3:connect to remote!");
-        if (!remote) {
-            console.log("we don't get remote object!");
-            return;
-        }
-
-        remote.connect(function() {
-            osjs = new OfferService(remote, account, secret);
-            osjs.getOffers();
-
-            tls = new TrustLineService(remote, account);
-            tls.getLines(function(lines) {
-                console.log("step4:prepare currencies!")
-                prepareCurrencies(lines);
-
-                console.log("step5:query find path!");
-                goNext();
-            });
-
-            remote.on('error', function(error) {
-                throw new Error("remote error!");
-            });
-
-            remote.on('disconnect', function() {
-                remote = new ripple.Remote(rsjs.getRemoteOption());
-                remoteConnect();
-            });
-        });
-    });
-}
-
-function prepareCurrencies(lines) {
-    lines = _.filter(lines, function(line) {
-        return line.limit != 0;
-    })
-    currencies = _.pluck(lines, 'currency');
-    currencies = _.uniq(currencies);
-    currencies.push("XRP");
-    currencySize = currencies.length;
-    return currencies;
 }
 
 var cLoop = new Loop([0, 0]);
 cLoop.allowSameIndex(true);
 
 var cIndexSet = [0, 0];
-var currencySize;
-var currencies;
+var first_offer_currency_size = first_order_currencies.length;
 
 function goNext() {
-    if (!currencySize) {
+    if (!first_offer_currency_size) {
         return;
     }
 
     if (cLoop.isCycle()) {
-        console.log("query done!");
         cLoop = new Loop([0, 0]);
         cLoop.allowSameIndex(true);
         cIndexSet = [0, 0];
-        console.log("next round would be start in 5 seconds!");
+        console.log("query done!!next round would be start in 5 seconds!");
         setTimeout(goNext, 1000 * 5);
         return;
     }
 
-    var currency1 = currencies[cIndexSet[0]];
-    var currency2 = currencies[cIndexSet[1]];
-    var cur1_issuers = tls.getIssuers(currency1);
-    var cur2_issuers = tls.getIssuers(currency2);
-
-    if (_.contains(noAvailablePair, currency1 + currency2)) {
-        cIndexSet = cLoop.next(cIndexSet, currencySize);
-        goNext();
-        return;
-    }
+    var currency1 = first_order_currencies[cIndexSet[0]];
+    var currency2 = first_order_currencies[cIndexSet[1]];
+    var cur1_issuers = first_order_allow_issuers[currency1];
+    var cur2_issuers = first_order_allow_issuers[currency2];
 
     if (wsConnected) {
         var req = {
@@ -264,7 +211,7 @@ function goNext() {
             "params": {},
             "limit": 1,
             "filter": 1,
-            "cache": 1
+            "cache": 0
         }
 
         if (currency1 == currency2) {
@@ -283,27 +230,10 @@ function goNext() {
 }
 
 var account;
-var secret;
 console.log("step1:getAccount!")
 tfmjs.getAccount(config.marketMaker, function(result) {
     account = result.account;
-    secret = result.secret;
-    decrypt(secret);
+    tfmjs.getEnv(function(result) {
+        connectWS(result.wspm);
+    })
 });
-
-function decrypt(encrypted) {
-    console.log("step2:decrypt secret!")
-    crypto.decrypt(encrypted, function(result) {
-        secret = result;
-        tfmjs.getEnv(function(result) {
-            connectWS(result.wspm);
-            remoteConnect(result.env);
-        })
-    });
-}
-
-setTimeout(throwDisconnectError, 1000 * 60 * 60);
-
-function throwDisconnectError() {
-    throw new Error('we are disconnect with ripple network!!!');
-}
