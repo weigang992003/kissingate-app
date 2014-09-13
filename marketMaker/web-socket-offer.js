@@ -258,7 +258,9 @@ function makeSameCurrencyProfit(order) {
         return;
     }
 
-    osjs.createOffer(order_taker_gets.to_json(), order_taker_pays.to_json(), wsoLogger, false, function(status) {
+    var cmd = buildCmd(order);
+
+    osjs.createSCPOffer(order_taker_gets.to_json(), order_taker_pays.to_json(), cmd, wsoLogger, function(status) {
         console.log("same currency tx:", status);
         wsoLogger.log(true, "same currency tx", status, order_taker_gets.to_json(), order_taker_pays.to_json());
         emitter.once('makeSameCurrencyProfit', makeSameCurrencyProfit);
@@ -271,23 +273,39 @@ emitter.once('makeFirstOrderProfit', makeFirstOrderProfit);
 emitter.once('makeSameCurrencyProfit', makeSameCurrencyProfit);
 
 function makeProfit(order1, order2) {
-    console.log("new data arrived!", order1, order2);
+    console.log("new data arrived!");
+    var order1_taker_pays_issuer = au.getIssuer(order1.TakerPays);
+    var order1_taker_gets_issuer = au.getIssuer(order1.TakerGets);
+    var order2_taker_pays_issuer = au.getIssuer(order2.TakerPays);
+    var order2_taker_gets_issuer = au.getIssuer(order2.TakerGets);
+
+    var order1_taker_pays_currency = au.getCurrency(order1.TakerPays);
+    var order1_taker_gets_currency = au.getCurrency(order1.TakerGets);
+    var order2_taker_pays_currency = au.getCurrency(order2.TakerPays);
+    var order2_taker_gets_currency = au.getCurrency(order2.TakerGets);
+
+
+    console.log("order1:" + order1_taker_pays_currency + "(" + order1_taker_pays_issuer + ")->" +
+        order1_taker_gets_currency + "(" + order1_taker_gets_issuer + ")");
+
+    console.log("order2:" + order2_taker_pays_currency + "(" + order2_taker_pays_issuer + ")->" +
+        order2_taker_gets_currency + "(" + order2_taker_gets_issuer + ")");
 
     var order1_taker_pays = Amount.from_json(order1.TakerPays);
     var order1_taker_gets = Amount.from_json(order1.TakerGets);
     var order2_taker_pays = Amount.from_json(order2.TakerPays);
     var order2_taker_gets = Amount.from_json(order2.TakerGets);
 
-    var order1_pays_balance = tls.getBalance(au.getIssuer(order1.TakerPays), au.getCurrency(order1.TakerPays));
-    var order1_gets_capacity = tls.getCapacity(au.getIssuer(order1.TakerGets), au.getCurrency(order1.TakerGets));
-    var order2_pays_balance = tls.getBalance(au.getIssuer(order2.TakerPays), au.getCurrency(order2.TakerPays));
-    var order2_gets_capacity = tls.getCapacity(au.getIssuer(order2.TakerGets), au.getCurrency(order2.TakerGets));
+    var order1_pays_balance = tls.getBalance(order1_taker_pays_issuer, order1_taker_pays_currency);
+    var order1_gets_capacity = tls.getCapacity(order1_taker_gets_issuer, order1_taker_gets_currency);
+    var order2_pays_balance = tls.getBalance(order2_taker_pays_issuer, order2_taker_pays_currency);
+    var order2_gets_capacity = tls.getCapacity(order2_taker_gets_issuer, order2_taker_gets_currency);
 
     var min_taker_pays = au.minAmount([order1_taker_pays, order2_taker_gets, order2_gets_capacity, order1_pays_balance]);
     var min_taker_gets = au.minAmount([order1_taker_gets, order1_gets_capacity, order2_taker_pays, order2_pays_balance]);
 
     if (!au.isVolumnAllowed(min_taker_pays) || !au.isVolumnAllowed(min_taker_gets)) {
-        console.log("the volumn is too small to trade", min_taker_gets.to_json(), min_taker_pays.to_json());
+        console.log("the volumn is too small to trade!!!");
         emitter.once('makeProfit', makeProfit);
         return;
     }
@@ -323,33 +341,28 @@ function makeProfit(order1, order2) {
     order1_taker_pays = order1_taker_pays.product_human("1.0001");
     order2_taker_pays = order2_taker_pays.product_human("1.0001");
 
-    var reserved = true;
-    if (osjs.atLeastExistOne([order1, order2], reserved)) {
-        console.log("same order already exist!!");
-        emitter.once('makeProfit', makeProfit);
-        return;
-    }
+    var cmds = [];
+    cmds.push(buildCmd(order1));
+    cmds.push(buildCmd(order2));
 
-    //TODO will remove when atLeastExistOne method works.
-    if (osjs.ifOfferExist(order1_taker_gets.to_json(), order1_taker_pays.to_json()) ||
-        osjs.ifOfferExist(order2_taker_gets.to_json(), order2_taker_pays.to_json())) {
-        console.log("same order already exist!!!");
-        emitter.once('makeProfit', makeProfit);
-        return;
-    }
+    osjs.canCreateDCPOffers(cmds, 0, function(canCreate) {
+        if (canCreate) {
+            osjs.createOffer(order1_taker_gets.to_json(), order1_taker_pays.to_json(), wsoLogger, false, function(status) {
+                console.log("tx1", status);
+                wsoLogger.log(true, "tx1", status, order1_taker_gets.to_json(), order1_taker_pays.to_json());
+            });
+            osjs.createOffer(order2_taker_gets.to_json(), order2_taker_pays.to_json(), wsoLogger, false, function(status) {
+                console.log("tx2", status);
+                wsoLogger.log(true, "tx2", status, order2_taker_gets.to_json(), order2_taker_pays.to_json());
 
-    osjs.createOffer(order1_taker_gets.to_json(), order1_taker_pays.to_json(), wsoLogger, false, function(status) {
-        console.log("tx1", status);
-        wsoLogger.log(true, "tx1", status, order1_taker_gets.to_json(), order1_taker_pays.to_json());
-    });
-    osjs.createOffer(order2_taker_gets.to_json(), order2_taker_pays.to_json(), wsoLogger, false, function(status) {
-        console.log("tx2", status);
-        wsoLogger.log(true, "tx2", status, order2_taker_gets.to_json(), order2_taker_pays.to_json());
-
-        tls.getLines(function() {
-            console.log("re-listen profit order!!!");
+                tls.getLines(function() {
+                    console.log("re-listen profit order!!!");
+                    emitter.once('makeProfit', makeProfit);
+                })
+            });
+        } else {
             emitter.once('makeProfit', makeProfit);
-        })
+        }
     });
 }
 

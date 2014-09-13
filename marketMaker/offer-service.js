@@ -17,36 +17,6 @@ function OfferService(r, a, s) {
 }
 
 
-function buildCmd(offer) {
-    var pays_issuer = au.getIssuer(offer.taker_pays);
-    var pays_currency = au.getCurrency(offer.taker_pays);
-    var gets_issuer = au.getIssuer(offer.taker_gets);
-    var gets_currency = au.getCurrency(offer.taker_gets);
-
-    var cmd = {
-        "cmd": "book",
-        "params": {
-            "pays_currency": [pays_currency],
-            "gets_currency": [gets_currency]
-        },
-        "limit": 1,
-        "filter": 1,
-        "cache": 0
-    }
-
-    if (pays_currency == gets_currency) {
-        cmd.filter = 0;
-        cmd.params[pays_currency] = [pays_issuer, gets_issuer];
-    } else {
-        cmd.params[pays_currency] = [pays_issuer];
-        cmd.params[gets_currency] = [gets_issuer];
-    }
-
-    console.log(cmd);
-
-    return cmd;
-}
-
 OfferService.prototype.getOffers = function(callback) {
     var self = this;
     var remote = this.remote;
@@ -105,11 +75,6 @@ OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, cr
     var accountId = this.accountId;
     var offers = this.offers;
 
-    if (self.ifOfferExist(taker_pays, taker_gets)) {
-        console.log("offer already exist!!!!");
-        return;
-    }
-
     var tx = remote.transaction();
     if (secret) {
         tx.secret(secret);
@@ -147,6 +112,61 @@ OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, cr
     });
 
     tx.submit();
+}
+
+OfferService.prototype.createSCPOffer = function(taker_pays, taker_gets, cmd, logger, callback) {
+    var self = this;
+
+    exeCmd(cmd, function(cmdResult) {
+        if (cmdResult.length == 0) {
+            throw new Error("it is weird we get empty book!!!");
+        }
+
+        if (cmdResult[0].Account != self.accountId) {
+            console.log("first order owner is ", cmdResult[0].Account);
+            self.createOffer(taker_pays, taker_gets, logger, false, callback);
+        } else {
+            if (callback) {
+                callback("our order in the first place!");
+            }
+        }
+    });
+}
+
+OfferService.prototype.canCreateDCPOffers = function(cmds, i, callback) {
+    var self = this;
+
+    if (cmds.length > i) {
+        var cmd = cmds[i];
+        exeCmd(cmd, function(result) {
+            if (result.length == 0) {
+                throw new Error("it is weird we get empty book!!!");
+            }
+
+            if (result[0].Account == self.accountId) {
+                var taker_pays = result[0].TakerPays;
+                var taker_gets = result[0].TakerGets;
+
+                var sbo = findSameBookOffer(self.offers, taker_pays, taker_gets);
+                if (sbo && sbo.length > 0) {
+                    console.log(" find same book offers:", sbo.length);
+                    self.cancelOffers(sbo, 0, function() {
+                        console.log("cancel offers for dcp");
+                        if (callback) {
+                            callback(false);
+                        }
+                    });
+                }
+            } else {
+                i = i + 1;
+                self.canCreateDCPOffers(cmds, i, callback);
+            }
+        });
+    } else {
+        if (callback) {
+            callback(true)
+        }
+    }
 }
 
 OfferService.prototype.createFirstOffer = function(taker_pays, taker_gets, removeOld, cmd, logger, callback) {

@@ -29,15 +29,22 @@ AmountUtil.prototype.isVolumnAllowed = function(amount) {
 
     var min_volumn = profit_min_volumns[currency];
 
+    var isAllow;
     if (min_volumn) {
         if (currency == "XRP") {
-            return min_volumn - amount < 0;
+            isAllow = min_volumn - amount < 0;
+            if (!isAllow) {
+                console.log(currency + " min_volumn:" + min_volumn, "real volumn:" + amount)
+            }
         } else {
-            return min_volumn - amount.value < 0;
+            isAllow = min_volumn - amount.value < 0;
+            if (!isAllow) {
+                console.log(currency + " min_volumn:" + min_volumn, "real volumn:" + amount.value);
+            }
         }
     }
 
-    return true;
+    return isAllow;
 }
 
 AmountUtil.prototype.minAmount = function(amounts) {

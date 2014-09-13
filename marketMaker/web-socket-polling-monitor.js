@@ -54,10 +54,6 @@ function checkOrdersForSameCurrency(orders) {
     }
 
     _.each(orders, function(order) {
-        if (order.Account == account) {
-            return;
-        }
-
         var expect_profit = pu.getProfitRate(order, profit_rate);
         console.log(currency + " real_profit:" + order.quality, order.TakerPays.issuer, order.TakerGets.issuer);
         if (order.quality - 0 < expect_profit) {
@@ -78,10 +74,6 @@ function checkOrdersForDiffCurrency(orders) {
         var gets_issuer = au.getIssuer(order.TakerGets);
         var pays_currency = au.getCurrency(order.TakerPays);
         var pays_issuer = au.getIssuer(order.TakerPays);
-
-        if (order.Account == account) {
-            return;
-        }
 
         if (gets_currency == currency1 && pays_currency == currency2) {
             order.quality = au.getPrice(order, pays_currency, gets_currency);
@@ -264,7 +256,7 @@ function goNext() {
             "params": {},
             "limit": 1,
             "filter": 1,
-            "cache": 1
+            "cache": 0
         }
 
         if (currency1 == currency2) {
