@@ -35,6 +35,7 @@ var osjs;
 var Amount = ripple.Amount;
 var remote = rsjs.getRemote();
 
+var drops = config.drops;
 var transfer_rates = config.transfer_rates;
 var first_order_allow_volumns = config.first_order_allow_volumns;
 
@@ -119,7 +120,7 @@ function listenProfitOrder() {
             console.log("handle key:", oldOne.key);
             oldOne.handled = true;
             firstOrderMap.push(oldOne);
-            // emitter.emit('makeFirstOrderProfit', oldOne.orders, 0);
+            emitter.emit('makeFirstOrderProfit', oldOne.orders, 0);
             return;
         }
 
@@ -134,7 +135,7 @@ function listenProfitOrder() {
             firstOrderMap = _.without(firstOrderMap, needHandle);
             needHandle.handled = true;
             firstOrderMap.push(needHandle);
-            // emitter.emit('makeFirstOrderProfit', needHandle.orders, 0);
+            emitter.emit('makeFirstOrderProfit', needHandle.orders, 0);
         } else {
             console.log("all are handled!! go next round!!");
             firstOrderMap = {};
@@ -227,8 +228,14 @@ function rebuildFirstOrder(order) {
     if (order.TakerPays.value) {
         order.TakerPays.value = gets_value * order.quality + "";
     } else {
-        order.TakerPays = gets_value * order.quality + "";
+        order.TakerPays = math.round(gets_value * order.quality, 6) + "";
     }
+
+    if (gets_currency == "XRP") {
+        order.TakerPays.value = order.TakerPays.value / drops + "";
+
+    }
+
 
     au.product(order.TakerGets, 1.000001);
 

@@ -1,6 +1,3 @@
-var Logger = require('./new-logger.js').Logger;
-var fopmLogger = new Logger('web-socket-offer');;
-
 var io = require('socket.io').listen(3006);
 var wsio = io.of('/ws');
 
@@ -24,6 +21,7 @@ tfm.getFirstOrders(function(fos) {
 var Loop = require('./loop-util.js').Loop;
 var ProfitUtil = require('./profit-util.js').ProfitUtil;
 var AmountUtil = require('./amount-util.js').AmountUtil;
+var exeCmd = require('./web-socket-book-util.js').exeCmd;
 var OfferService = require('./offer-service.js').OfferService;
 var queryBookByOrder = require('./query-book.js').queryBookByOrder;
 var TrustLineService = require('./trust-line-service.js').TrustLineService;
@@ -43,28 +41,6 @@ var same_currency_profit = config.same_currency_profit;
 var same_currency_issuers = config.same_currency_issuers;
 var first_order_currencies = config.first_order_currencies;
 var first_order_allow_issuers = config.first_order_allow_issuers;
-
-function checkOrdersForSameCurrency(orders) {
-    var currency = currencies[cIndexSet[0]];
-    var same_currency_allow = _.keys(same_currency_issuers);
-
-    if (!_.contains(same_currency_allow, currency)) {
-        return;
-    }
-
-    _.each(orders, function(order) {
-        if (order.Account == account) {
-            return;
-        }
-
-        var expect_profit = pu.getProfitRate(order, profit_rate);
-        console.log(currency + " real_profit:" + order.quality, order.TakerPays.issuer, order.TakerGets.issuer);
-        if (order.quality - 0 < expect_profit) {
-            scpLogger.log(true, "same currency profit", order);
-            wsio.emit('scp', order);
-        }
-    });
-}
 
 function checkOrdersForDiffCurrency(orders) {
     console.log("get orders number:", orders.length);
@@ -153,37 +129,11 @@ function checkOrders(orders) {
     goNext();
 }
 
-var wsConnected = false;
-var ws;
 
-function connectWS(uri) {
-    ws = new WebSocket(uri);
-    ws.on('open', function() {
-        wsConnected = true;
-        goNext();
-    });
-    ws.on('message', function(data, flags) {
-        var books = JSON.parse(data);
-        var orders = _.flatten(books);
-        if (orders.length == 0 || orders.length == 1) {
-            cIndexSet = cLoop.next(cIndexSet, first_offer_currency_size);
-            goNext();
-            return;
-        } else {
-            checkOrders(orders);
-        }
-    });
-    ws.on('close', function() {
-        wsConnected = false;
-        ws.close();
-        connectWS(uri);
-    });
-}
+var cLoop = new Loop([0, 1]);
+cLoop.allowSameIndex(false);
 
-var cLoop = new Loop([0, 0]);
-cLoop.allowSameIndex(true);
-
-var cIndexSet = [0, 0];
+var cIndexSet = [0, 1];
 var first_offer_currency_size = first_order_currencies.length;
 
 function goNext() {
@@ -192,11 +142,11 @@ function goNext() {
     }
 
     if (cLoop.isCycle()) {
-        cLoop = new Loop([0, 0]);
-        cLoop.allowSameIndex(true);
-        cIndexSet = [0, 0];
+        cLoop = new Loop([0, 1]);
+        cLoop.allowSameIndex(false);
+        cIndexSet = [0, 1];
         console.log("query done!!next round would be start in 5 seconds!");
-        setTimeout(goNext, 1000 * 5);
+        setTimeout(goNext, 1000 * 15);
         return;
     }
 
@@ -205,35 +155,37 @@ function goNext() {
     var cur1_issuers = first_order_allow_issuers[currency1];
     var cur2_issuers = first_order_allow_issuers[currency2];
 
-    if (wsConnected) {
-        var req = {
-            "cmd": "book",
-            "params": {},
-            "limit": 1,
-            "filter": 1,
-            "cache": 0
-        }
-
-        if (currency1 == currency2) {
-            req.filter = 0;
-        }
-
-        req.params[currency1] = cur1_issuers;
-        req.params[currency2] = cur2_issuers;
-
-        console.log(currency1, currency2);
-
-        ws.send(JSON.stringify(req));
-    } else {
-        console.log("WebSocket is broken!");
+    var req = {
+        "cmd": "book",
+        "params": {},
+        "limit": 1,
+        "filter": 1,
+        "cache": 0
     }
+
+    if (currency1 == currency2) {
+        req.filter = 0;
+    }
+
+    req.params[currency1] = cur1_issuers;
+    req.params[currency2] = cur2_issuers;
+
+    console.log(currency1, currency2);
+
+    exeCmd(req, function(orders) {
+        if (orders.length == 0 || orders.length == 1) {
+            cIndexSet = cLoop.next(cIndexSet, first_offer_currency_size);
+            goNext();
+            return;
+        } else {
+            checkOrders(orders);
+        }
+    })
 }
 
 var account;
 console.log("step1:getAccount!")
 tfmjs.getAccount(config.marketMaker, function(result) {
     account = result.account;
-    tfmjs.getEnv(function(result) {
-        connectWS(result.wspm);
-    })
+    goNext();
 });

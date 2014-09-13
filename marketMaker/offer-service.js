@@ -179,7 +179,7 @@ OfferService.prototype.createFirstOffer = function(taker_pays, taker_gets, remov
             }
 
             if (cmdResult[0].Account != self.accountId) {
-                console.log("first order owner is ", cmdResult[0].Account);
+                console.log("first order owner:", cmdResult[0].Account);
                 var results = findSameBookOffer(self.offers, taker_pays, taker_gets);
                 if (results && results.length > 0) {
                     console.log("find same book offers:", results.length);
@@ -245,12 +245,24 @@ OfferService.prototype.cancelOffers = function(offersToCancel, i, callback) {
     }
 }
 
+function logOffer(offer) {
+    var offer_taker_pays_issuer = au.getIssuer(offer.taker_pays);
+    var offer_taker_gets_issuer = au.getIssuer(offer.taker_gets);
+    var offer_taker_pays_currency = au.getCurrency(offer.taker_pays);
+    var offer_taker_gets_currency = au.getCurrency(offer.taker_gets);
+
+
+    console.log("offer:" + offer_taker_pays_currency + "(" + offer_taker_pays_issuer + ")->" +
+        offer_taker_gets_currency + "(" + offer_taker_gets_issuer + ")");
+}
+
 OfferService.prototype.cancelOffer = function(offer, callback) {
     var self = this;
 
     console.log("start to cancel offer:" + offer.seq);
     self.remote.transaction().offerCancel(self.accountId, offer.seq).secret(self.secret).on('success', function() {
-        console.log('offer Cancel success!!!', offer);
+        console.log('offer Cancel success!!!');
+        logOffer(offer);
 
         self.offers = _.without(self.offers, _.findWhere(self.offers, {
             'seq': offer.seq
