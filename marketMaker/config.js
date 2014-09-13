@@ -67,7 +67,7 @@ exports.same_currency_issuers = {
 exports.same_currency_profit = ["CNY"];
 exports.same_issuer_profit = ["rNPRNzBB92BVpAhhZr4iXDTveCgV5Pofm9"];
 
-exports.first_order_currencies = ["CNY", "JPY", "XRP"];
+exports.first_order_currencies = ["CNY", "JPY", "XRP", "USD"];
 exports.first_order_allow_volumns = {
     "CNY": "10",
     "JPY": "100",
