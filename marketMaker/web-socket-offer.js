@@ -384,7 +384,7 @@ function makeProfit(order1, order2) {
 //     }
 // }
 
-setTimeout(prepareRestart, 1000 * 60 * 10);
+setTimeout(prepareRestart, 1000 * 60 * 60);
 
 function prepareRestart() {
     emitter.removeAllListeners('makeProfit');
