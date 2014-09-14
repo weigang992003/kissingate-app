@@ -155,7 +155,7 @@ function makeFirstOrderProfit(orders, i) {
         order = rebuildFirstOrder(order);
 
         var order_gets_balance = tls.getBalance(au.getIssuer(order.TakerGets), au.getCurrency(order.TakerGets));
-        if (order_gets_balance.is_zero()) {
+        if (au.isVolumnAllowed(order_gets_balance)) {
             console.log("lack of money to create first order!!!", order);
             if (orders.length == i + 1) {
                 emitter.once('makeFirstOrderProfit', makeFirstOrderProfit);
