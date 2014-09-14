@@ -3,10 +3,11 @@ var math = require('mathjs');
 var aim = require('./account-info-manager.js');
 var Amount = require('./amount-util.js').Amount;
 var AmountUtil = require('./amount-util.js').AmountUtil;
-var exeCmd = require('./web-socket-book-util.js').exeCmd;
+var WSBookUtil = require('./web-socket-book-util.js').WSBookUtil;
 var FirstOrderUtil = require('./first-order-util.js').FirstOrderUtil;
 
 var au = new AmountUtil();
+var wsbu = new WSBookUtil();
 var fou = new FirstOrderUtil();
 
 function OfferService(r, a, s) {
@@ -117,7 +118,7 @@ OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, cr
 OfferService.prototype.createSCPOffer = function(taker_pays, taker_gets, cmd, logger, callback) {
     var self = this;
 
-    exeCmd(cmd, function(cmdResult) {
+    wsbu.exeCmd(cmd, function(cmdResult) {
         if (cmdResult.length == 0) {
             throw new Error("it is weird we get empty book!!!");
         }
@@ -138,7 +139,7 @@ OfferService.prototype.canCreateDCPOffers = function(cmds, i, callback) {
 
     if (cmds.length > i) {
         var cmd = cmds[i];
-        exeCmd(cmd, function(result) {
+        wsbu.exeCmd(cmd, function(result) {
             if (result.length == 0) {
                 throw new Error("it is weird we get empty book!!!");
             }
@@ -173,7 +174,7 @@ OfferService.prototype.createFirstOffer = function(taker_pays, taker_gets, remov
     var self = this;
 
     if (removeOld) {
-        exeCmd(cmd, function(cmdResult) {
+        wsbu.exeCmd(cmd, function(cmdResult) {
             if (cmdResult.length == 0) {
                 throw new Error("it is weird we get empty book!!!");
             }

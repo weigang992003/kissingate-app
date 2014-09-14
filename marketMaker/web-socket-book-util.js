@@ -2,44 +2,58 @@ var WebSocket = require('ws');
 var _ = require('underscore');
 var tfmjs = require('./the-future-manager.js');
 
-var ws;
-var wsConnected;
+function WSBookUtil() {
+    this.ws;
+    this.timer;
+    this.wsConnected;
+}
 
-function connect(callback) {
+WSBookUtil.prototype.connect = function(callback) {
+    var self = this;
+    var ws = self.ws;
+
     tfmjs.getEnv(function(result) {
         ws = new WebSocket(result.wspm);
         ws.on('open', function() {
-            wsConnected = true;
+            self.wsConnected = true;
+            self.ws = ws;
             if (callback) {
                 callback();
             }
         });
 
         ws.on('close', function() {
-            wsConnected = false;
+            self.wsConnected = false;
             ws.close();
-            connect();
+            self.connect();
         });
     })
-}
+};
 
-function exeCmd(cmd, callback) {
+WSBookUtil.prototype.exeCmd = function(cmd, callback) {
+    var self = this;
+    var timer = this.timer;
+    var wsConnected = this.wsConnected;
+
     if (timer) {
         clearTimeout(timer);
     }
 
     if (wsConnected) {
-        exe(cmd, callback);
+        self.exe(cmd, callback);
     } else {
-        connect(function() {
-            exe(cmd, callback);
+        self.connect(function() {
+            self.exe(cmd, callback);
         });
     }
-}
+};
 
-var timer;
 
-function exe(cmd, callback) {
+WSBookUtil.prototype.exe = function(cmd, callback) {
+    var self = this;
+    var ws = this.ws;
+    var timer = this.timer;
+
     ws.once('message', function(data, flags) {
         if (timer) {
             clearTimeout(timer);
@@ -56,15 +70,17 @@ function exe(cmd, callback) {
 
     ws.send(JSON.stringify(cmd));
 
-    timer = setTimeout(function() {
+    self.timer = setTimeout(function() {
         ws.removeAllListeners('message');
-        exeCmd(cmd, callback);
+        self.exeCmd(cmd, callback);
     }, 3000);
 }
 
-exports.exeCmd = exeCmd;
+exports.WSBookUtil = WSBookUtil;
 
-// exeCmd({
+
+// var wsbu = new WSBookUtil();
+// wsbu.exeCmd({
 //     "cmd": "book",
 //     "params": {
 //         "CNY": ["rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y"],
@@ -72,7 +88,7 @@ exports.exeCmd = exeCmd;
 //     },
 //     "limit": 1,
 //     "filter": 0,
-//     "cache": 0
+//     "cache": 1
 // }, function(orders) {
 //     console.log(orders);
 // })

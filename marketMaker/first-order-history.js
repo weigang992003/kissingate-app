@@ -37,10 +37,13 @@ var Remote = ripple.Remote;
 var Amount = ripple.Amount;
 var _ = require('underscore');
 
+var au = require('./amount-util.js').AmountUtil();
 var config = require('../marketMaker/config.js');
 var cryptoUtil = require('../marketMaker/crypto-util.js');
 var theFuture = require('./the-future-manager.js');
 
+var AccountInfoManager = require('./account-info-manager.js').AccountInfoManager;
+var aim = new AccountInfoManager();
 
 var accountIncomes;
 theFuture.getAccountIncomes(function(results) {
@@ -108,7 +111,22 @@ function incomeStatis(err, result) {
                 return;
             }
             if (modifiedNode.LedgerEntryType == "Offer") {
+                var finalFields = modifiedNode.FinalFields;
+                if (finalFields && finalFields.Account == account) {
+                    var previousFields = modifiedNode.PreviousFields;
+                    var price = au.calPrice(previousFields.TakerPays, previousFields.TakerGets);
+                    price = au.toExp(price);
 
+                    var th = {};
+                    th.hashs = [tx.tx.hash],
+                    th.account = result.account;
+                    th.i_pays_currency = au.getCurrency(finalFields.TakerGets);
+                    th.i_gets_currency = au.getCurrency(finalFields.TakerPays);
+                    th.i_pays_value = au.getValue(previousFields.TakerGets) - au.getValue(finalFields.TakerGets);
+                    th.i_gets_value = au.getValue(previousFields.TakerPays) - au.getValue(finalFields.TakerPays);
+
+                    aim.saveTH(th);
+                }
             }
             if (modifiedNode.LedgerEntryType == "AccountRoot") {
                 var finalFields = modifiedNode.FinalFields;

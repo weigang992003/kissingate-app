@@ -17,6 +17,10 @@ AmountUtil.prototype.calPrice = function(pays, gets) {
     return math.round(pays.value / gets.value, 15);
 };
 
+AmountUtil.prototype.toExp = function(price) {
+    return (price - 0).toExponential();
+}
+
 AmountUtil.prototype.isVolumnAllowed = function(amount) {
     if (amount instanceof Amount) {
         if (amount.is_zero()) {
@@ -61,6 +65,14 @@ AmountUtil.prototype.getPrice = function(order, pays_currency, gets_currency) {
 
 AmountUtil.prototype.getCurrency = function(amountJson) {
     return getCurrency(amountJson);
+}
+
+AmountUtil.prototype.getValue = function(amountJson) {
+    if (getCurrency(amountJson) == "XRP") {
+        return amountJson;
+    } else {
+        return amountJson.value;
+    }
 }
 
 AmountUtil.prototype.setValue = function(src_amount, dst_amount) {
