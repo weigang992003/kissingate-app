@@ -123,8 +123,13 @@ OfferService.prototype.createSCPOffer = function(taker_pays, taker_gets, cmd, lo
             throw new Error("it is weird we get empty book!!!");
         }
 
-        if (cmdResult[0].Account != self.accountId) {
-            console.log("first order owner is ", cmdResult[0].Account);
+        var sameBookO = _.find(cmdResult, function(o) {
+            return au.getIssuer(taker_pays) == au.getIssuer(o.TakerPays) &&
+                au.getIssuer(taker_gets) == au.getIssuer(o.TakerGets);
+        })
+
+        if (sameBookO.Account != self.accountId) {
+            console.log("first order owner is ", sameBookO.Account);
             self.createOffer(taker_pays, taker_gets, logger, false, callback);
         } else {
             if (callback) {
