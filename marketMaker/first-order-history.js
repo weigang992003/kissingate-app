@@ -1,64 +1,46 @@
-// {
-//     "ModifiedNode": {
-//         "FinalFields": {
-//             "Account": "rHaLk9zSC1JPmbDiWAgWTgjcEacHzGbqf",
-//             "BookDirectory": "49789A0B460DC77A2CED9349C432AEA97352345BA3C7313A5C0C403049B90D00",
-//             "BookNode": "0000000000000000",
-//             "Flags": 0,
-//             "OwnerNode": "0000000000000000",
-//             "Sequence": 34380,
-//             "TakerGets": {
-//                 "currency": "CNY",
-//                 "issuer": "rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y",
-//                 "value": "4.9709999999826"
-//             },
-//             "TakerPays": "171413793"
-//         },
-//         "LedgerEntryType": "Offer",
-//         "LedgerIndex": "CB8FF678D3AD4DDEFC897A3F7F49EAB8085862CAAC72AA06C6802DB6A0D0C24C",
-//         "PreviousFields": {
-//             "TakerGets": {
-//                 "currency": "CNY",
-//                 "issuer": "rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y",
-//                 "value": "5"
-//             },
-//             "TakerPays": "172413793"
-//         },
-//         "PreviousTxnID": "9725CDCA1FEABF8F4AFCC7A2601A9F660B2638966A154C04112D5254D8E5FBDE",
-//         "PreviousTxnLgrSeq": 8863880
-//     }
-// }
+var Logger = require('./new-logger.js').Logger;
+var fohLogger = new Logger('first-order-history');
 
-var http = require('http');
 var ripple = require('../src/js/ripple');
 var jsbn = require('../src/js/jsbn/jsbn.js');
 
 var Remote = ripple.Remote;
 var Amount = ripple.Amount;
+
 var _ = require('underscore');
-
-var au = require('./amount-util.js').AmountUtil();
 var config = require('../marketMaker/config.js');
-var cryptoUtil = require('../marketMaker/crypto-util.js');
-var theFuture = require('./the-future-manager.js');
 
+var AmountUtil = require('./amount-util.js').AmountUtil;
 var AccountInfoManager = require('./account-info-manager.js').AccountInfoManager;
+
+var au = new AmountUtil();
 var aim = new AccountInfoManager();
 
-var accountIncomes;
-theFuture.getAccountIncomes(function(results) {
-    if (results) {
-        console.log("accountIncomes:", results);
-        accountIncomes = results;
-        remoteConnect();
-    }
-});
+var drops = config.drops;
 
-var accountIndex = -1;
-var accountIncome;
 var ledger_current_index;
 var ledger_index_start;
 var ledger_index_end;
+var account;
+
+var remote = new Remote({
+    // see the API Reference for available options
+    // trace: true,
+    trusted: true,
+    local_signing: true,
+    local_fee: true,
+    fee_cushion: 1.5,
+    max_fee: 100,
+    servers: [{
+        host: 's-west.ripple.com',
+        port: 443,
+        secure: true
+    }, {
+        host: 's-east.ripple.com',
+        port: 443,
+        secure: true
+    }]
+});
 
 function remoteConnect() {
     remote.connect(function() {
@@ -66,31 +48,31 @@ function remoteConnect() {
         remote.requestLedgerCurrent(function(err, result) {
             if (err) throw new Error(err);
             ledger_current_index = result.ledger_current_index;
-            goNextAccount();
+            console.log("ledger_current_index:", ledger_current_index);
+
+            aim.getLedgerIndexStart("th", function(result) {
+                console.log(result);
+                account = result.account;
+                ledger_index_start = result.index;
+                console.log("ledger_index_start:", ledger_index_start);
+                goNext();
+            });
         });
     });
 }
 
-function goNextAccount() {
-    accountIndex++;
-    if (accountIncomes.length > accountIndex) {
-        accountIncome = accountIncomes[accountIndex];
-        goNext();
-    } else {
-        close();
-    }
-}
+remoteConnect();
 
 function goNext() {
-    ledger_index_start = accountIncome.ledger_index_start;
     if (ledger_index_start > ledger_current_index) {
-        goNextAccount();
+        console.log("query tx history done!!!");
+        return;
     }
-    ledger_index_end = ledger_index_start + 1000;
-    ledger_index_end = ledger_index_end > ledger_current_index ? ledger_current_index : ledger_index_end,
+    ledger_index_end = ledger_index_start + 100;
+    ledger_index_end = ledger_index_end > ledger_current_index ? ledger_current_index : ledger_index_end;
 
-    remote.requestAccountTx({
-        'account': accountIncome.account,
+    var cmd = {
+        'account': account,
         'ledger_index_min': ledger_index_start,
         'ledger_index_max': ledger_index_end,
         "binary": false,
@@ -98,24 +80,85 @@ function goNext() {
         "descending": false,
         "offset": 0,
         "forward": false
-    }, incomeStatis);
+    }
+
+    console.log(cmd);
+
+    remote.requestAccountTx(cmd, doStatis);
 }
 
-function incomeStatis(err, result) {
-    var incomes = {};
-    var account = accountIncome.account;
+function doStatis(err, result) {
+    if (err) {
+        throw new Error(err);
+    }
     _.each(result.transactions, function(tx) {
+        console.log(tx.tx.hash);
+        if (tx.tx.Account == account && tx.tx.TransactionType == "OfferCreate") {
+            var th = {};
+            th.hashs = [tx.tx.hash],
+            th.account = result.account;
+
+            _.each(tx.meta.AffectedNodes, function(affectedNode) {
+                var modifiedNode = affectedNode.ModifiedNode;
+                if (!modifiedNode) {
+                    return;
+                }
+
+                if (modifiedNode.LedgerEntryType == "Offer") {
+                    var finalFields = modifiedNode.FinalFields;
+                    if (finalFields) {
+                        var previousFields = modifiedNode.PreviousFields;
+
+                        th.i_pays_currency = au.getCurrency(finalFields.TakerPays);
+                        th.i_gets_currency = au.getCurrency(finalFields.TakerGets);
+
+                        var new_pays_value = au.getValue(previousFields.TakerPays) - au.getValue(finalFields.TakerPays);
+                        if (th.i_pays_value) {
+                            th.i_pays_value = th.i_pays_value + new_pays_value;
+                        } else {
+                            th.i_pays_value = new_pays_value;
+                        }
+
+                        var new_gets_value = au.getValue(previousFields.TakerGets) - au.getValue(finalFields.TakerGets);
+                        if (th.i_gets_value) {
+                            th.i_gets_value = th.i_gets_value + new_gets_value;
+                        } else {
+                            th.i_gets_value = new_gets_value;
+                        }
+
+                    }
+                }
+            });
+
+            if (th.i_pays_value && th.i_gets_value) {
+                if (th.i_pays_currency == "XRP") {
+                    th.i_pays_value = th.i_pays_value / drops;
+                }
+                if (th.i_gets_currency == "XRP") {
+                    th.i_gets_value = th.i_gets_value / drops;
+                }
+
+                th.price = au.toExp(th.i_pays_value / th.i_gets_value);
+                console.log(th);
+                aim.saveTH(th);
+            }
+            return;
+        }
+
         _.each(tx.meta.AffectedNodes, function(affectedNode) {
             var modifiedNode = affectedNode.ModifiedNode;
             if (!modifiedNode) {
                 return;
             }
+
             if (modifiedNode.LedgerEntryType == "Offer") {
                 var finalFields = modifiedNode.FinalFields;
                 if (finalFields && finalFields.Account == account) {
                     var previousFields = modifiedNode.PreviousFields;
-                    var price = au.calPrice(previousFields.TakerPays, previousFields.TakerGets);
-                    price = au.toExp(price);
+
+                    if (!previousFields.TakerPays || !previousFields.TakerGets) {
+                        return;
+                    }
 
                     var th = {};
                     th.hashs = [tx.tx.hash],
@@ -125,100 +168,43 @@ function incomeStatis(err, result) {
                     th.i_pays_value = au.getValue(previousFields.TakerGets) - au.getValue(finalFields.TakerGets);
                     th.i_gets_value = au.getValue(previousFields.TakerPays) - au.getValue(finalFields.TakerPays);
 
+                    if (th.i_pays_currency == "XRP") {
+                        th.i_pays_value = th.i_pays_value / drops;
+                    }
+                    if (th.i_gets_currency == "XRP") {
+                        th.i_gets_value = th.i_gets_value / drops;
+                    }
+
+                    th.price = au.toExp(th.i_pays_value / th.i_gets_value);
+
+                    console.log(th);
                     aim.saveTH(th);
                 }
             }
-            if (modifiedNode.LedgerEntryType == "AccountRoot") {
-                var finalFields = modifiedNode.FinalFields;
-                if (finalFields && finalFields.Account == account) {
-                    var previousFields = modifiedNode.PreviousFields;
-                    var income = finalFields.Balance - previousFields.Balance;
-                    if (incomes.XRP) {
-                        incomes.XRP = income + incomes.XRP;
-                    } else {
-                        incomes.XRP = income;
-                    }
-                }
-            }
-            if (modifiedNode.LedgerEntryType == "RippleState") {
-                var finalFields = modifiedNode.FinalFields;
-                if (finalFields && finalFields.HighLimit.issuer == account) {
-
-                    var currency = finalFields.Balance.currency;
-
-                    var previousFields = modifiedNode.PreviousFields;
-
-                    var income = previousFields.Balance.value - finalFields.Balance.value;
-                    if (incomes[currency]) {
-                        incomes[currency] = income + incomes[currency];
-                    } else {
-                        incomes[currency] = income;
-                    }
-                }
-
-                if (finalFields && finalFields.LowLimit.issuer == account) {
-                    var currency = finalFields.Balance.currency;
-
-                    var previousFields = modifiedNode.PreviousFields;
-
-                    var income = finalFields.Balance.value - previousFields.Balance.value;
-                    if (incomes[currency]) {
-                        incomes[currency] = income + incomes[currency];
-                    } else {
-                        incomes[currency] = income;
-                    }
-                }
-            }
-
         });
     });
 
-    console.log(incomes);
-    if (_.isEmpty(incomes)) {
-        accountIncome.ledger_index_start = ledger_index_end + 1;
-        theFuture.saveAccountIncome(accountIncome);
-        console.log("current ledger_index_start:", accountIncome.ledger_index_start);
+    ledger_index_start = ledger_index_end;
 
+    console.log("save ledger_index_start!!");
+
+    aim.saveLIS({
+        action: 'th',
+        account: account,
+        index: ledger_index_start
+    }, function() {
         goNext();
-        return;
-
-    }
-    var currencies = _.keys(incomes);
-
-    _.each(currencies, function(currency) {
-        var income = _.find(accountIncome.incomes, function(income) {
-            return income.currency == currency;
-        });
-
-        if (income) {
-            accountIncome.incomes = _.without(accountIncome.incomes, income);
-            income.income = (incomes[currency].toFixed(15) - 0) + (income.income - 0);
-            income.income = income.income + "";
-            accountIncome.incomes.push(income);
-        } else {
-            accountIncome.incomes.push({
-                'currency': currency,
-                'income': incomes[currency].toFixed(15)
-            })
-        }
     });
-
-    console.log(accountIncome.incomes);
-
-    accountIncome.ledger_index_start = ledger_index_end + 1;
-    console.log("current ledger_index_start:", accountIncome.ledger_index_start);
-    theFuture.saveAccountIncome(accountIncome);
-
-    goNext();
-
 }
 
-setTimeout(close, 1000 * 60 * 60);
 
 
-function close() {
-    remote.disconnect(function() {
-        console.log("disconnect");
-        process.exit(1);
-    })
-}
+// setTimeout(close, 1000 * 60 * 60);
+
+
+// function close() {
+//     remote.disconnect(function() {
+//         console.log("disconnect");
+//         process.exit(1);
+//     })
+// }

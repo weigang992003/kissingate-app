@@ -34,45 +34,101 @@ var txHistorySchema = mongoose.Schema({
     collection: 'txHisotry'
 });
 
+var ledgerIndexStartSchema = mongoose.Schema({
+    action: String,
+    account: String,
+    index: Number
+}, {
+    collection: 'ledgerIndexStart'
+});
+
 var txHisotry = ai.model('txHisotry', txHistorySchema);
 var balanceHistory = ai.model('balanceHistory', balanceHistorySchema);
+var ledgerIndexStart = ai.model('ledgerIndexStart', ledgerIndexStartSchema);
 
 function AccountInfoManager() {}
 
 AccountInfoManager.prototype.saveTH = function(record) {
-    var row = new txHisotry(record);
-    row.save(record);
+    txHisotry.findOne({
+        account: record.account,
+        i_pays_currency: record.i_pays_currency,
+        i_gets_currency: record.i_gets_currency
+    }, function(err, result) {
+        if (result) {
+            result.i_pays_value = result.i_pays_value + record.i_pays_value;
+            result.i_gets_value = result.i_gets_value + record.i_gets_value;
+            result.hashs = _.union(result.hashs, record.hashs);
+            result.save();
+        } else {
+            var row = new txHisotry(record);
+            row.save(function(err) {
+                throw new Error(err);
+            });
+        }
+    })
 };
 
-function merge(th1, th2) {
-    if (th1.i_pays_currency != th2.i_gets_currency || th2.i_pays_currency != th1.i_gets_currency) {
-        return;
-    }
+AccountInfoManager.prototype.removeTH = function(record) {
+    txHisotry.findOne({
+        account: record.account,
+        i_pays_currency: record.i_pays_currency,
+        i_gets_currency: record.i_gets_currency
+    }, function(err, result) {
+        if (result) {
+            result.remove();
+        }
+    })
+}
 
-    var th = {};
-    th.hashs = _.union(th1.hashs, th2.hashs);
-    th.account = th1.account;
-
-    //case1 i_pays_value of th1 bigger then gets_value and i_gets_value of th1 bigger then pays_value of th2
-    //1 USD ->6 CNY 3CNY -> 0.5 USD
-    //when has profit between th1 and th2, or th1>=th2 or th2>th1
-    if (th1.price * th2.price < 1) {
-        if (th1.i_pays_value - th2.i_gets_value >= 0 && th1.i_gets_value - th2.i_pays_value >= 0) {
-            th.i_pays_currency = th1.i_pays_currency;
-            th.i_gets_currency = th1.i_gets_currency;
-            th.i_pays_value = th1.i_pays_currency - th2.i_gets_value;
-            th.i_gets_value = th1.i_gets_value - th2.i_pays_value;
-            th.price = (th.i_pays_value / th.i_gets_value).toExponential();
-        } else {
-            th.i_pays_currency = th2.i_pays_currency;
-            th.i_gets_currency = th2.i_gets_currency;
-            th.i_pays_value = th2.i_pays_currency - th1.i_gets_value;
-            th.i_gets_value = th2.i_gets_value - th1.i_pays_value;
-            th.price = (th.i_pays_value / th.i_gets_value).toExponential();
+AccountInfoManager.prototype.getLedgerIndexStart = function(action, callback) {
+    ledgerIndexStart.findOne({
+        'action': action
+    }, function(err, result) {
+        if (err) {
+            throw new Error(err);
         }
 
-        return th;
-    }
+        if (result && callback) {
+            callback(result);
+        }
+    });
+};
+
+AccountInfoManager.prototype.saveLIS = function(record, callback) {
+    ledgerIndexStart.findOne({
+        action: record.action,
+        account: record.account
+    }, function(err, result) {
+        if (result) {
+            result.index = record.index;
+            result.save();
+        } else {
+            var row = new ledgerIndexStart(record);
+            row.save(function(err) {
+                throw new Error(err);
+            });
+        }
+
+        if (callback) {
+            callback();
+        }
+    });
+}
+
+AccountInfoManager.prototype.getTH = function(account, i_pays_currency, i_gets_currency, callback) {
+    txHisotry.findOne({
+        account: account,
+        i_pays_currency: i_pays_currency,
+        i_gets_currency: i_gets_currency
+    }, function(err, result) {
+        if (err) {
+            throw new Error(err);
+        }
+
+        if (result && callback) {
+            callback(result);
+        }
+    })
 }
 
 function saveBH(record, minus) {
@@ -137,3 +193,9 @@ function minus(src_amount, reduce_amount) {
 
 exports.saveBH = saveBH;
 exports.AccountInfoManager = AccountInfoManager;
+
+// var aim = new AccountInfoManager();
+// aim.getTH('rf9q1WE2Kdmv9AWtesCaANJyNxnFjp5T7z', 'XRPT', 'USDT', function(result) {
+//     console.log(result);
+//     result.remove();
+// });
