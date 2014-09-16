@@ -25,10 +25,12 @@ var Loop = require('./loop-util.js').Loop;
 var ProfitUtil = require('./profit-util.js').ProfitUtil;
 var AmountUtil = require('./amount-util.js').AmountUtil;
 var OfferService = require('./offer-service.js').OfferService;
+var WSBookUtil = require('./web-socket-book-util.js').WSBookUtil;
 var queryBookByOrder = require('./query-book.js').queryBookByOrder;
 var TrustLineService = require('./trust-line-service.js').TrustLineService;
 
 var au = new AmountUtil();
+var wsbu = new WSBookUtil();
 
 var tls;
 var osjs;
@@ -256,7 +258,7 @@ function goNext() {
             "params": {},
             "limit": 1,
             "filter": 1,
-            "cache": 0
+            "cache": 1
         }
 
         if (currency1 == currency2) {
@@ -294,7 +296,7 @@ function decrypt(encrypted) {
     });
 }
 
-setTimeout(throwDisconnectError, 1000 * 60 * 5);
+setTimeout(throwDisconnectError, 1000 * 60 * 30);
 
 function throwDisconnectError() {
     throw new Error('we are disconnect with ripple network!!!');

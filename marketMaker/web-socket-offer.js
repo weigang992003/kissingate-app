@@ -205,6 +205,8 @@ function buildCmd(order) {
     if (pays_currency == gets_currency) {
         cmd.filter = 0;
         cmd.params[pays_currency] = [pays_issuer, gets_issuer];
+        cmd.params["pays_issuer"] = [pays_issuer];
+        cmd.params["gets_issuer"] = [gets_issuer];
     } else {
         cmd.params[pays_currency] = [pays_issuer];
         cmd.params[gets_currency] = [gets_issuer];

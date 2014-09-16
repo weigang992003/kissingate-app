@@ -83,25 +83,9 @@ OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, cr
         return;
     }
 
-    console.log("create offer:", "taker_pays", taker_pays, "taker_gets", taker_gets);
-    if (logger)
-        logger.log(true, "we are create offer here", "taker_pays", taker_pays, "taker_gets", taker_gets);
-
     tx.offerCreate(accountId, taker_pays, taker_gets);
     tx.on("success", function(res) {
         self.getOffers(callback);
-        // if (createFO) {
-        //     var quality = au.calPrice(taker_pays, taker_gets);
-        //     fou.createFirstOffer({
-        //         status: 'live',
-        //         quality: quality,
-        //         seq: res.transaction.Sequence,
-        //         ledger_index: res.ledger_index,
-        //         account: res.transaction.Account,
-        //         src_currency: au.getCurrency(taker_gets),
-        //         dst_currency: au.getCurrency(taker_pays),
-        //     });
-        // }
     });
 
     tx.on('proposed', function(res) {});
@@ -128,7 +112,7 @@ OfferService.prototype.createSCPOffer = function(taker_pays, taker_gets, cmd, lo
                 au.getIssuer(taker_gets) == au.getIssuer(o.TakerGets);
         })
 
-        if (sameBookO.Account != self.accountId) {
+        if (sameBookO && sameBookO.Account != self.accountId) {
             console.log("first order owner is ", sameBookO.Account);
             self.createOffer(taker_pays, taker_gets, logger, false, callback);
         } else {

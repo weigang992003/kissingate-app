@@ -16,13 +16,14 @@ tfm.getEnv(function(result) {
         var req = {
             cmd: 'book',
             params: {
-                pays_currency: ['JPY'],
+                pays_currency: ['CNY'],
                 gets_currency: ['CNY'],
-                JPY: ['rMAz5ZnK73nyNUL4foAvaxdreczCkG3vA6'],
-                CNY: ['razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA']
+                pays_issuer: ['rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK'],
+                gets_issuer: ['razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA'],
+                CNY: ['razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA', 'rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK']
             },
             limit: 1,
-            filter: 1,
+            filter: 0,
             cache: 0
         }
         ws.send(JSON.stringify(req));

@@ -21,13 +21,13 @@ tfm.getFirstOrders(function(fos) {
 var Loop = require('./loop-util.js').Loop;
 var ProfitUtil = require('./profit-util.js').ProfitUtil;
 var AmountUtil = require('./amount-util.js').AmountUtil;
-var exeCmd = require('./web-socket-book-util.js').exeCmd;
 var OfferService = require('./offer-service.js').OfferService;
+var WSBookUtil = require('./web-socket-book-util.js').WSBookUtil;
 var queryBookByOrder = require('./query-book.js').queryBookByOrder;
 var TrustLineService = require('./trust-line-service.js').TrustLineService;
 
 var au = new AmountUtil();
-
+var wsbu = new WSBookUtil();
 var tls;
 var osjs;
 var pu = new ProfitUtil();
@@ -172,7 +172,7 @@ function goNext() {
 
     console.log(currency1, currency2);
 
-    exeCmd(req, function(orders) {
+    wsbu.exeCmd(req, function(orders) {
         if (orders.length == 0 || orders.length == 1) {
             cIndexSet = cLoop.next(cIndexSet, first_offer_currency_size);
             goNext();
