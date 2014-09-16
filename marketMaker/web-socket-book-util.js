@@ -32,12 +32,11 @@ WSBookUtil.prototype.connect = function(callback) {
 
 WSBookUtil.prototype.exeCmd = function(cmd, callback) {
     var self = this;
-    var timer = this.timer;
-    var wsConnected = this.wsConnected;
-
-    if (timer) {
-        clearTimeout(timer);
+    if (self.timer) {
+        clearTimeout(self.timer);
     }
+
+    var wsConnected = self.wsConnected;
 
     if (wsConnected) {
         self.exe(cmd, callback);
@@ -52,11 +51,10 @@ WSBookUtil.prototype.exeCmd = function(cmd, callback) {
 WSBookUtil.prototype.exe = function(cmd, callback) {
     var self = this;
     var ws = this.ws;
-    var timer = this.timer;
 
     ws.once('message', function(data, flags) {
-        if (timer) {
-            clearTimeout(timer);
+        if (self.timer) {
+            clearTimeout(self.timer);
         }
 
         var books = JSON.parse(data);

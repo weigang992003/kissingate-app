@@ -107,10 +107,12 @@ OfferService.prototype.createSCPOffer = function(taker_pays, taker_gets, cmd, lo
             throw new Error("it is weird we get empty book!!!");
         }
 
-        var sameBookO = _.find(cmdResult, function(o) {
-            return au.getIssuer(taker_pays) == au.getIssuer(o.TakerPays) &&
-                au.getIssuer(taker_gets) == au.getIssuer(o.TakerGets);
-        })
+        sameBookO = cmdResult[0];
+
+        // var sameBookO = _.find(cmdResult, function(o) {
+        //     return au.getIssuer(taker_pays) == au.getIssuer(o.TakerPays) &&
+        //         au.getIssuer(taker_gets) == au.getIssuer(o.TakerGets);
+        // })
 
         if (sameBookO && sameBookO.Account != self.accountId) {
             console.log("first order owner is ", sameBookO.Account);
