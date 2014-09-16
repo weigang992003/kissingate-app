@@ -160,7 +160,7 @@ function goNext() {
         "params": {},
         "limit": 1,
         "filter": 1,
-        "cache": 0
+        "cache": 1
     }
 
     if (currency1 == currency2) {
