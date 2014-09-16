@@ -146,6 +146,20 @@ AccountInfoManager.prototype.getTH = function(account, i_pays_currency, i_gets_c
     })
 }
 
+AccountInfoManager.prototype.getTHByAccount = function(account, callback) {
+    txHisotry.find({
+        account: account
+    }, function(err, results) {
+        if (err) {
+            throw new Error(err);
+        }
+
+        if (results && callback) {
+            callback(results);
+        }
+    })
+}
+
 function saveBH(record, minus) {
     balanceHistory.findOne({
         hash: record.hash,
