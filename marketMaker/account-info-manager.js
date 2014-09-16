@@ -3,6 +3,9 @@ var mongoose = require('mongoose');
 
 var ai = mongoose.createConnection('mongodb://localhost/account-info');
 
+var AmountUtil = require('./amount-util.js').AmountUtil;
+var au = new AmountUtil();
+
 var balanceHistorySchema = mongoose.Schema({
     hash: String,
     account: String,
@@ -48,21 +51,33 @@ var ledgerIndexStart = ai.model('ledgerIndexStart', ledgerIndexStartSchema);
 
 function AccountInfoManager() {}
 
-AccountInfoManager.prototype.saveTH = function(record) {
+AccountInfoManager.prototype.saveTH = function(record, callback) {
     txHisotry.findOne({
         account: record.account,
         i_pays_currency: record.i_pays_currency,
         i_gets_currency: record.i_gets_currency
     }, function(err, result) {
         if (result) {
-            result.i_pays_value = result.i_pays_value + record.i_pays_value;
-            result.i_gets_value = result.i_gets_value + record.i_gets_value;
+            result.i_pays_value = result.i_pays_value - (-record.i_pays_value);
+            result.i_gets_value = result.i_gets_value - (-record.i_gets_value);
             result.hashs = _.union(result.hashs, record.hashs);
-            result.save();
+            result.price = au.toExp(result.i_pays_value / result.i_gets_value);
+            result.save(function(err) {
+                if (err) {
+                    throw new Error(err);
+                } else if (callback) {
+                    callback();
+                }
+
+            });
         } else {
             var row = new txHisotry(record);
             row.save(function(err) {
-                throw new Error(err);
+                if (err) {
+                    throw new Error(err);
+                } else if (callback) {
+                    callback();
+                }
             });
         }
     })

@@ -64,9 +64,8 @@ function remoteConnect() {
 remoteConnect();
 
 function goNext() {
-    if (ledger_index_start > ledger_current_index) {
-        console.log("query tx history done!!!");
-        return;
+    if (ledger_index_start >= ledger_current_index) {
+        throw new Error("query tx history done!!!");
     }
     ledger_index_end = ledger_index_start + 100;
     ledger_index_end = ledger_index_end > ledger_current_index ? ledger_current_index : ledger_index_end;
@@ -82,21 +81,22 @@ function goNext() {
         "forward": false
     }
 
-    console.log(cmd);
+    console.log(ledger_index_start, ledger_index_end);
 
     remote.requestAccountTx(cmd, doStatis);
 }
 
-function doStatis(err, result) {
-    if (err) {
-        throw new Error(err);
-    }
-    _.each(result.transactions, function(tx) {
+function exeStatis(account, transactions, i) {
+    if (transactions.length > i) {
+        var tx = transactions[i];
+        i = i + 1;
+
         console.log(tx.tx.hash);
         if (tx.tx.Account == account && tx.tx.TransactionType == "OfferCreate") {
+            console.log("we are owner of this tx!!");
             var th = {};
             th.hashs = [tx.tx.hash],
-            th.account = result.account;
+            th.account = account;
 
             _.each(tx.meta.AffectedNodes, function(affectedNode) {
                 var modifiedNode = affectedNode.ModifiedNode;
@@ -139,12 +139,20 @@ function doStatis(err, result) {
                 }
 
                 th.price = au.toExp(th.i_pays_value / th.i_gets_value);
-                console.log(th);
-                aim.saveTH(th);
+                console.log("save th!");
+                aim.saveTH(th, function() {
+                    exeStatis(account, transactions, i);
+                });
+            } else {
+                console.log("go next tx!");
+                exeStatis(account, transactions, i);
             }
             return;
         }
 
+        var th = {};
+        th.hashs = [tx.tx.hash],
+        th.account = account;
         _.each(tx.meta.AffectedNodes, function(affectedNode) {
             var modifiedNode = affectedNode.ModifiedNode;
             if (!modifiedNode) {
@@ -160,42 +168,55 @@ function doStatis(err, result) {
                         return;
                     }
 
-                    var th = {};
-                    th.hashs = [tx.tx.hash],
-                    th.account = result.account;
                     th.i_pays_currency = au.getCurrency(finalFields.TakerGets);
                     th.i_gets_currency = au.getCurrency(finalFields.TakerPays);
                     th.i_pays_value = au.getValue(previousFields.TakerGets) - au.getValue(finalFields.TakerGets);
                     th.i_gets_value = au.getValue(previousFields.TakerPays) - au.getValue(finalFields.TakerPays);
-
-                    if (th.i_pays_currency == "XRP") {
-                        th.i_pays_value = th.i_pays_value / drops;
-                    }
-                    if (th.i_gets_currency == "XRP") {
-                        th.i_gets_value = th.i_gets_value / drops;
-                    }
-
-                    th.price = au.toExp(th.i_pays_value / th.i_gets_value);
-
-                    console.log(th);
-                    aim.saveTH(th);
                 }
             }
         });
-    });
 
-    ledger_index_start = ledger_index_end;
+        if (th.i_pays_value && th.i_gets_value) {
+            if (th.i_pays_currency == "XRP") {
+                th.i_pays_value = th.i_pays_value / drops;
+            }
+            if (th.i_gets_currency == "XRP") {
+                th.i_gets_value = th.i_gets_value / drops;
+            }
 
-    console.log("save ledger_index_start!!");
+            th.price = au.toExp(th.i_pays_value / th.i_gets_value);
+            console.log("save th!");
+            aim.saveTH(th, function() {
+                exeStatis(account, transactions, i);
+            });
+        } else {
+            console.log("go next tx!");
+            exeStatis(account, transactions, i);
+        }
+    } else {
+        ledger_index_start = ledger_index_end;
 
-    aim.saveLIS({
-        action: 'th',
-        account: account,
-        index: ledger_index_start
-    }, function() {
-        goNext();
-    });
+        console.log("save ledger_index_start:", ledger_index_start);
+
+        aim.saveLIS({
+            action: 'th',
+            account: account,
+            index: ledger_index_start
+        }, function() {
+            goNext();
+        });
+    }
 }
+
+function doStatis(err, result) {
+    if (err) {
+        throw new Error(err);
+    }
+
+    exeStatis(result.account, result.transactions, 0);
+}
+
+
 
 
 
