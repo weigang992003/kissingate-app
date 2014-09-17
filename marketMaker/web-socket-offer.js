@@ -85,8 +85,8 @@ function remoteConnect(env) {
 
 function listenProfitOrder() {
     console.log("step5:listen to profit socket!");
-    pows.on('dcp', function(order1, order2) {
-        emitter.emit('makeProfit', order1, order2);
+    pows.on('dcp', function(order1, order2, profit) {
+        emitter.emit('makeProfit', order1, order2, profit);
     });
 
     pows.on('scp', function(order) {
@@ -281,8 +281,8 @@ emitter.once('makeProfit', makeProfit);
 emitter.once('makeFirstOrderProfit', makeFirstOrderProfit);
 emitter.once('makeSameCurrencyProfit', makeSameCurrencyProfit);
 
-function makeProfit(order1, order2) {
-    console.log("new data arrived!");
+function makeProfit(order1, order2, profit) {
+    console.log("new data arrived! profit:", profit);
     var order1_taker_pays_issuer = au.getIssuer(order1.TakerPays);
     var order1_taker_gets_issuer = au.getIssuer(order1.TakerGets);
     var order2_taker_pays_issuer = au.getIssuer(order2.TakerPays);

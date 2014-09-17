@@ -115,11 +115,7 @@ function checkOrdersForDiffCurrency(orders) {
             console.log("expect profit rate:" + expect_profit);
 
             if (real_profit < expect_profit) {
-                wsio.emit('dcp', order_type_1, order_type_2);
-
-                dcpLogger.log(true, "sell", order_type_1.TakerPays, "buy", order_type_1.TakerGets,
-                    "sell", order_type_2.TakerPays, "buy", order_type_2.TakerGets,
-                    "profit:" + real_profit, "price1:" + order_type_1.quality, "price2:" + order_type_2.quality);
+                wsio.emit('dcp', order_type_1, order_type_2, real_profit);
             }
 
             return real_profit < 1;
