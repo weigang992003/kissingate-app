@@ -135,11 +135,11 @@ OfferService.prototype.canCreateDCPOffers = function(cmds, i, callback) {
                 throw new Error("it is weird we get empty book!!!");
             }
 
-            if (result[0].Account == self.accountId) {
-                var taker_pays = result[0].TakerPays;
-                var taker_gets = result[0].TakerGets;
+            var taker_pays = result[0].TakerPays;
+            var taker_gets = result[0].TakerGets;
 
-                var sbo = findSameBookOffer(self.offers, taker_pays, taker_gets);
+            var sbo = findSameBookOffer(self.offers, taker_pays, taker_gets);
+            if (result[0].Account == self.accountId) {
                 if (sbo && sbo.length > 0) {
                     console.log(" find same book offers:", sbo.length);
                     self.cancelOffers(sbo, 0, function() {
@@ -150,8 +150,16 @@ OfferService.prototype.canCreateDCPOffers = function(cmds, i, callback) {
                     });
                 }
             } else {
-                i = i + 1;
-                self.canCreateDCPOffers(cmds, i, callback);
+                console.log("the first place owner is:" + result[0].Account);
+                if (sbo && sbo.length > 3) {
+                    console.log("can't create offer anymore, since find same book offers :", sbo.length);
+                    if (callback) {
+                        callback(false);
+                    }
+                } else {
+                    i = i + 1;
+                    self.canCreateDCPOffers(cmds, i, callback);
+                }
             }
         });
     } else {
