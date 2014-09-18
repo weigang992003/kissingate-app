@@ -3,6 +3,7 @@ var _ = require('underscore');
 var aujs = require('./amount-util.js');
 var rsjs = require('./remote-service.js');
 var tfm = require('./the-future-manager.js');
+var wcjs = require('./web-config.js');
 
 var getPrice = aujs.getPrice;
 var getIssuer = aujs.getIssuer;
@@ -11,12 +12,15 @@ var getCurrency = aujs.getCurrency;
 var currency1 = "USD";
 var currency2 = "CNY";
 
+var currency_list = wcjs.currency_list;
+
 var asks = [
-    "please input pays_currency",
-    "please input pays_issuer",
-    "please input gets_currency",
-    "please input gets_issuer",
-    "please input account"
+    "please input pays_currency:",
+    "please input pays_issuer:",
+    "please input gets_currency:",
+    "please input gets_issuer:",
+    "please input the volumn:",
+    "please input account:"
 ];
 
 var taker_pays = {};
@@ -32,10 +36,14 @@ function ask(questions, i) {
 
     stdin.resume();
     stdout.write(question);
+    if (i == 0) {
+        console.log("");
+        console.log(currency_list);
+    }
 
     stdin.once('data', function(data) {
         if (i == 0) {
-            taker_pays.currency = data;
+            taker_pays.currency = currency_list[data];
             i = i + 1;
             ask(questions, i);
             return;
@@ -63,15 +71,15 @@ function ask(questions, i) {
             return;
         }
 
-        if (i == 4) {
-            mongodbManager.getAccount(data, function(result) {
-                account = result.account;
-                console.log("account:" + account);
-                crypto.decrypt(result.secret, function(result) {
-                    secret = result;
-                });
-            });
-        }
+        // if (i == 4) {
+        //     mongodbManager.getAccount(data, function(result) {
+        //         account = result.account;
+        //         console.log("account:" + account);
+        //         crypto.decrypt(result.secret, function(result) {
+        //             secret = result;
+        //         });
+        //     });
+        // }
     });
 }
 
@@ -112,19 +120,16 @@ function buildCmd() {
 }
 
 
-tfm.getEnv(function(result) {
-    console.log("step3:connect to remote!")
-    rsjs.getRemote(result.env, function(r) {
-        remote = r;
+// tfm.getEnv(function(result) {
+//     console.log("step3:connect to remote!")
+//     rsjs.getRemote(result.env, function(r) {
+//         remote = r;
 
-        remote.connect(function() {
-            osjs = new OfferService(remote, account, secret);
-            osjs.createOffer(taker_pays, taker_gets);
-        });
-    });
-
-});
-
+//         remote.connect(function() {
+//             osjs = new OfferService(remote, account, secret);
+//         });
+//     });
+// });
 
 function checkOrdersForDiffCurrency(orders) {
     orders = _.sortBy(orders, function(order) {

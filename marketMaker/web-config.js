@@ -35,20 +35,19 @@ exports.remote_options = {
     }]
 };
 
-exports.currency_unit = {
-    "XRP": "40000000",
-    "BTC": "0.00016",
-    "USD": "0.200",
-    "JPY": "20",
-    "CNY": "1.400",
-    "FMM": "1.400",
-    "EUR": "0.160",
-    "CAD": "0.200",
-    "ILS": "2.000",
-    "CHF": "0.200",
-    "NZD": "0.200",
-    "XAU": "0.00012"
-};
+exports.currency_list = {
+    "1": "XRP",
+    "2": "USD",
+    "3": "JPY",
+    "4": "BTC",
+    "5": "JPY",
+    "6": "EUR",
+    "7": "FMM",
+    "8": "STR",
+    "9": "NZD",
+    "10": "CAD",
+    "11": "XAU"
+}
 
 exports.transfer_rates = {
     'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B': 0.002,
@@ -98,6 +97,8 @@ exports.currencies_no = {
     "USD": 7
 }
 
+exports.cu
+
 exports.mother = -1;
 exports.newAccount = 0;
 exports.tradeFailed = 1;
@@ -110,7 +111,6 @@ exports.delayWhenFailure = 60000;
 exports.ratio = 1.2;
 
 exports.xrpIssuer = "rrrrrrrrrrrrrrrrrrrrrhoLvTp";
-
 
 //websocket port map (server)
 //3003 web-socket-polling-monitor

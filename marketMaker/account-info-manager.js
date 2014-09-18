@@ -45,7 +45,15 @@ var ledgerIndexStartSchema = mongoose.Schema({
     collection: 'ledgerIndexStart'
 });
 
+var currencyInfoSchema = mongoose.Schema({
+    currency: String,
+    issuers: [String]
+}, {
+    collection: 'currencyInfo'
+});
+
 var txHisotry = ai.model('txHisotry', txHistorySchema);
+var currencyInfo = ai.model('currencyInfo', currencyInfoSchema);
 var balanceHistory = ai.model('balanceHistory', balanceHistorySchema);
 var ledgerIndexStart = ai.model('ledgerIndexStart', ledgerIndexStartSchema);
 
@@ -156,6 +164,24 @@ AccountInfoManager.prototype.getTHByAccount = function(account, callback) {
 
         if (results && callback) {
             callback(results);
+        }
+    })
+}
+
+AccountInfoManager.prototype.saveCurrencyInfo = function(record, callback) {
+    var row = new currencyInfo(record);
+    currencyInfo.findOne({
+        currency: record.currency
+    }, function(err, result) {
+        if (result) {
+            result.issuers = record.issuers;
+            result.save(function(err) {
+                if (!err && callback) {
+                    callback();
+                }
+            });
+        } else {
+            row.save();
         }
     })
 }

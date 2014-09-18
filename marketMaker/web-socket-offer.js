@@ -319,12 +319,6 @@ function makeProfit(order1, order2, profit) {
         return;
     }
 
-    if (min_taker_gets.is_zero() || min_taker_pays.is_zero()) {
-        console.log("lack of currency balance:", min_taker_gets.to_json(), min_taker_pays.to_json());
-        emitter.once('makeProfit', makeProfit);
-        return;
-    }
-
     var times = min_taker_gets.ratio_human(order1_taker_gets).to_human().replace(',', '');
     times = math.round(times - 0, 6);
     if (min_taker_pays.compareTo(order1_taker_pays.product_human(times)) == 1) {
@@ -375,21 +369,11 @@ function makeProfit(order1, order2, profit) {
     });
 }
 
-// setInterval(checkIfHasListener, 1000 * 30);
-
-// function checkIfHasListener() {
-//     if (emitter.listeners('makeProfit').length == 0) {
-//         emitter.once('makeProfit', makeProfit);
-//     }
-//     if (emitter.listeners('makeSameCurrencyProfit').length == 0) {
-//         emitter.once('makeSameCurrencyProfit', makeSameCurrencyProfit);
-//     }
-// }
-
-setTimeout(prepareRestart, 1000 * 60 * 60);
+setTimeout(prepareRestart, 1000 * 60 * 20);
 
 function prepareRestart() {
     emitter.removeAllListeners('makeProfit');
+    emitter.removeAllListeners('makeFirstOrderProfit');
     emitter.removeAllListeners('makeSameCurrencyProfit');
     setTimeout(throwDisconnectError, 1000 * 30);
 }
