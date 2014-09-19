@@ -1,6 +1,3 @@
-var Logger = require('./new-logger.js').Logger;
-var fohLogger = new Logger('first-order-history');
-
 var ripple = require('../src/js/ripple');
 var jsbn = require('../src/js/jsbn/jsbn.js');
 
@@ -8,20 +5,15 @@ var Remote = ripple.Remote;
 var Amount = ripple.Amount;
 
 var _ = require('underscore');
-var config = require('../marketMaker/config.js');
+var config = require('./config.js');
+var tfmjs = require('./the-future-manager.js');
 
 var AmountUtil = require('./amount-util.js').AmountUtil;
+var TrustLineService = require('./trust-line-service.js').TrustLineService;
 var AccountInfoManager = require('./account-info-manager.js').AccountInfoManager;
 
 var au = new AmountUtil();
 var aim = new AccountInfoManager();
-
-var drops = config.drops;
-
-var ledger_current_index;
-var ledger_index_start;
-var ledger_index_end;
-var account;
 
 var remote = new Remote({
     // see the API Reference for available options
@@ -46,14 +38,17 @@ function remoteConnect() {
     remote.connect(function() {
         tls = new TrustLineService(remote, account);
         tls.getLines(function(lines) {
+            console.log(lines);
+            lines = _.filter(lines, function(line) {
+                return line.limit != 0;
+            });
+
             lines = _.map(lines, function(line) {
-                if (line.limit != 0) {
-                    return {
-                        currency: line.currency,
-                        issuer: line.account
-                    }
+                return {
+                    currency: line.currency,
+                    issuer: line.account
                 }
-            })
+            });
 
             lines = _.groupBy(lines, function(line) {
                 return line.currency;
@@ -62,9 +57,15 @@ function remoteConnect() {
             currencyInfos = _.map(_.pairs(lines), function(pair) {
                 return {
                     currency: pair[0],
-                    issuers: pair[1]
+                    issuers: _.pluck(pair[1], 'issuer')
                 }
             });
+
+            console.log(currencyInfos);
+
+            _.each(currencyInfos, function(currencyInfo) {
+                aim.saveCurrencyInfo(currencyInfo);
+            })
         });
 
         remote.on('error', function(error) {
@@ -77,6 +78,9 @@ function remoteConnect() {
     });
 }
 
-
-
-remoteConnect();
+var account;
+console.log("step1:getAccount!")
+tfmjs.getAccount(config.marketMaker, function(result) {
+    account = result.account;
+    remoteConnect();
+});
