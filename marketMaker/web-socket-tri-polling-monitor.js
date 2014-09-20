@@ -258,9 +258,12 @@ function goNext() {
         }
 
         var pairs = getCurrencyPair([currency1, currency2, currency3]);
+        console.log(pairs);
         _.each(pairs, function(pair) {
             req.params.push(buildParams[pair[0], pair[1]]);
         });
+        console.log(req);
+
 
         console.log(currency1, currency2, currency3);
 
