@@ -15,16 +15,16 @@ tfm.getEnv(function(result) {
     ws.on('open', function() {
         var req = {
             cmd: 'book',
-            params: {
-                pays_currency: ['CNY'],
-                gets_currency: ['CNY'],
-                pays_issuer: ['rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK'],
-                gets_issuer: ['razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA'],
-                CNY: ['razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA', 'rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK']
-            },
-            limit: 1,
-            filter: 0,
-            cache: 0
+            params: [{
+                limit: 1,
+                filter: 1,
+                cache: 0,
+                'CNY': ['rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y', 'razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA', 'rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK'],
+                // 'XRP': ['rrrrrrrrrrrrrrrrrrrrrhoLvTp'],
+                'USD': ['rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q', 'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B'],
+                // 'JPY': ['rMAz5ZnK73nyNUL4foAvaxdreczCkG3vA6'],
+                'ABC': []
+            }]
         }
         ws.send(JSON.stringify(req));
     });

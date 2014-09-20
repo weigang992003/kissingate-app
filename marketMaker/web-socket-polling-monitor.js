@@ -251,18 +251,24 @@ function goNext() {
     if (wsConnected) {
         var req = {
             "cmd": "book",
-            "params": {},
+            "params": [],
+
+        }
+
+        var param = {
             "limit": 1,
             "filter": 1,
-            "cache": 1
+            "cache": 0
         }
 
         if (currency1 == currency2) {
-            req.filter = 0;
+            param.filter = 0;
         }
 
-        req.params[currency1] = cur1_issuers;
-        req.params[currency2] = cur2_issuers;
+        param[currency1] = cur1_issuers;
+        param[currency2] = cur2_issuers;
+
+        req.params.push(param);
 
         console.log(currency1, currency2);
 
