@@ -224,9 +224,7 @@ function goNext() {
 
     if (cLoop.isCycle()) {
         console.log("query done!");
-        cLoop = new Loop([0, 0]);
-        cLoop.allowSameIndex(true);
-        cIndexSet = [0, 0];
+        cLoop = new Loop([0, 1, 2], currencySize, false);
         console.log("next round would be start in 5 seconds!");
         setTimeout(goNext, 1000 * 5);
         return;
@@ -237,6 +235,12 @@ function goNext() {
     var currency1 = currencies[cIndexSet[0]];
     var currency2 = currencies[cIndexSet[1]];
     var currency3 = currencies[cIndexSet[2]];
+
+    if (currency1 == currency2 && currency2 == currency3 && currency3 == currency1) {
+        cLoop.next();
+        goNext();
+        return;
+    }
 
     if (_.contains(noAvailablePair, currency1 + currency2 + currency3)) {
         cLoop.next();
@@ -253,9 +257,10 @@ function goNext() {
             "cache": 1
         }
 
-        req.params.push(buildParams(currency1, currency2));
-        req.params.push(buildParams(currency2, currency3));
-        req.params.push(buildParams(currency3, currency1));
+        var pairs = getCurrencyPair([currency1, currency2, currency3]);
+        _.each(pairs, function(pair) {
+            req.params.push(buildParams[pair[0], pair[1]]);
+        });
 
         console.log(currency1, currency2, currency3);
 
@@ -265,10 +270,59 @@ function goNext() {
     }
 }
 
+function getCurrencyPair(currencyList) {
+    var currencyMap = {};
+
+    _.each(currencyList, function(currency) {
+        var count = currencyMap[currency];
+        if (!count) {
+            currencyMap[currency] = 1;
+        } else {
+            currencyMap[currency] = count + 1;
+        }
+    });
+
+    var currencySet = _.uniq(currencyList);
+
+    return buildPair(currencySet, currencyMap);
+}
+
+function buildPair(currencySet, currencyMap) {
+    var pairs = [];
+    if (currencySet.length <= 1) {
+        return pairs;
+    }
+
+    while (currencySet.length > 2) {
+        var first = currencySet[0];
+        _.each(currencySet, function(currency) {
+            if (first == currency) {
+                var count = currencyMap[currency];
+                if (count > 1) {
+                    pairs.push([first, currency]);
+                }
+            } else {
+                pairs.push([first, currency]);
+            }
+        });
+
+        currencySet = _.rest(currencySet);
+    }
+
+    return pairs;
+}
+
 function buildParams(currency1, currency2) {
-    var params = {};
+    var params = {
+        filter: 1,
+        cache: 1,
+        limit: 1
+    };
     params[currency1] = tls.getIssuers(currency1);
     params[currency2] = tls.getIssuers(currency2);
+    if (currency1 == currency2) {
+        params.filter = 0;
+    }
     return params;
 }
 
