@@ -150,7 +150,7 @@ function listenProfitOrder() {
     });
 
     tows.on('top', function(orders, profit) {
-        emitter.emit('makeTriCurrencyProfit', makeTriCurrencyProfit);
+        emitter.emit('makeTriCurrencyProfit', orders, profit);
     })
 }
 

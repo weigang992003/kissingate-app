@@ -131,6 +131,9 @@ function checkOrderProfit(order1, order2, order3) {
     console.log("real profit rate:", real_profit);
     var expect_profit = pu.getMultiProfitRate([order1, order2, order3], profit_rate);
     console.log("expect profit rate:" + expect_profit);
+    if (real_profit < expect_profit) {
+        wsio.emit('top', [order1, order2, order3], real_profit);
+    }
 }
 
 function checkOrders(orders) {
@@ -152,7 +155,7 @@ function connectWS(uri) {
         var books = JSON.parse(data);
         var orders = _.flatten(books);
         if (orders.length == 0 || orders.length == 1) {
-            cIndexSet = cLoop.next(cIndexSet, currencySize);
+            cLoop.next();
             goNext();
             return;
         } else {
@@ -211,7 +214,7 @@ function prepareCurrencies(lines) {
     currencies = _.uniq(currencies);
     currencies.push("XRP");
     currencySize = currencies.length;
-    cLoop = new Loop([0, 1, 2], currencySize, false);
+    cLoop = new Loop([0, 0, 0], currencySize, true);
     return currencies;
 }
 
@@ -224,7 +227,7 @@ function goNext() {
 
     if (cLoop.isCycle()) {
         console.log("query done!");
-        cLoop = new Loop([0, 1, 2], currencySize, false);
+        cLoop = new Loop([0, 0, 0], currencySize, true);
         console.log("next round would be start in 5 seconds!");
         setTimeout(goNext, 1000 * 5);
         return;
@@ -260,10 +263,8 @@ function goNext() {
         var pairs = getCurrencyPair([currency1, currency2, currency3]);
         console.log(pairs);
         _.each(pairs, function(pair) {
-            req.params.push(buildParams[pair[0], pair[1]]);
+            req.params.push(buildParams(pair[0], pair[1]));
         });
-        console.log(req);
-
 
         console.log(currency1, currency2, currency3);
 
@@ -296,7 +297,7 @@ function buildPair(currencySet, currencyMap) {
         return pairs;
     }
 
-    while (currencySet.length > 2) {
+    while (currencySet.length >= 2) {
         var first = currencySet[0];
         _.each(currencySet, function(currency) {
             if (first == currency) {
@@ -310,6 +311,13 @@ function buildPair(currencySet, currencyMap) {
         });
 
         currencySet = _.rest(currencySet);
+        if (currencySet.length == 1) {
+            var currency = currencySet[0];
+            var count = currencyMap[currency];
+            if (count > 1) {
+                pairs.push([currency, currency]);
+            }
+        }
     }
 
     return pairs;
