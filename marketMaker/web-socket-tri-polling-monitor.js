@@ -25,9 +25,11 @@ var OfferService = require('./offer-service.js').OfferService;
 var WSBookUtil = require('./web-socket-book-util.js').WSBookUtil;
 var queryBookByOrder = require('./query-book.js').queryBookByOrder;
 var TrustLineService = require('./trust-line-service.js').TrustLineService;
+var AccountInfoManager = require('./account-info-manager').AccountInfoManager;
 
 var au = new AmountUtil();
 var wsbu = new WSBookUtil();
+var aim = new AccountInfoManager();
 
 var tls;
 var osjs;
@@ -150,6 +152,7 @@ function connectWS(uri) {
     ws = new WebSocket(uri);
     ws.on('open', function() {
         wsConnected = true;
+        goNext();
     });
     ws.on('message', function(data, flags) {
         var books = JSON.parse(data);
@@ -168,53 +171,13 @@ function connectWS(uri) {
     });
 }
 
-var remote;
-
-function remoteConnect(env) {
-    rsjs.getRemote(env, function(r) {
-        console.log("start to connect ws!!!");
-
-        remote = r;
-        console.log("step3:connect to remote!");
-        if (!remote) {
-            console.log("we don't get remote object!");
-            return;
-        }
-
-        remote.connect(function() {
-            osjs = new OfferService(remote, account, secret);
-            osjs.getOffers();
-
-            tls = new TrustLineService(remote, account);
-            tls.getLines(function(lines) {
-                console.log("step4:prepare currencies!")
-                prepareCurrencies(lines);
-
-                console.log("step5:query find path!");
-                goNext();
-            });
-
-            remote.on('error', function(error) {
-                throw new Error("remote error!");
-            });
-
-            remote.on('disconnect', function() {
-                remote = new ripple.Remote(rsjs.getRemoteOption());
-                remoteConnect();
-            });
-        });
-    });
-}
-
-function prepareCurrencies(lines) {
-    lines = _.filter(lines, function(line) {
-        return line.limit != 0;
-    })
-    currencies = _.pluck(lines, 'currency');
+function prepareCurrencies(results) {
+    currencies = _.pluck(results, 'currency');
     currencies = _.uniq(currencies);
     currencies.push("XRP");
     currencySize = currencies.length;
     cLoop = new Loop([0, 0, 0], currencySize, true);
+    console.log(currencies);
     return currencies;
 }
 
@@ -329,31 +292,30 @@ function buildParams(currency1, currency2) {
         cache: 1,
         limit: 1
     };
-    params[currency1] = tls.getIssuers(currency1);
-    params[currency2] = tls.getIssuers(currency2);
+    params[currency1] = issuerMap[currency1];
+    params[currency2] = issuerMap[currency2];
     if (currency1 == currency2) {
         params.filter = 0;
     }
     return params;
 }
 
-var account;
-var secret;
-console.log("step1:getAccount!")
-tfmjs.getAccount(config.marketMaker, function(result) {
-    account = result.account;
-    secret = result.secret;
-    decrypt(secret);
-});
+tfmjs.getEnv(function(result) {
+    console.log("get currencies!!");
+    aim.getCurrencyInfos(function(results) {
+        buildIssuerMap(results);
+        prepareCurrencies(results);
+        console.log("connectWS!!");
+        connectWS(result.wspm);
+    });
+})
 
-function decrypt(encrypted) {
-    console.log("step2:decrypt secret!")
-    crypto.decrypt(encrypted, function(result) {
-        secret = result;
-        tfmjs.getEnv(function(result) {
-            connectWS(result.wspm);
-            remoteConnect(result.env);
-        })
+var issuerMap = {};
+
+function buildIssuerMap(currencyInfos) {
+    console.log(currencyInfos);
+    _.each(currencyInfos, function(currencyInfo) {
+        issuerMap[currencyInfo.currency] = currencyInfo.issuers;
     });
 }
 

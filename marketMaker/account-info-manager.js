@@ -186,6 +186,16 @@ AccountInfoManager.prototype.saveCurrencyInfo = function(record, callback) {
     })
 }
 
+AccountInfoManager.prototype.getCurrencyInfos = function(callback) {
+    currencyInfo.find({}, function(err, results) {
+        if (!err && results) {
+            if (callback) {
+                callback(results);
+            }
+        }
+    })
+}
+
 function saveBH(record, minus) {
     balanceHistory.findOne({
         hash: record.hash,
