@@ -5,6 +5,7 @@ var wsoLogger = new Logger('web-socket-offer');
 var io = require('socket.io-client');
 var pows = io.connect('http://localhost:3003/ws');
 var fows = io.connect('http://localhost:3006/ws');
+var tows = io.connect('http://localhost:3007/ws');
 
 var math = require('mathjs');
 var WebSocket = require('ws');
@@ -19,6 +20,7 @@ var tfmjs = require('./the-future-manager.js');
 var rippleInfo = require('./ripple-info-manager.js');
 
 var Loop = require('./loop-util.js').Loop;
+var CLogger = require('./log-util.js').CLogger;
 var AmountUtil = require('./amount-util.js').AmountUtil;
 var OfferService = require('./offer-service.js').OfferService;
 var queryBookByOrder = require('./query-book.js').queryBookByOrder;
@@ -27,6 +29,7 @@ var AccountListener = require('./listen-account-util.js').AccountListener;
 var TrustLineService = require('./trust-line-service.js').TrustLineService;
 
 var au = new AmountUtil();
+var cLogger = new CLogger();
 var fou = new FirstOrderUtil();
 var tfm = new tfmjs.TheFutureManager();
 
@@ -83,6 +86,55 @@ function remoteConnect(env) {
     });
 }
 
+function firstOrderDecision(orders, key) {
+    var oldOne = _.findWhere(firstOrderMap, {
+        'key': key
+    });
+
+    firstOrderMap = _.without(firstOrderMap, oldOne);
+
+    if (!oldOne) {
+        firstOrderMap.push({
+            'key': key,
+            'orders': orders,
+            'handled': false
+        })
+        return;
+    }
+
+    oldOne.orders = orders;
+    if (!hasListenerForFirstOrder()) {
+        console.log("we don't have listener for first order right now!");
+        firstOrderMap.push(oldOne);
+        return;
+    }
+
+    if (!oldOne.handled) {
+        console.log("handle key:", oldOne.key);
+        oldOne.handled = true;
+        firstOrderMap.push(oldOne);
+        emitter.emit('makeFirstOrderProfit', oldOne.orders, 0);
+        return;
+    }
+
+    firstOrderMap.push(oldOne);
+
+    var needHandle = _.findWhere(firstOrderMap, {
+        'handled': false
+    });
+
+    if (needHandle) {
+        console.log("handle key:", needHandle.key);
+        firstOrderMap = _.without(firstOrderMap, needHandle);
+        needHandle.handled = true;
+        firstOrderMap.push(needHandle);
+        emitter.emit('makeFirstOrderProfit', needHandle.orders, 0);
+    } else {
+        console.log("all are handled!! go next round!!");
+        firstOrderMap = {};
+    }
+}
+
 function listenProfitOrder() {
     console.log("step5:listen to profit socket!");
     pows.on('dcp', function(order1, order2, profit) {
@@ -94,53 +146,12 @@ function listenProfitOrder() {
     });
 
     fows.on('fos', function(orders, key) {
-        var oldOne = _.findWhere(firstOrderMap, {
-            'key': key
-        });
-
-        firstOrderMap = _.without(firstOrderMap, oldOne);
-
-        if (!oldOne) {
-            firstOrderMap.push({
-                'key': key,
-                'orders': orders,
-                'handled': false
-            })
-            return;
-        }
-
-        oldOne.orders = orders;
-        if (!hasListenerForFirstOrder()) {
-            console.log("we don't have listener for first order right now!");
-            firstOrderMap.push(oldOne);
-            return;
-        }
-
-        if (!oldOne.handled) {
-            console.log("handle key:", oldOne.key);
-            oldOne.handled = true;
-            firstOrderMap.push(oldOne);
-            emitter.emit('makeFirstOrderProfit', oldOne.orders, 0);
-            return;
-        }
-
-        firstOrderMap.push(oldOne);
-
-        var needHandle = _.findWhere(firstOrderMap, {
-            'handled': false
-        });
-
-        if (needHandle) {
-            console.log("handle key:", needHandle.key);
-            firstOrderMap = _.without(firstOrderMap, needHandle);
-            needHandle.handled = true;
-            firstOrderMap.push(needHandle);
-            emitter.emit('makeFirstOrderProfit', needHandle.orders, 0);
-        } else {
-            console.log("all are handled!! go next round!!");
-            firstOrderMap = {};
-        }
+        firstOrderDecision(orders, key);
     });
+
+    tows.on('top', function(orders, profit) {
+        emitter.emit('makeTriCurrencyProfit', makeTriCurrencyProfit);
+    })
 }
 
 function hasListenerForFirstOrder() {
@@ -235,9 +246,7 @@ function rebuildFirstOrder(order) {
 
     if (gets_currency == "XRP") {
         order.TakerPays.value = order.TakerPays.value / drops + "";
-
     }
-
 
     au.product(order.TakerGets, 1.000001);
 
@@ -276,10 +285,104 @@ function makeSameCurrencyProfit(order) {
     });
 }
 
-var emitter = new events.EventEmitter();
-emitter.once('makeProfit', makeProfit);
-emitter.once('makeFirstOrderProfit', makeFirstOrderProfit);
-emitter.once('makeSameCurrencyProfit', makeSameCurrencyProfit);
+function makeTriCurrencyProfit(orders, profit) {
+    console.log("tri data arrived! profit:", profit);
+    var taker_pays_amounts = [];
+    var taker_gets_amounts = [];
+    var taker_pays_balances = [];
+    var taker_gets_capacities = [];
+    var length = orders.length;
+
+    for (var i = 0; i < orders.length; i++) {
+        var order = orders[i];
+        cLogger.logOrder(order);
+        var taker_pays_amount = Amount.from_json(order.TakerPays);
+        var taker_gets_amount = Amount.from_json(order.TakerGets);
+        var taker_pays_balance = tls.getBalance(au.getIssuer(order.TakerPays), au.getCurrency(order.TakerPays));
+        var taker_gets_capacity = tls.getBalance(au.getIssuer(order.TakerGets), au.getCurrency(order.TakerGets));
+
+        if (au.isVolumnNotAllowed(taker_pays_amount) || au.isVolumnNotAllowed(taker_gets_amount) ||
+            au.isVolumnNotAllowed(taker_pays_balances) || au.isVolumnNotAllowed(taker_gets_capacity)) {
+            console.log("the volumn is too small to trade tri!!!");
+            emitter.once('makeTriCurrencyProfit', makeTriCurrencyProfit);
+            return;
+        }
+
+        var min_taker_pays = au.minAmount([taker_pays_amount, taker_pays_balance]);
+        var min_taker_gets = au.minAmount([taker_gets_amount, taker_gets_capacity]);
+
+        var times = min_taker_gets.ratio_human(taker_gets_amount).to_human().replace(',', '');
+        times = math.round(times - 0, 6);
+        if (min_taker_pays.compareTo(taker_pays_amount.product_human(times)) == 1) {
+            taker_gets_amount = au.setValue(taker_gets_amount, min_taker_gets);
+            taker_pays_amount = taker_pays_amount.product_human(times);
+        } else {
+            times = min_taker_pays.ratio_human(taker_pays_amount).to_human().replace(',', '');
+            times = math.round(times - 0, 6);
+            taker_pays_amount = au.setValue(taker_pays_amount, min_taker_pays);
+            taker_gets_amount = taker_gets_amount.product_human(times);
+        }
+
+        taker_pays_amounts.push(taker_pays_amount);
+        taker_gets_amounts.push(taker_gets_amount);
+    };
+
+    var min_index = 0;
+    for (var i = 0; i < taker_pays_amounts.length; i++) {
+        var taker_pays_amount = taker_pays_amounts[i];
+        var taker_gets_amount = taker_gets_amounts[(i - 1) % length];
+
+        if (taker_pays_amount.compareTo(taker_gets_amount) == 1) {
+            min_index = (i - 1) % length;
+        }
+    };
+
+    var order1_taker_pays = taker_pays_amounts[min_index].to_json();
+    var order1_taker_gets = taker_gets_amounts[min_index].to_json();
+
+
+    for (var i = min_index, j = 0; j < 2; i = (i + 1) % length, j++) {
+        var pre_taker_gets_amount = taker_gets_amounts[i];
+        var next_taker_pays_amount = taker_pays_amounts[(i + 1) % length];
+        var next_taker_gets_amount = taker_gets_amounts[(i + 1) % length];
+        var times = pre_taker_gets_amount.ratio_human(next_taker_pays_amount).to_human().replace(',', '');
+        times = math.round(times - 0, 6);
+
+        taker_pays_amounts[(i + 1) % length] = au.setValue(next_taker_pays_amount, pre_taker_gets_amount);
+        taker_gets_amounts[(i + 1) % length] = next_taker_gets_amount.product_human(times);
+    };
+
+    _.each(taker_pays_amounts, function(taker_pays_amount, i) {
+        var taker_pays_amount = taker_pays_amount.product_human("1.0001");
+        taker_pays_amounts[i] = taker_pays_amount;
+    });
+
+    var cmds = [];
+    _.each(_.range(length), function(i) {
+        cmds.push(buildCmd(orders[i]));
+    });
+
+    osjs.canCreateDCPOffers(cmds, 0, function(canCreate) {
+        if (canCreate) {
+            _.each(_.range(length), function(i) {
+                var taker_pays_json = taker_pays_amounts[i].to_json();
+                var taker_gets_json = taker_pays_amounts[i].to_json();
+                osjs.createOffer(taker_gets_json, taker_pays_json, wsoLogger, false, function(status) {
+                    console.log("tx", status);
+                    if (i == length - 1) {
+                        tls.getLines(function() {
+                            console.log("re-listen tri profit order!!!");
+                            emitter.once('makeTriCurrencyProfit', makeTriCurrencyProfit);
+                        })
+                    }
+                });
+
+            });
+        } else {
+            emitter.once('makeTriCurrencyProfit', makeTriCurrencyProfit);
+        }
+    });
+}
 
 function makeProfit(order1, order2, profit) {
     console.log("new data arrived! profit:", profit);
@@ -293,12 +396,8 @@ function makeProfit(order1, order2, profit) {
     var order2_taker_pays_currency = au.getCurrency(order2.TakerPays);
     var order2_taker_gets_currency = au.getCurrency(order2.TakerGets);
 
-
-    console.log("order1:" + order1_taker_pays_currency + "(" + order1_taker_pays_issuer + ")->" +
-        order1_taker_gets_currency + "(" + order1_taker_gets_issuer + ")");
-
-    console.log("order2:" + order2_taker_pays_currency + "(" + order2_taker_pays_issuer + ")->" +
-        order2_taker_gets_currency + "(" + order2_taker_gets_issuer + ")");
+    cLogger.logOrder(order1);
+    cLogger.logOrder(order2);
 
     var order1_taker_pays = Amount.from_json(order1.TakerPays);
     var order1_taker_gets = Amount.from_json(order1.TakerGets);
@@ -368,6 +467,14 @@ function makeProfit(order1, order2, profit) {
         }
     });
 }
+
+var emitter = new events.EventEmitter();
+emitter.once('makeProfit', makeProfit);
+emitter.once('makeFirstOrderProfit', makeFirstOrderProfit);
+emitter.once('makeSameCurrencyProfit', makeSameCurrencyProfit);
+emitter.once('makeTriCurrencyProfit', makeTriCurrencyProfit);
+
+
 
 setTimeout(prepareRestart, 1000 * 60 * 20);
 

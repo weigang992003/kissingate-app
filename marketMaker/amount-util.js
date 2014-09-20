@@ -21,6 +21,10 @@ AmountUtil.prototype.toExp = function(price) {
     return (price - 0).toExponential();
 }
 
+AmountUtil.prototype.isVolumnNotAllowed = function(amount) {
+    return !this.isVolumnAllowed(amount);
+}
+
 AmountUtil.prototype.isVolumnAllowed = function(amount) {
     if (amount instanceof Amount) {
         if (amount.is_zero()) {
@@ -46,6 +50,8 @@ AmountUtil.prototype.isVolumnAllowed = function(amount) {
                 console.log(currency + " min_volumn:" + min_volumn, "real volumn:" + amount.value);
             }
         }
+    } else {
+        console.log("we don't set min_volumn for currency:", currency);
     }
 
     return isAllow;

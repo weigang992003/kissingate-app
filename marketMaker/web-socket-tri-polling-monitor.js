@@ -1,4 +1,4 @@
-var io = require('socket.io').listen(3003);
+var io = require('socket.io').listen(3007);
 var wsio = io.of('/ws');
 
 var math = require('mathjs');
