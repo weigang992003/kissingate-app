@@ -11,8 +11,6 @@ var mongodbManager = require('./the-future-manager.js');
 var emitter = new events.EventEmitter();
 emitter.once('decrypt', decrypt);
 emitter.once('remoteConnect', remoteConnect);
-emitter.on('goNext', goNext);
-emitter.on('createOffer', createOffer);
 
 var OfferService = require('./offer-service.js').OfferService;
 var WSBookUtil = require('./web-socket-book-util.js').WSBookUtil;
@@ -47,14 +45,12 @@ var remote = new ripple.Remote(remote_options);
 
 var account;
 var secret;
+console.log("get account!!");
 mongodbManager.getAccount(config.mother, function(result) {
     account = result.account;
     secret = result.secret;
     emitter.emit('decrypt', secret);
 });
-
-var offers;
-var orders = [];
 
 function decrypt(encrypted) {
     crypto.decrypt(encrypted, function(result) {
@@ -65,8 +61,10 @@ function decrypt(encrypted) {
 
 function remoteConnect() {
     remote.connect(function() {
+        console.log("remote connected!!");
         remote.requestAccountLines(account, function(err, result) {
             if (err) console.log(err);
+            console.log("get Lines!!!!");
             averageBalance(result.lines);
         });
     });
@@ -101,23 +99,27 @@ function averageBalance(lines) {
         }
     });
 
-    var balanceMap = {};
     currencies = _.keys(newLines);
-    _.each(currencies, function(currency) {
-
-    });
-
-    emitter.emit('goNext');
+    goNextCurrency(currencies, newLines, 0);
 }
 
 function goNextCurrency(currencies, lines, i) {
     if (currencies.length > i) {
+        var currency = currencies[i];
+        if (currency != 'CNY') {
+            i = i + 1;
+            goNextCurrency(currencies, lines, i);
+            return;
+        }
+
         var sameCurrencyLines = lines[currency];
 
         var total = 0;
         _.each(sameCurrencyLines, function(e) {
             total = total + math.round(parseFloat(e.balance), 6);
         });
+
+        var balanceMap = {};
         balanceMap[currency] = total;
         var average = math.round((total / sameCurrencyLines.length), 6);
 
@@ -140,7 +142,7 @@ function goNextCurrency(currencies, lines, i) {
 }
 
 function goNext(payList, getList, i, j, average, callback) {
-    if (payList.length > i || getList.length > j) {
+    if (i >= payList.length || j >= getList.length) {
         if (callback) {
             callback();
         }
@@ -154,12 +156,12 @@ function goNext(payList, getList, i, j, average, callback) {
     var getmost = average - get.balance;
     if (paymost > getmost) {
         var taker_gets = {
-            'currency': currency,
+            'currency': pay.currency,
             'issuer': pay.account,
             'value': getmost
         };
         var taker_pays = {
-            'currency': currency,
+            'currency': get.currency,
             'issuer': get.account,
             'value': getmost + ''
         };
@@ -168,16 +170,20 @@ function goNext(payList, getList, i, j, average, callback) {
         wsbu.exeCmd(req, function(res) {
             if (res[0].quality > 1) {
                 taker_gets.value = res.quality * 0.9999 + "";
-            }
+                osjs.createFirstOffer(taker_pays, taker_gets, true, req, null, function() {
+                    get.balance = average;
+                    pay.balance = pay.balance - taker_gets.value;
+                    payList[i] = pay;
 
-            osjs.createFirstOffer(taker_pays, taker_gets, true, req, null, function() {
-                get.balance = average;
-                pay.balance = pay.balance - taker_gets.value;
-                payList[i] = pay;
-
+                    j = j + 1;
+                    goNext(payList, payList, getList, i, j, average);
+                });
+            } else {
+                console.log("the first order is profit offer.");
                 j = j + 1;
                 goNext(payList, payList, getList, i, j, average);
-            });
+                return;
+            }
         });
     } else {
         i = i + 1;
@@ -203,6 +209,7 @@ function buildCmd(taker_pays, taker_gets) {
     param["gets_currency"] = [taker_gets.currency];
 
     if (taker_pays.currency == taker_gets.currency) {
+        param["filter"] = 0;
         param["pays_issuer"] = [taker_pays.issuer];
         param["gets_issuer"] = [taker_gets.issuer];
         param[taker_pays.currency] = [taker_pays.issuer, taker_gets.issuer];
@@ -210,44 +217,9 @@ function buildCmd(taker_pays, taker_gets) {
 
     req.params.push(param);
 
+    console.log(req);
+
     return req;
-}
-
-function createOffer(taker_pays, taker_gets) {
-    var tx = remote.transaction();
-    if (secret) {
-        tx.secret(secret);
-    } else {
-        return;
-    }
-
-    Logger.log(true, "we are create offer here", "taker_pays", taker_pays, "taker_gets", taker_gets);
-
-    tx.offerCreate(account, taker_pays, taker_gets);
-    tx.on("success", function(res) {
-        next++;
-        emitter.emit('goNext');
-    })
-    tx.on("error", function(res) {
-        console.log(res);
-        throw new Error('something wrong!!!!');
-    })
-
-    tx.submit();
-}
-
-function ifOfferExist(offers, pays, gets) {
-    var self = this;
-
-    var result = _.filter(offers, function(offer) {
-        return offer.taker_pays.currency == pays.currency && offer.taker_pays.issuer == pays.issuer && offer.taker_gets.currency == gets.currency && offer.taker_gets.issuer == gets.issuer;
-    });
-
-    if (result.length > 0) {
-        return true;
-    }
-
-    return false;
 }
 
 setTimeout(throwDisconnectError, 1000 * 60 * 10);
