@@ -170,11 +170,11 @@ function makeFirstOrderProfit(orders, i) {
             console.log("lack of money to create first order!!!", order);
             if (orders.length == i + 1) {
                 emitter.once('makeFirstOrderProfit', makeFirstOrderProfit);
-                return;
             } else {
                 i = i + 1;
                 makeFirstOrderProfit(orders, i);
             }
+            return;
         }
 
         var removeOld = true;
