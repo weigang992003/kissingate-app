@@ -65,14 +65,10 @@ function decrypt(encrypted) {
 
 function remoteConnect() {
     remote.connect(function() {
-        osjs = new OfferService(remote, account, secret);
-        osjs.getOffers(function() {
-            remote.requestAccountLines(account, function(err, result) {
-                if (err) console.log(err);
-                averageBalance(result.lines);
-            });
-
-        })
+        remote.requestAccountLines(account, function(err, result) {
+            if (err) console.log(err);
+            averageBalance(result.lines);
+        });
     });
 }
 
@@ -108,19 +104,27 @@ function averageBalance(lines) {
     var balanceMap = {};
     currencies = _.keys(newLines);
     _.each(currencies, function(currency) {
-        var list = newLines[currency];
+
+    });
+
+    emitter.emit('goNext');
+}
+
+function goNextCurrency(currencies, lines, i) {
+    if (currencies.length > i) {
+        var sameCurrencyLines = lines[currency];
 
         var total = 0;
-        _.each(list, function(e) {
+        _.each(sameCurrencyLines, function(e) {
             total = total + math.round(parseFloat(e.balance), 6);
         });
         balanceMap[currency] = total;
-        var average = math.round((total / list.length), 6);
+        var average = math.round((total / sameCurrencyLines.length), 6);
 
         var payList = [];
         var getList = [];
 
-        _.each(list, function(e) {
+        _.each(sameCurrencyLines, function(e) {
             if (e.balance < average) {
                 getList.push(e);
             } else {
@@ -128,14 +132,18 @@ function averageBalance(lines) {
             }
         });
 
-        goNext(payList, getList, 0, 0, average);
-    });
-
-    emitter.emit('goNext');
+        goNext(payList, getList, 0, 0, average, function() {
+            i = i + 1;
+            goNextCurrency(currencies, lines, i);
+        });
+    }
 }
 
-function goNext(payList, getList, i, j, average) {
+function goNext(payList, getList, i, j, average, callback) {
     if (payList.length > i || getList.length > j) {
+        if (callback) {
+            callback();
+        }
         return;
     }
 
