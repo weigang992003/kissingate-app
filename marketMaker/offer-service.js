@@ -17,7 +17,6 @@ function OfferService(r, a, s) {
     this.offers = [];
 }
 
-
 OfferService.prototype.getOffers = function(callback) {
     var self = this;
     var remote = this.remote;
@@ -36,6 +35,10 @@ OfferService.prototype.getOffers = function(callback) {
             callback("success");
         }
     });
+};
+
+OfferService.prototype.currentOffers = function() {
+    return this.offers;
 };
 
 OfferService.prototype.ifOfferExist = function(pays, gets) {

@@ -129,12 +129,27 @@ function checkPathProfit(orders_paths) {
 
 
 function checkOrderProfit(order1, order2, order3) {
-    var real_profit = order1.quality * order2.quality * order3.quality;
-    console.log("real profit rate:", real_profit);
-    var expect_profit = pu.getMultiProfitRate([order1, order2, order3], profit_rate);
-    console.log("expect profit rate:" + expect_profit);
-    if (real_profit < expect_profit) {
-        wsio.emit('top', [order1, order2, order3], real_profit);
+    var orders = [order1, order2, order3];
+    var taker_pays_issuers = []
+    _.each(orders, function(order) {
+        taker_pays_issuers.push(au.getIssuer(order.TakerPays));
+    });
+    taker_pays_issuers = _.uniq(taker_pays_issuers);
+
+    if (taker_pays_issuers.length == 3) {
+        var real_profit = order1.quality * order2.quality * order3.quality;
+        console.log("real profit rate:", real_profit);
+        var expect_profit = pu.getMultiProfitRate([order1, order2, order3], profit_rate);
+        console.log("expect profit rate:" + expect_profit);
+        if (real_profit < expect_profit) {
+            console.log(order1, order2, order3);
+            wsio.emit('top', [order1, order2, order3], real_profit);
+            return true;
+        } else {
+            return false;
+        }
+    } else {
+        return true;
     }
 }
 
@@ -224,7 +239,6 @@ function goNext() {
         }
 
         var pairs = getCurrencyPair([currency1, currency2, currency3]);
-        console.log(pairs);
         _.each(pairs, function(pair) {
             req.params.push(buildParams(pair[0], pair[1]));
         });
