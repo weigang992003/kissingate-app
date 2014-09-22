@@ -96,7 +96,8 @@ exports.currencies_no = {
     "XRP": 2,
     "CNY": 3,
     "JPY": 5,
-    "USD": 7
+    "USD": 7,
+    "BTC": 11
 }
 
 exports.mother = -1;
