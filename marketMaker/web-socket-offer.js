@@ -259,18 +259,15 @@ function makeSameCurrencyProfit(order) {
 
     order_taker_pays = order_taker_pays.product_human("1.0001");
 
-    if (osjs.ifOfferExist(order_taker_gets.to_json(), order_taker_pays.to_json())) {
-        emitter.once('makeSameCurrencyProfit', makeSameCurrencyProfit);
-        return;
-    }
-
     var order_pays_balance = tls.getBalance(au.getIssuer(order.TakerPays), au.getCurrency(order.TakerPays));
     var order_gets_capacity = tls.getCapacity(au.getIssuer(order.TakerGets), au.getCurrency(order.TakerGets));
+    console.log("order_taker_pays for same currency:", order_taker_pays.to_text_full());
+    console.log("order_gets_capacity for same currency:", order_gets_capacity.to_text_full());
 
     var min_taker_pays = au.minAmount([order_taker_pays, order_pays_balance]);
     var min_taker_gets = au.minAmount([order_taker_gets, order_gets_capacity]);
 
-    if (!au.isVolumnAllowed(min_taker_pays) || !au.isVolumnAllowed(min_taker_gets)) {
+    if (au.isVolumnNotAllowed(min_taker_pays) || au.isVolumnNotAllowed(min_taker_gets)) {
         console.log("the volumn is too small to trade for same currency profit");
         emitter.once('makeSameCurrencyProfit', makeSameCurrencyProfit);
         return;
@@ -280,7 +277,6 @@ function makeSameCurrencyProfit(order) {
 
     osjs.createSCPOffer(order_taker_gets.to_json(), order_taker_pays.to_json(), cmd, wsoLogger, function(status) {
         console.log("same currency tx:", status);
-        wsoLogger.log(true, "same currency tx", status, order_taker_gets.to_json(), order_taker_pays.to_json());
         emitter.once('makeSameCurrencyProfit', makeSameCurrencyProfit);
     });
 }
