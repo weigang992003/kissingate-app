@@ -67,19 +67,20 @@ exports.same_currency_issuers = {
 exports.same_currency_profit = ["CNY"];
 exports.same_issuer_profit = ["rNPRNzBB92BVpAhhZr4iXDTveCgV5Pofm9"];
 
-exports.first_order_currencies = ["CNY", "XRP"];
+exports.first_order_currencies = ["CNY", "XRP", "USD", "BTC", "JPY"];
 exports.first_order_allow_volumns = {
     "CNY": "10",
     "JPY": "100",
     "USD": "2",
-    "XRP": "200000000"
+    "XRP": "200000000",
+    "BTC": "0.0001"
 }
 exports.first_order_allow_issuers = {
     'CNY': ['rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y', 'razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA', 'rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK'],
     'XRP': ['rrrrrrrrrrrrrrrrrrrrrhoLvTp'],
     'USD': ['rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q', 'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B'],
-    'JPY': ['rMAz5ZnK73nyNUL4foAvaxdreczCkG3vA6']
-
+    'JPY': ['rMAz5ZnK73nyNUL4foAvaxdreczCkG3vA6'],
+    'BTC': ['rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q', 'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B']
 }
 exports.profit_min_volumns = {
     "XRP": "20000000",
