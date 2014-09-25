@@ -298,7 +298,7 @@ function decrypt(encrypted) {
     });
 }
 
-setTimeout(throwDisconnectError, 1000 * 60 * 30);
+setTimeout(throwDisconnectError, 1000 * 60 * 120);
 
 function throwDisconnectError() {
     throw new Error('we are disconnect with ripple network!!!');

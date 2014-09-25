@@ -472,7 +472,7 @@ emitter.once('makeTriCurrencyProfit', makeTriCurrencyProfit);
 
 
 
-setTimeout(prepareRestart, 1000 * 60 * 20);
+setTimeout(prepareRestart, 1000 * 60 * 60);
 
 function prepareRestart() {
     emitter.removeAllListeners('makeProfit');
