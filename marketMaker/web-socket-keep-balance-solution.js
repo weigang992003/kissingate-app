@@ -18,6 +18,8 @@ var WSBookUtil = require('./web-socket-book-util.js').WSBookUtil;
 var osjs;
 var wsbu = new WSBookUtil();
 
+var same_currency_keep_balances = config.same_currency_keep_balances;
+
 var remote_options = remote_options = {
     // see the API Reference for available options
     // trace: true,
@@ -62,29 +64,33 @@ function decrypt(encrypted) {
 function remoteConnect() {
     remote.connect(function() {
         console.log("remote connected!!");
-        remote.requestAccountLines(account, function(err, result) {
-            if (err) console.log(err);
-            console.log("get Lines!!!!");
-            averageBalance(result.lines);
-        });
+        osjs = new OfferService(remote, account, secret);
+        osjs.getOffers(function() {
+            remote.requestAccountLines(account, function(err, result) {
+                if (err) console.log(err);
+                console.log("get Lines!!!!");
+                averageBalance(result.lines);
+            });
+        })
     });
 }
 
 function averageBalance(lines) {
     lines = _.filter(lines, function(line) {
-        return line.limit != 0;
+        return line.limit != 0 && _.contains(same_currency_keep_balances, line.currency);
     });
 
     lines = _.groupBy(lines, function(line) {
         return line.currency;
-    })
+    });
 
     var newLines = {};
     var currencies = _.keys(lines);
+    console.log("currencies", currencies);
     _.each(currencies, function(currency) {
         if (lines[currency].length > 1) {
             lines[currency] = _.sortBy(lines[currency], function(line) {
-                return line.limit;
+                return line.limit - 0;
             });
 
             var limit = _.last(lines[currency]).limit;
@@ -106,7 +112,7 @@ function averageBalance(lines) {
 function goNextCurrency(currencies, lines, i) {
     if (currencies.length > i) {
         var currency = currencies[i];
-        if (currency != 'CNY') {
+        if (!_.contains(same_currency_keep_balances, currency)) {
             i = i + 1;
             goNextCurrency(currencies, lines, i);
             return;
@@ -122,6 +128,7 @@ function goNextCurrency(currencies, lines, i) {
         var balanceMap = {};
         balanceMap[currency] = total;
         var average = math.round((total / sameCurrencyLines.length), 6);
+        average = average * 0.99;
 
         var payList = [];
         var getList = [];
@@ -136,7 +143,12 @@ function goNextCurrency(currencies, lines, i) {
 
         goNext(payList, getList, 0, 0, average, function() {
             i = i + 1;
-            goNextCurrency(currencies, lines, i);
+            if (currencies.length > i) {
+                console.log("go next currency", currencies[i]);
+                goNextCurrency(currencies, lines, i);
+            } else {
+                throw new Error("keep balance done!!!");
+            }
         });
     }
 }
@@ -154,7 +166,7 @@ function goNext(payList, getList, i, j, average, callback) {
 
     var paymost = pay.balance - average;
     var getmost = average - get.balance;
-    if (paymost > getmost) {
+    if (paymost > getmost && getmost > get.balance) {
         var taker_gets = {
             'currency': pay.currency,
             'issuer': pay.account,
@@ -168,26 +180,29 @@ function goNext(payList, getList, i, j, average, callback) {
 
         var req = buildCmd(taker_pays, taker_gets);
         wsbu.exeCmd(req, function(res) {
+            console.log("quality:", res[0].quality);
             if (res[0].quality > 1) {
-                taker_gets.value = res.quality * 0.9999 + "";
+                taker_gets.value = (taker_pays.value / res[0].quality) * 1.00001 + "";
+                console.log("taker_pays", taker_pays);
+                console.log("taker_gets", taker_gets);
                 osjs.createFirstOffer(taker_pays, taker_gets, true, req, null, function() {
                     get.balance = average;
                     pay.balance = pay.balance - taker_gets.value;
                     payList[i] = pay;
 
                     j = j + 1;
-                    goNext(payList, payList, getList, i, j, average);
+                    goNext(payList, getList, i, j, average, callback);
                 });
             } else {
                 console.log("the first order is profit offer.");
                 j = j + 1;
-                goNext(payList, payList, getList, i, j, average);
+                goNext(payList, getList, i, j, average, callback);
                 return;
             }
         });
     } else {
         i = i + 1;
-        goNext(payList, payList, getList, i, j, average);
+        goNext(payList, getList, i, j, average, callback);
     }
 }
 

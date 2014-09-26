@@ -100,6 +100,8 @@ exports.currencies_no = {
     "BTC": 11
 }
 
+exports.same_currency_keep_balances = ['CNY', 'BTC', 'USD'];
+
 exports.mother = -1;
 exports.newAccount = 0;
 exports.tradeFailed = 1;
