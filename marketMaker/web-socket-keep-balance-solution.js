@@ -12,11 +12,13 @@ var emitter = new events.EventEmitter();
 emitter.once('decrypt', decrypt);
 emitter.once('remoteConnect', remoteConnect);
 
+var Logger = require('./log-util.js').CLogger;
 var OfferService = require('./offer-service.js').OfferService;
 var WSBookUtil = require('./web-socket-book-util.js').WSBookUtil;
 
 var osjs;
 var wsbu = new WSBookUtil();
+var logger = new Logger();
 
 var same_currency_keep_balances = config.same_currency_keep_balances;
 
@@ -232,7 +234,7 @@ function buildCmd(taker_pays, taker_gets) {
 
     req.params.push(param);
 
-    console.log(req);
+    logger.logOffer(taker_gets, taker_pays);
 
     return req;
 }
