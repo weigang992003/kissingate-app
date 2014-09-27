@@ -23,6 +23,7 @@ var Loop = require('./loop-util.js').Loop;
 var CLogger = require('./log-util.js').CLogger;
 var AmountUtil = require('./amount-util.js').AmountUtil;
 var OfferService = require('./offer-service.js').OfferService;
+var WSBookUtil = require('./web-socket-book-util.js').WSBookUtil;
 var queryBookByOrder = require('./query-book.js').queryBookByOrder;
 var FirstOrderUtil = require('./first-order-util.js').FirstOrderUtil;
 var AccountListener = require('./listen-account-util.js').AccountListener;
@@ -30,6 +31,7 @@ var TrustLineService = require('./trust-line-service.js').TrustLineService;
 
 var au = new AmountUtil();
 var cLogger = new CLogger();
+var wsbu = new WSBookUtil();
 var fou = new FirstOrderUtil();
 var tfm = new tfmjs.TheFutureManager();
 
@@ -41,6 +43,7 @@ var remote = rsjs.getRemote();
 var drops = config.drops;
 var transfer_rates = config.transfer_rates;
 var first_order_allow_volumns = config.first_order_allow_volumns;
+var solved_too_small_volumn_currencies = config.solved_too_small_volumn_currencies;
 
 var account;
 var secret;
@@ -202,6 +205,10 @@ function buildCmd(order) {
     var gets_issuer = au.getIssuer(order.TakerGets);
     var gets_currency = au.getCurrency(order.TakerGets);
 
+    return buildCmdByIssuerNCurrency(pays_issuer, pays_currency, gets_issuer, gets_currency);
+}
+
+function buildCmdByIssuerNCurrency(pays_issuer, pays_currency, gets_issuer, gets_currency) {
     var cmd = {
         "cmd": "book",
         "params": {
@@ -408,7 +415,7 @@ function makeProfit(order1, order2, profit) {
     var min_taker_pays = au.minAmount([order1_taker_pays, order2_taker_gets, order2_gets_capacity, order1_pays_balance]);
     var min_taker_gets = au.minAmount([order1_taker_gets, order1_gets_capacity, order2_taker_pays, order2_pays_balance]);
 
-    if (!au.isVolumnAllowed(min_taker_pays) || !au.isVolumnAllowed(min_taker_gets)) {
+    if (au.isVolumnNotAllowed(min_taker_pays) || au.isVolumnNotAllowed(min_taker_gets)) {
         console.log("the volumn is too small to trade!!!");
         emitter.once('makeProfit', makeProfit);
         return;

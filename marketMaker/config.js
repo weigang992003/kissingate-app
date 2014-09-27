@@ -101,6 +101,7 @@ exports.currencies_no = {
 }
 
 exports.same_currency_keep_balances = ['CNY', 'BTC', 'USD'];
+exports.solved_too_small_volumn_currencies = ['CNY', 'BTC', 'USD'];
 
 exports.mother = -1;
 exports.newAccount = 0;
