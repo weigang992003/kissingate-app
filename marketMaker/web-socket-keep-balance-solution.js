@@ -1,3 +1,6 @@
+var Logger = require('./new-logger.js').Logger;
+var wsoLogger = new Logger('web-socket-keep-balance-solution');
+
 var math = require('mathjs');
 var _ = require('underscore');
 var events = require('events');

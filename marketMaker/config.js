@@ -73,7 +73,8 @@ exports.first_order_allow_volumns = {
     "JPY": "100",
     "USD": "2",
     "XRP": "200000000",
-    "BTC": "0.0001"
+    "BTC": "0.0001",
+    "EUR": "1"
 }
 exports.first_order_allow_issuers = {
     'CNY': ['rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y', 'razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA', 'rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK'],
