@@ -81,6 +81,7 @@ function buildCmdByIssuerNCurrency(pays_issuer, pays_currency, gets_issuer, gets
 
 
 function makeTriCurrencyProfit(orders, profit) {
+    profit = math.round(profit, 6);
     console.log("tri data arrived! profit:", profit);
     var taker_pays_amounts = [];
     var taker_gets_amounts = [];
@@ -136,6 +137,7 @@ function makeTriCurrencyProfit(orders, profit) {
     if (final_taker_gets_amount.compareTo(taker_gets_amount) == 1) {
         var start_taker_pays_amount = taker_gets_amount.product_human(profit);
         times = start_taker_pays_amount.ratio_human(taker_pays_amount).to_human().replace(',', '');
+        times = math.round(times - 0, 6);
         taker_pays_amounts[0] = au.setValue(taker_pays_amount, start_taker_pays_amount);
         taker_gets_amounts[0] = taker_gets_amounts[0].product_human(times);
     }
@@ -245,5 +247,44 @@ var order3 = {
     }
 }
 
-var orderList = [order1, order2, order3];
-makeTriCurrencyProfit(orderList, 0.1);
+var orderList = [{
+    TakerPays: {
+        currency: 'BTC',
+        value: '0.0000377123234481304',
+        issuer: 'rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q'
+    },
+    Account: 'r3cPPejMEFKidfAwrFATCXfE2dbde4Axho',
+    quality: '0.002185225824444',
+    TakerGets: {
+        currency: 'CAD',
+        value: '0.0172578609616825',
+        issuer: 'r3ADD8kXSUKHd6zTCKfnKT3zV9EZHjzp1S'
+    }
+}, {
+    TakerPays: {
+        currency: 'JPY',
+        value: '7015.866572189205',
+        issuer: 'rMAz5ZnK73nyNUL4foAvaxdreczCkG3vA6'
+    },
+    Account: 'rh9yCJdcakq7JMLiZtZjsq9qdDffszaJHo',
+    quality: '40734.87165128349',
+    TakerGets: {
+        currency: 'BTC',
+        value: '0.172232445759238',
+        issuer: 'rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q'
+    }
+}, {
+    TakerPays: {
+        currency: 'CAD',
+        value: '0.000103425117931',
+        issuer: 'r3ADD8kXSUKHd6zTCKfnKT3zV9EZHjzp1S'
+    },
+    Account: 'r3cPPejMEFKidfAwrFATCXfE2dbde4Axho',
+    quality: '0.010879977002252',
+    TakerGets: {
+        currency: 'JPY',
+        value: '0.009506005197387',
+        issuer: 'rMAz5ZnK73nyNUL4foAvaxdreczCkG3vA6'
+    }
+}];
+makeTriCurrencyProfit(orderList, 0.9684799940048182);
