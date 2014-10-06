@@ -110,13 +110,13 @@ function goNextOrder(lowList, highList, low_i, high_i, callback) {
         var high = highList[high_i];
 
         var taker_pays = {
-            'currency': currency,
+            'currency': low.currency,
             'issuer': high.account,
             'value': low.balance
         };
 
         var taker_gets = {
-            'currency': currency,
+            'currency': low.currency,
             'issuer': low.account,
             'value': low.balance
         };
@@ -134,7 +134,7 @@ function goNextOrder(lowList, highList, low_i, high_i, callback) {
                     if (high_i == 0) {
                         low_i = low_i + 1;
                     }
-                    goNextOrder(lowLimits, highLimits, low_i, high_i, callback);
+                    goNextOrder(lowList, highList, low_i, high_i, callback);
                 });
             } else {
                 console.log("the first order is profit offer. goNext");
@@ -142,7 +142,7 @@ function goNextOrder(lowList, highList, low_i, high_i, callback) {
                 if (high_i == 0) {
                     low_i = low_i + 1;
                 }
-                goNextOrder(lowLimits, highLimits, low_i, high_i, callback);
+                goNextOrder(lowList, highList, low_i, high_i, callback);
             }
         });
     } else {
@@ -163,6 +163,9 @@ function goNextCurrency(currencies, lowLimits, highLimits, currency_i) {
                 currency_i = currency_i + 1;
                 goNextCurrency(currencies, lowLimits, highLimits, currency_i);
             })
+        } else {
+            currency_i = currency_i + 1;
+            goNextCurrency(currencies, lowLimits, highLimits, currency_i);
         }
     } else {
         throw new Error("low to high keep balance done!");
