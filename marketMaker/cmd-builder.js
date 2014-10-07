@@ -35,4 +35,31 @@ CmdUtil.prototype.buildCmd = function(taker_pays, taker_gets) {
     return req;
 }
 
+CmdUtil.prototype.buildByIssuerNCurrency = function(pays_issuer, pays_currency, gets_issuer, gets_currency) {
+    var cmd = {
+        "cmd": "book",
+        "params": {
+            "pays_currency": [pays_currency],
+            "gets_currency": [gets_currency]
+        },
+        "limit": 1,
+        "filter": 1,
+        "cache": 0
+    }
+
+    if (pays_currency == gets_currency) {
+        cmd.filter = 0;
+        cmd.params[pays_currency] = [pays_issuer, gets_issuer];
+        cmd.params["pays_issuer"] = [pays_issuer];
+        cmd.params["gets_issuer"] = [gets_issuer];
+    } else {
+        cmd.params[pays_currency] = [pays_issuer];
+        cmd.params[gets_currency] = [gets_issuer];
+    }
+
+    console.log(cmd);
+
+    return cmd;
+}
+
 exports.CmdUtil = CmdUtil;

@@ -128,6 +128,10 @@ AmountUtil.prototype.zoom = function(old_one, new_one, zoom_object) {
     return this.product(zoom_object, times);
 }
 
+AmountUtil.prototype.getValue = function(amountJson) {
+    getCurrency(amountJson) == "XRP" ? amountJson : amountJson.value;
+}
+
 
 function minAmount(amounts) {
     if (!amounts || amounts.length == 0) {
@@ -154,6 +158,8 @@ function getIssuer(amountJson) {
 function getCurrency(amountJson) {
     return typeof amountJson == "string" ? "XRP" : amountJson.currency;
 }
+
+
 
 function setValue(src_amount, dst_amount) {
     if (src_amount.currency().to_json() == "XRP") {
