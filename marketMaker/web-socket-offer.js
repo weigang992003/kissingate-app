@@ -476,18 +476,3 @@ emitter.once('makeProfit', makeProfit);
 emitter.once('makeFirstOrderProfit', makeFirstOrderProfit);
 emitter.once('makeSameCurrencyProfit', makeSameCurrencyProfit);
 emitter.once('makeTriCurrencyProfit', makeTriCurrencyProfit);
-
-
-
-setTimeout(prepareRestart, 1000 * 60 * 58);
-
-function prepareRestart() {
-    emitter.removeAllListeners('makeProfit');
-    emitter.removeAllListeners('makeFirstOrderProfit');
-    emitter.removeAllListeners('makeSameCurrencyProfit');
-    setTimeout(throwDisconnectError, 1000 * 30);
-}
-
-function throwDisconnectError() {
-    throw new Error('we are disconnect with ripple network!!!');
-}
