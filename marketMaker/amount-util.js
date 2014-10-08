@@ -132,6 +132,10 @@ AmountUtil.prototype.getValue = function(amountJson) {
     getCurrency(amountJson) == "XRP" ? amountJson : amountJson.value;
 }
 
+AmountUtil.prototype.getTimes = function(amount, comparedAmount) {
+    return amount.ratio_human(comparedAmount).to_human().replace(/,/g, '');
+};
+
 
 function minAmount(amounts) {
     if (!amounts || amounts.length == 0) {

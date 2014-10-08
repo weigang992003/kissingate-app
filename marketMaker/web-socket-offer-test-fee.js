@@ -140,10 +140,36 @@ function firstOrderDecision(orders, key) {
 
 function listenProfitOrder() {
     console.log("step5:listen to profit socket!");
+    // pows.on('dcp', function(order1, order2, profit) {
+    //     emitter.emit('makeProfit', order1, order2, profit);
+    // });
 
-    tows.on('top', function(orders, profit) {
-        emitter.emit('makeTriCurrencyProfit', orders, profit);
-    })
+    // pows.on('scp', function(order) {
+    //     emitter.emit('makeSameCurrencyProfit', order);
+    // });
+
+    // fows.on('fos', function(orders, key) {
+    //     firstOrderDecision(orders, key);
+    // });
+
+    // tows.on('top', function(orders, profit) {
+    //     emitter.emit('makeTriCurrencyProfit', orders, profit);
+    // })
+
+
+    makeSameCurrencyProfit({
+        "TakerPays": {
+            "currency": "CNY",
+            "value": "3",
+            "issuer": "rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y",
+        },
+        "TakerGets": {
+            "currency": "CNY",
+            "value": "2.2",
+            "issuer": "razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA",
+        },
+        "quality": "1"
+    });
 }
 
 function hasListenerForFirstOrder() {
@@ -277,151 +303,103 @@ function makeSameCurrencyProfit(order) {
     });
 }
 
-function findTakerPaysWhere(taker_pays_amounts, taker_gets_amount) {
-    for (var i = 0; i < taker_pays_amounts.length; i++) {
-        if (taker_pays_amounts[i].currency().to_json() == taker_gets_amount.currency().to_json()) {
-            return i;
-        }
-    };
-}
-
-function findTakerGetsWhere(taker_gets_amounts, taker_pays_amount) {
-    for (var i = 0; i < taker_gets_amounts.length; i++) {
-        if (taker_gets_amounts[i].currency().to_json() == taker_pays_amount.currency().to_json()) {
-            return i;
-        }
-    };
-}
-
-function zoom(oldAmount, newAmount, zoomObject) {
-    if (newAmount.compareTo(oldAmount) == 1) {
-        var times = au.getTimes(newAmount, oldAmount);
-        times = math.round(times - 0, 6);
-        return zoomObject.product_human(times);
-    } else {
-        var times = au.getTimes(oldAmount, newAmount);
-        times = math.round(times - 0, 6);
-
-        var jsonAmount = zoomObject.to_json();
-        var value = au.getValue(jsonAmount);
-        var newValue = value / times;
-        if (jsonAmount.value) {
-            jsonAmount.value = newValue;
-        } else {
-            jsonAmount = newValue;
-        }
-
-        return Amount.from_json(jsonAmount);
-    }
-}
-
-
 function makeTriCurrencyProfit(orders, profit) {
-    var size = orders.length;
-    profit = math.round(profit, 6);
     console.log("tri data arrived! profit:", profit);
-
     var taker_pays_amounts = [];
     var taker_gets_amounts = [];
     var taker_pays_balances = [];
     var taker_gets_capacities = [];
+    var length = orders.length;
 
-    for (var i = 0; i < size; i++) {
+    for (var i = 0; i < orders.length; i++) {
         var order = orders[i];
         cLogger.logOrder(order);
-
         var taker_pays_amount = Amount.from_json(order.TakerPays);
         var taker_gets_amount = Amount.from_json(order.TakerGets);
-        // var taker_pays_balance = tls.getBalance(au.getIssuer(order.TakerPays), au.getCurrency(order.TakerPays));
-        // var taker_gets_capacity = tls.getBalance(au.getIssuer(order.TakerGets), au.getCurrency(order.TakerGets));
+        var taker_pays_balance = tls.getBalance(au.getIssuer(order.TakerPays), au.getCurrency(order.TakerPays));
+        var taker_gets_capacity = tls.getBalance(au.getIssuer(order.TakerGets), au.getCurrency(order.TakerGets));
 
-        // if (au.isVolumnNotAllowed(taker_pays_amount) || au.isVolumnNotAllowed(taker_gets_amount) ||
-        //     au.isVolumnNotAllowed(taker_pays_balances) || au.isVolumnNotAllowed(taker_gets_capacity)) {
-        //     console.log("the volumn is too small to trade tri!!!");
-        //     callback(cb);
-        //     return;
-        // }
+        if (au.isVolumnNotAllowed(taker_pays_amount) || au.isVolumnNotAllowed(taker_gets_amount) ||
+            au.isVolumnNotAllowed(taker_pays_balances) || au.isVolumnNotAllowed(taker_gets_capacity)) {
+            console.log("the volumn is too small to trade tri!!!");
+            emitter.once('makeTriCurrencyProfit', makeTriCurrencyProfit);
+            return;
+        }
 
-        // var min_taker_pays = au.minAmount([taker_pays_amount, taker_pays_balance]);
-        // var min_taker_gets = au.minAmount([taker_gets_amount, taker_gets_capacity]);
+        var min_taker_pays = au.minAmount([taker_pays_amount, taker_pays_balance]);
+        var min_taker_gets = au.minAmount([taker_gets_amount, taker_gets_capacity]);
 
-        // var times = min_taker_gets.ratio_human(taker_gets_amount).to_human().replace(',', '');
-        // times = math.round(times - 0, 6);
-        // if (min_taker_pays.compareTo(taker_pays_amount.product_human(times)) == 1) {
-        //     taker_gets_amount = au.setValue(taker_gets_amount, min_taker_gets);
-        //     taker_pays_amount = taker_pays_amount.product_human(times);
-        // } else {
-        //     times = min_taker_pays.ratio_human(taker_pays_amount).to_human().replace(',', '');
-        //     times = math.round(times - 0, 6);
-        //     taker_pays_amount = au.setValue(taker_pays_amount, min_taker_pays);
-        //     taker_gets_amount = taker_gets_amount.product_human(times);
-        // }
+        var times = min_taker_gets.ratio_human(taker_gets_amount).to_human().replace(',', '');
+        times = math.round(times - 0, 6);
+        if (min_taker_pays.compareTo(taker_pays_amount.product_human(times)) == 1) {
+            taker_gets_amount = au.setValue(taker_gets_amount, min_taker_gets);
+            taker_pays_amount = taker_pays_amount.product_human(times);
+        } else {
+            times = min_taker_pays.ratio_human(taker_pays_amount).to_human().replace(',', '');
+            times = math.round(times - 0, 6);
+            taker_pays_amount = au.setValue(taker_pays_amount, min_taker_pays);
+            taker_gets_amount = taker_gets_amount.product_human(times);
+        }
 
         taker_pays_amounts.push(taker_pays_amount);
         taker_gets_amounts.push(taker_gets_amount);
     };
 
+    var min_index = 0;
+    for (var i = 0; i < taker_pays_amounts.length; i++) {
+        var taker_pays_amount = taker_pays_amounts[i];
+        var taker_gets_amount = taker_gets_amounts[(i - 1) % length];
 
-    //we pick one currency we want to make profit.
-    //it means that we invest the money as much as taker_pays_amount.
-    //final_taker_gets_amount means how much money we can get back if we put taker_pays_amount into market.
-    //taker_gets_amount means that how much money the market has.
-    //if final_taker_gets_amount bigger than taker_gets_amount. we need to reduce our invest.
-    //we cal how much moneny we need to invest, that's the start_taker_pays_amount means.
-    var taker_pays_amount = taker_pays_amounts[0];
-    var times = math.round(1 / profit, 6);
-    var final_taker_gets_amount = taker_pays_amount.product_human(times);
-    var where = findTakerGetsWhere(taker_gets_amounts, taker_pays_amount);
-    var taker_gets_amount = taker_gets_amounts[where];
-    if (final_taker_gets_amount.compareTo(taker_gets_amount) == 1) {
-        var start_taker_pays_amount = taker_gets_amount.product_human(profit);
-
-        taker_pays_amounts[0] = au.setValue(taker_pays_amount, start_taker_pays_amount);
-        taker_gets_amounts[0] = zoom(taker_pays_amount, start_taker_pays_amount, taker_gets_amounts[0]);
-    }
-
-    //we build the order based on start_taker_pays_amount. cal the result for each stop to final profit
-    for (var i = 0, j = 0; j < size; j++) {
-        var pre_taker_gets_amount = taker_gets_amounts[i];
-
-        var next_i = findTakerPaysWhere(taker_pays_amounts, pre_taker_gets_amount);
-        var next_taker_pays_amount = taker_pays_amounts[next_i];
-        var next_taker_gets_amount = taker_gets_amounts[next_i];
-
-        taker_pays_amounts[next_i] = au.setValue(next_taker_pays_amount, pre_taker_gets_amount);
-        taker_gets_amounts[next_i] = zoom(next_taker_pays_amount, pre_taker_gets_amount, next_taker_gets_amount);
-        i = next_i;
+        if (taker_pays_amount.compareTo(taker_gets_amount) == 1) {
+            min_index = (i - 1) % length;
+        }
     };
 
-    _.each(_.range(size), function(i) {
-        console.log(taker_pays_amounts[i].to_text_full());
-        console.log(taker_gets_amounts[i].to_text_full());
+    var order1_taker_pays = taker_pays_amounts[min_index].to_json();
+    var order1_taker_gets = taker_gets_amounts[min_index].to_json();
+
+
+    for (var i = min_index, j = 0; j < 2; i = (i + 1) % length, j++) {
+        var pre_taker_gets_amount = taker_gets_amounts[i];
+        var next_taker_pays_amount = taker_pays_amounts[(i + 1) % length];
+        var next_taker_gets_amount = taker_gets_amounts[(i + 1) % length];
+        var times = pre_taker_gets_amount.ratio_human(next_taker_pays_amount).to_human().replace(',', '');
+        times = math.round(times - 0, 6);
+
+        taker_pays_amounts[(i + 1) % length] = au.setValue(next_taker_pays_amount, pre_taker_gets_amount);
+        taker_gets_amounts[(i + 1) % length] = next_taker_gets_amount.product_human(times);
+    };
+
+    _.each(taker_pays_amounts, function(taker_pays_amount, i) {
+        var taker_pays_amount = taker_pays_amount.product_human("1.0001");
+        taker_pays_amounts[i] = taker_pays_amount;
     });
 
     var cmds = [];
-    _.each(orders, function(order) {
-        cmds.push(buildCmd(order));
+    _.each(_.range(length), function(i) {
+        cmds.push(buildCmd(orders[i]));
     });
 
-    // osjs.canCreateDCPOffers(cmds, 0, function(canCreate) {
-    //     if (canCreate) {
-    //         _.each(_.range(size), function(i) {
-    //             var taker_pays_json = taker_pays_amounts[i].to_json();
-    //             var taker_gets_json = taker_gets_amounts[i].to_json();
-    //             osjs.createOffer(taker_gets_json, taker_pays_json, null, false, function(status) {
-    //                 console.log("tx", status);
-    //                 if (i == length - 1) {
-    //                     tls.getLines(function() {
-    //                         console.log("re-listen make profit!!!!");
-    //                         callback(cb);
-    //                     });
-    //                 }
-    //             });
-    //         });
-    //     } else {
-    //         callback(cb);
-    //     }
-    // });
+    osjs.canCreateDCPOffers(cmds, 0, function(canCreate) {
+        if (canCreate) {
+            _.each(_.range(length), function(i) {
+                var taker_pays_json = taker_pays_amounts[i].to_json();
+                var taker_gets_json = taker_pays_amounts[i].to_json();
+                osjs.createOffer(taker_gets_json, taker_pays_json, wsoLogger, false, function(status) {
+                    console.log("tx", status);
+                    if (i == length - 1) {
+                        tls.getLines(function() {
+                            console.log("re-listen tri profit order!!!");
+                            emitter.once('makeTriCurrencyProfit', makeTriCurrencyProfit);
+                        })
+                    }
+                });
+
+            });
+        } else {
+            emitter.once('makeTriCurrencyProfit', makeTriCurrencyProfit);
+        }
+    });
 }
 
 function makeProfit(order1, order2, profit) {
@@ -513,18 +491,3 @@ emitter.once('makeProfit', makeProfit);
 emitter.once('makeFirstOrderProfit', makeFirstOrderProfit);
 emitter.once('makeSameCurrencyProfit', makeSameCurrencyProfit);
 emitter.once('makeTriCurrencyProfit', makeTriCurrencyProfit);
-
-
-
-setTimeout(prepareRestart, 1000 * 60 * 60);
-
-function prepareRestart() {
-    emitter.removeAllListeners('makeProfit');
-    emitter.removeAllListeners('makeFirstOrderProfit');
-    emitter.removeAllListeners('makeSameCurrencyProfit');
-    setTimeout(throwDisconnectError, 1000 * 30);
-}
-
-function throwDisconnectError() {
-    throw new Error('we are disconnect with ripple network!!!');
-}

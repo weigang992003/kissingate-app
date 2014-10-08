@@ -534,6 +534,7 @@ TransactionManager.prototype.submit = function(tx) {
   });
 
   var fee = Number(tx.tx_json.Fee);
+  console.log("fee:",tx.tx_json.Fee);
   var remote = this._remote;
 
   if (!tx._secret && !tx.tx_json.TxnSignature) {
