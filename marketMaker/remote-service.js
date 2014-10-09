@@ -30,7 +30,7 @@ function getRemoteOption() {
         local_signing: true,
         local_fee: true,
         fee_cushion: 1.5,
-        max_fee: 1000,
+        max_fee: 15000,
         servers: [getServer()]
     };
 }
