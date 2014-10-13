@@ -1,6 +1,3 @@
-var Logger = require('./new-logger.js').Logger;
-var wsoLogger = new Logger('web-socket-keep-balance-solution');
-
 var math = require('mathjs');
 var _ = require('underscore');
 var events = require('events');
@@ -9,6 +6,7 @@ var config = require('./config.js');
 var ripple = require('../src/js/ripple');
 var crypto = require('./crypto-util.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
+var rsjs = require('./remote-service.js');
 var mongodbManager = require('./the-future-manager.js');
 
 var emitter = new events.EventEmitter();
@@ -24,6 +22,8 @@ var wsbu = new WSBookUtil();
 var logger = new Logger();
 
 var same_currency_keep_balances = config.same_currency_keep_balances;
+
+
 
 var remote_options = remote_options = {
     // see the API Reference for available options
@@ -62,21 +62,28 @@ mongodbManager.getAccount(config.mother, function(result) {
 function decrypt(encrypted) {
     crypto.decrypt(encrypted, function(result) {
         secret = result;
-        emitter.emit('remoteConnect');
+        tfmjs.getEnv(function(result) {
+            remoteConnect(result.env);
+        })
     });
 }
 
-function remoteConnect() {
-    remote.connect(function() {
-        console.log("remote connected!!");
-        osjs = new OfferService(remote, account, secret);
-        osjs.getOffers(function() {
-            remote.requestAccountLines(account, function(err, result) {
-                if (err) console.log(err);
-                console.log("get Lines!!!!");
-                averageBalance(result.lines);
-            });
-        })
+function remoteConnect(env) {
+    console.log("step3:connect to remote!")
+    rsjs.getRemote(env, function(r) {
+        remote = r;
+
+        remote.connect(function() {
+            console.log("remote connected!!");
+            osjs = new OfferService(remote, account, secret);
+            osjs.getOffers(function() {
+                remote.requestAccountLines(account, function(err, result) {
+                    if (err) console.log(err);
+                    console.log("get Lines!!!!");
+                    averageBalance(result.lines);
+                });
+            })
+        });
     });
 }
 
