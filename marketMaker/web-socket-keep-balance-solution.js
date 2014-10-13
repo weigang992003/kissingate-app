@@ -32,7 +32,7 @@ var remote_options = remote_options = {
     local_signing: true,
     local_fee: true,
     fee_cushion: 1.5,
-    max_fee: 100,
+    max_fee: 15000,
     servers: [{
         host: 's-east.ripple.com',
         port: 443,

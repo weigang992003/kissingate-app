@@ -1,6 +1,6 @@
 var _ = require('underscore');
 var mongoose = require('mongoose');
-var ridb = mongoose.createConnection('mongodb://localhost/ripple-info');
+var ridb = mongoose.createConnection('mongodb://localhost:9000/ripple-info');
 
 var currenciesSchema = mongoose.Schema({
     currency: String,

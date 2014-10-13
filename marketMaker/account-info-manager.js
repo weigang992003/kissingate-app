@@ -1,7 +1,7 @@
 var _ = require('underscore');
 var mongoose = require('mongoose');
 
-var ai = mongoose.createConnection('mongodb://localhost/account-info');
+var ai = mongoose.createConnection('mongodb://localhost:9000/account-info');
 
 var AmountUtil = require('./amount-util.js').AmountUtil;
 var au = new AmountUtil();

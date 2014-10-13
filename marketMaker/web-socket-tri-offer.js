@@ -142,7 +142,7 @@ function listenProfitOrder() {
     console.log("step5:listen to profit socket!");
 
     tows.on('top', function(orders, profit) {
-        emitter.emit('makeTriCurrencyProfit', orders, profit);
+        emitter.emit('makeProfit', orders, profit);
     })
 }
 
@@ -509,12 +509,7 @@ function makeProfit(order1, order2, profit) {
 }
 
 var emitter = new events.EventEmitter();
-emitter.once('makeProfit', makeProfit);
-emitter.once('makeFirstOrderProfit', makeFirstOrderProfit);
-emitter.once('makeSameCurrencyProfit', makeSameCurrencyProfit);
-emitter.once('makeTriCurrencyProfit', makeTriCurrencyProfit);
-
-
+emitter.once('makeProfit', makeTriCurrencyProfit);
 
 setTimeout(prepareRestart, 1000 * 60 * 60);
 
