@@ -62,7 +62,7 @@ mongodbManager.getAccount(config.mother, function(result) {
 function decrypt(encrypted) {
     crypto.decrypt(encrypted, function(result) {
         secret = result;
-        tfmjs.getEnv(function(result) {
+        mongodbManager.getEnv(function(result) {
             remoteConnect(result.env);
         })
     });
