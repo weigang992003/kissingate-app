@@ -7,7 +7,7 @@ var ripple = require('../src/js/ripple');
 var crypto = require('./crypto-util.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
 var rsjs = require('./remote-service.js');
-var mongodbManager = require('./the-future-manager.js');
+var tfmjs = require('./the-future-manager.js');
 
 var emitter = new events.EventEmitter();
 emitter.once('decrypt', decrypt);
@@ -21,9 +21,8 @@ var osjs;
 var wsbu = new WSBookUtil();
 var logger = new Logger();
 
+var transfer_rates = config.transfer_rates;
 var same_currency_keep_balances = config.same_currency_keep_balances;
-
-
 
 var remote_options = remote_options = {
     // see the API Reference for available options
@@ -53,7 +52,7 @@ var remote = new ripple.Remote(remote_options);
 var account;
 var secret;
 console.log("get account!!");
-mongodbManager.getAccount(config.mother, function(result) {
+tfmjs.getAccount(config.mother, function(result) {
     account = result.account;
     secret = result.secret;
     emitter.emit('decrypt', secret);
@@ -62,7 +61,7 @@ mongodbManager.getAccount(config.mother, function(result) {
 function decrypt(encrypted) {
     crypto.decrypt(encrypted, function(result) {
         secret = result;
-        mongodbManager.getEnv(function(result) {
+        tfmjs.getEnv(function(result) {
             remoteConnect(result.env);
         })
     });
@@ -190,10 +189,12 @@ function goNext(payList, getList, i, j, average, callback) {
             'value': getmost + ''
         };
 
+        var transfer_rate = transfer_rates[taker_gets.issuer];
+
         var req = buildCmd(taker_pays, taker_gets);
         wsbu.exeCmd(req, function(res) {
             console.log("quality:", res[0].quality);
-            if (res[0].quality > 1) {
+            if (res[0].quality > 1.00005 + transfer_rate) {
                 taker_gets.value = (taker_pays.value / res[0].quality) * 1.00001 + "";
                 console.log("taker_pays", taker_pays);
                 console.log("taker_gets", taker_gets);
