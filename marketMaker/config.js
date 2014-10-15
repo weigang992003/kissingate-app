@@ -103,6 +103,12 @@ exports.currencies_no = {
     "BTC": 11
 }
 
+exports.currency_pair_allow_trade_not_in_same_ledger = [
+    ['CNY', 'JPY']
+];
+
+exports.currency_allow_empty = ['JPY'];
+
 exports.same_currency_keep_balances = ['CNY', 'BTC', 'USD'];
 exports.solved_too_small_volumn_currencies = ['CNY', 'BTC', 'USD'];
 

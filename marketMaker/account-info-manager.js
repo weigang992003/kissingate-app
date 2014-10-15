@@ -66,18 +66,33 @@ AccountInfoManager.prototype.saveTH = function(record, callback) {
         i_gets_currency: record.i_gets_currency
     }, function(err, result) {
         if (result) {
-            result.i_pays_value = result.i_pays_value - (-record.i_pays_value);
-            result.i_gets_value = result.i_gets_value - (-record.i_gets_value);
-            result.hashs = _.union(result.hashs, record.hashs);
-            result.price = au.toExp(result.i_pays_value / result.i_gets_value);
-            result.save(function(err) {
-                if (err) {
-                    throw new Error(err);
-                } else if (callback) {
+            var needToSave = true;
+
+            record.hashs.every(function(txHash) {
+                if (_.contains(result.hashs, txHash)) {
+                    needToSave = false;
+                }
+                return needToSave;
+            });
+
+            if (needToSave) {
+                result.i_pays_value = result.i_pays_value - (-record.i_pays_value);
+                result.i_gets_value = result.i_gets_value - (-record.i_gets_value);
+                result.hashs = _.union(result.hashs, record.hashs);
+                result.price = au.toExp(result.i_pays_value / result.i_gets_value);
+                result.save(function(err) {
+                    if (err) {
+                        throw new Error(err);
+                    } else if (callback) {
+                        callback();
+                    }
+                });
+            } else {
+                console.log("find same hash in existing hashes");
+                if (callback) {
                     callback();
                 }
-
-            });
+            }
         } else {
             var row = new txHisotry(record);
             row.save(function(err) {
@@ -256,11 +271,4 @@ function minus(src_amount, reduce_amount) {
     }
 }
 
-exports.saveBH = saveBH;
 exports.AccountInfoManager = AccountInfoManager;
-
-// var aim = new AccountInfoManager();
-// aim.getTH('rf9q1WE2Kdmv9AWtesCaANJyNxnFjp5T7z', 'XRPT', 'USDT', function(result) {
-//     console.log(result);
-//     result.remove();
-// });

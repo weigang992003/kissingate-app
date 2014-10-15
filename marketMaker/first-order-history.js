@@ -1,6 +1,3 @@
-var Logger = require('./new-logger.js').Logger;
-var fohLogger = new Logger('first-order-history');
-
 var ripple = require('../src/js/ripple');
 var jsbn = require('../src/js/jsbn/jsbn.js');
 
