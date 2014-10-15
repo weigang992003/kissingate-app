@@ -86,13 +86,13 @@ exports.first_order_allow_issuers = {
     'BTC': ['rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q', 'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B']
 }
 exports.profit_min_volumns = {
-    "XRP": "20000000",
-    "BTC": "0.0002",
-    "USD": "1",
-    "JPY": "20",
-    "CNY": "2",
-    "FMM": "2",
-    "EUR": "0.8"
+    "XRP": "200000000",
+    "BTC": "0.001",
+    "USD": "5",
+    "JPY": "200",
+    "CNY": "20",
+    "FMM": "20",
+    "EUR": "3"
 }
 
 exports.currencies_no = {
