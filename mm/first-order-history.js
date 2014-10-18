@@ -5,7 +5,7 @@ var Remote = ripple.Remote;
 var Amount = ripple.Amount;
 
 var _ = require('underscore');
-var config = require('../marketMaker/config.js');
+var config = require('./config.js');
 
 var AmountUtil = require('./amount-util.js').AmountUtil;
 var AccountInfoManager = require('./account-info-manager.js').AccountInfoManager;
