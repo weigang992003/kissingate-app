@@ -1,3 +1,6 @@
+var Logger = require('./new-logger.js').Logger;
+var wsdoLogger = new Logger("web-socket-dcp-offer");
+
 var io = require('socket.io-client');
 var pows = io.connect('http://localhost:3003/ws');
 var fows = io.connect('http://localhost:3006/ws');
@@ -38,6 +41,8 @@ var drops = config.drops;
 var transfer_rates = config.transfer_rates;
 var first_order_allow_volumns = config.first_order_allow_volumns;
 var solved_too_small_volumn_currencies = config.solved_too_small_volumn_currencies;
+
+var emitter = new events.EventEmitter();
 
 function buildCmd(order) {
     var pays_issuer = au.getIssuer(order.TakerPays);
@@ -80,7 +85,12 @@ function listenProfitOrder() {
     pows.on('dcp', function(orders, profit) {
         emitter.emit('makeMultiCurrencyProfit', orders, profit);
     });
+    tows.on('top', function(orders, profit) {
+        emitter.emit('makeMultiCurrencyProfit', orders, profit);
+    })
 }
+
+emitter.once('makeMultiCurrencyProfit', makeMultiCurrencyProfit);
 
 function makeMultiCurrencyProfit(orders, profit) {
     profit = math.round(profit, 6);
@@ -97,9 +107,9 @@ function makeMultiCurrencyProfit(orders, profit) {
         var taker_pays_amount = Amount.from_json(order.TakerPays);
         var taker_gets_amount = Amount.from_json(order.TakerGets);
         var taker_pays_balance = tls.getBalance(au.getIssuer(order.TakerPays), au.getCurrency(order.TakerPays));
-        var taker_gets_capacity = tls.getBalance(au.getIssuer(order.TakerGets), au.getCurrency(order.TakerGets));
+        var taker_gets_capacity = tls.getCapacity(au.getIssuer(order.TakerGets), au.getCurrency(order.TakerGets));
         if (au.isVolumnNotAllowed(taker_pays_amount) || au.isVolumnNotAllowed(taker_gets_amount) ||
-            au.isVolumnNotAllowed(taker_pays_balances) || au.isVolumnNotAllowed(taker_gets_capacity)) {
+            au.isVolumnNotAllowed(taker_pays_balance) || au.isVolumnNotAllowed(taker_gets_capacity)) {
             console.log("the volumn is too small to trade for multi!!!");
             emitter.once('makeMultiCurrencyProfit', makeMultiCurrencyProfit);
             return;
@@ -144,7 +154,7 @@ function makeMultiCurrencyProfit(orders, profit) {
     }
 
     //we build the order based on start_taker_pays_amount. cal the result for each stop to final profit
-    for (var i = 0, j = 0; j < 2; j++) {
+    for (var i = 0, j = 0; j < length - 1; j++) {
         var pre_taker_gets_amount = taker_gets_amounts[i];
 
         var next_i = findTakerPaysWhere(taker_pays_amounts, pre_taker_gets_amount);
@@ -159,9 +169,13 @@ function makeMultiCurrencyProfit(orders, profit) {
     };
 
     var cmds = [];
+    var exchanges = {};
     _.each(_.range(length), function(i) {
+        exchanges[i + ""] = taker_pays_amounts[i].to_text_full() + "->" + taker_gets_amounts[i].to_text_full();
         console.log(taker_pays_amounts[i].to_text_full(), "->", taker_gets_amounts[i].to_text_full());
     });
+
+    wsdoLogger.log(true, exchanges);
 
     // osjs.canCreateDCPOffers(cmds, 0, function(canCreate) {
     //     if (canCreate) {
@@ -183,6 +197,8 @@ function makeMultiCurrencyProfit(orders, profit) {
     //         emitter.once('makeMultiCurrencyProfit', makeMultiCurrencyProfit);
     //     }
     // });
+
+    emitter.once('makeMultiCurrencyProfit', makeMultiCurrencyProfit);
 }
 
 function findTakerPaysWhere(taker_pays_amounts, taker_gets_amount) {

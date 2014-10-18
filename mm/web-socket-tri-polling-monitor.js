@@ -10,7 +10,6 @@ var crypto = require('./crypto-util.js');
 var rsjs = require('./remote-service.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
 var tfmjs = require('./the-future-manager.js');
-var rippleInfo = require('./ripple-info-manager.js');
 
 var tfm = new tfmjs.TheFutureManager();
 var firstOrders;
@@ -23,7 +22,6 @@ var ProfitUtil = require('./profit-util.js').ProfitUtil;
 var AmountUtil = require('./amount-util.js').AmountUtil;
 var OfferService = require('./offer-service.js').OfferService;
 var WSBookUtil = require('./web-socket-book-util.js').WSBookUtil;
-var queryBookByOrder = require('./query-book.js').queryBookByOrder;
 var TrustLineService = require('./trust-line-service.js').TrustLineService;
 var AccountInfoManager = require('./account-info-manager').AccountInfoManager;
 
