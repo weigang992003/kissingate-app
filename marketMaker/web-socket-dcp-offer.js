@@ -15,6 +15,7 @@ var jsbn = require('../src/js/jsbn/jsbn.js');
 var tfmjs = require('./the-future-manager.js');
 var rippleInfo = require('./ripple-info-manager.js');
 
+var CmdUtil = require('./cmd-builder.js').CmdUtil;
 var Loop = require('./loop-util.js').Loop;
 var CLogger = require('./log-util.js').CLogger;
 var AmountUtil = require('./amount-util.js').AmountUtil;
@@ -77,10 +78,14 @@ function buildCmdByIssuerNCurrency(pays_issuer, pays_currency, gets_issuer, gets
     return cmd;
 }
 
+function listenProfitOrder() {
+    console.log("step5:listen to profit socket!");
+    pows.on('dcp', function(orders, profit) {
+        emitter.emit('makeMultiCurrencyProfit', orders, profit);
+    });
+}
 
-
-
-function makeTriCurrencyProfit(orders, profit) {
+function makeMultiCurrencyProfit(orders, profit) {
     profit = math.round(profit, 6);
     console.log("tri data arrived! profit:", profit);
     var taker_pays_amounts = [];
@@ -100,7 +105,7 @@ function makeTriCurrencyProfit(orders, profit) {
         // if (au.isVolumnNotAllowed(taker_pays_amount) || au.isVolumnNotAllowed(taker_gets_amount) ||
         //     au.isVolumnNotAllowed(taker_pays_balances) || au.isVolumnNotAllowed(taker_gets_capacity)) {
         //     console.log("the volumn is too small to trade tri!!!");
-        //     emitter.once('makeTriCurrencyProfit', makeTriCurrencyProfit);
+        //     emitter.once('makeMultiCurrencyProfit', makeMultiCurrencyProfit);
         //     return;
         // }
         // var min_taker_pays = au.minAmount([taker_pays_amount, taker_pays_balance]);
@@ -159,8 +164,7 @@ function makeTriCurrencyProfit(orders, profit) {
 
     var cmds = [];
     _.each(_.range(length), function(i) {
-        console.log(taker_pays_amounts[i].to_text_full());
-        console.log(taker_gets_amounts[i].to_text_full());
+        console.log(taker_pays_amounts[i].to_text_full(), "->", taker_gets_amounts[i].to_text_full());
     });
 
     // osjs.canCreateDCPOffers(cmds, 0, function(canCreate) {
@@ -173,14 +177,14 @@ function makeTriCurrencyProfit(orders, profit) {
     //                 if (i == length - 1) {
     //                     tls.getLines(function() {
     //                         console.log("re-listen tri profit order!!!");
-    //                         emitter.once('makeTriCurrencyProfit', makeTriCurrencyProfit);
+    //                         emitter.once('makeMultiCurrencyProfit', makeMultiCurrencyProfit);
     //                     })
     //                 }
     //             });
 
     //         });
     //     } else {
-    //         emitter.once('makeTriCurrencyProfit', makeTriCurrencyProfit);
+    //         emitter.once('makeMultiCurrencyProfit', makeMultiCurrencyProfit);
     //     }
     // });
 }
@@ -200,91 +204,3 @@ function findTakerGetsWhere(taker_gets_amounts, taker_pays_amount) {
         }
     };
 }
-
-var order1 = {
-    TakerPays: {
-        currency: 'CNY',
-        value: '10',
-        issuer: 'rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y'
-    },
-    Account: 'rEepZ4ok2UWuvBedU54XjfjxeiePexxEsq',
-    quality: '0.1',
-    TakerGets: {
-        currency: 'JPY',
-        value: '100',
-        issuer: 'rMAz5ZnK73nyNUL4foAvaxdreczCkG3vA6'
-    }
-}
-
-var order2 = {
-    TakerPays: {
-        currency: 'USD',
-        value: '0.1',
-        issuer: 'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B'
-    },
-    Account: 'rajDteRmFXXs8ALEhfPpwMZy7QuW3o7MtE',
-    quality: '0.05',
-    TakerGets: {
-        currency: 'CNY',
-        value: '2',
-        issuer: 'rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK'
-    }
-}
-
-
-var order3 = {
-    TakerPays: {
-        currency: 'JPY',
-        value: '16',
-        issuer: 'rMAz5ZnK73nyNUL4foAvaxdreczCkG3vA6'
-    },
-    Account: 'rDVMxgwAd1ofsSLAzcRZfeEUUw8dFRYZJ8',
-    quality: '20',
-    TakerGets: {
-        currency: 'USD',
-        value: '0.8',
-        issuer: 'rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q'
-    }
-}
-
-var orderList = [{
-    TakerPays: {
-        currency: 'BTC',
-        value: '0.0000377123234481304',
-        issuer: 'rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q'
-    },
-    Account: 'r3cPPejMEFKidfAwrFATCXfE2dbde4Axho',
-    quality: '0.002185225824444',
-    TakerGets: {
-        currency: 'CAD',
-        value: '0.0172578609616825',
-        issuer: 'r3ADD8kXSUKHd6zTCKfnKT3zV9EZHjzp1S'
-    }
-}, {
-    TakerPays: {
-        currency: 'JPY',
-        value: '7015.866572189205',
-        issuer: 'rMAz5ZnK73nyNUL4foAvaxdreczCkG3vA6'
-    },
-    Account: 'rh9yCJdcakq7JMLiZtZjsq9qdDffszaJHo',
-    quality: '40734.87165128349',
-    TakerGets: {
-        currency: 'BTC',
-        value: '0.172232445759238',
-        issuer: 'rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q'
-    }
-}, {
-    TakerPays: {
-        currency: 'CAD',
-        value: '0.000103425117931',
-        issuer: 'r3ADD8kXSUKHd6zTCKfnKT3zV9EZHjzp1S'
-    },
-    Account: 'r3cPPejMEFKidfAwrFATCXfE2dbde4Axho',
-    quality: '0.010879977002252',
-    TakerGets: {
-        currency: 'JPY',
-        value: '0.009506005197387',
-        issuer: 'rMAz5ZnK73nyNUL4foAvaxdreczCkG3vA6'
-    }
-}];
-makeTriCurrencyProfit(orderList, 0.9684799940048182);

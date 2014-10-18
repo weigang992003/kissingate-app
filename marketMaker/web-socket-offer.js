@@ -140,8 +140,8 @@ function firstOrderDecision(orders, key) {
 
 function listenProfitOrder() {
     console.log("step5:listen to profit socket!");
-    pows.on('dcp', function(order1, order2, profit) {
-        emitter.emit('makeProfit', order1, order2, profit);
+    pows.on('dcp', function(orders, profit) {
+        emitter.emit('makeProfit', orders, profit);
     });
 
     pows.on('scp', function(order) {
@@ -387,7 +387,9 @@ function makeTriCurrencyProfit(orders, profit) {
     });
 }
 
-function makeProfit(order1, order2, profit) {
+function makeProfit(orders, profit) {
+    var order1 = orders[0];
+    var order2 = orders[1];
     console.log("new data arrived! profit:", profit);
     var order1_taker_pays_issuer = au.getIssuer(order1.TakerPays);
     var order1_taker_gets_issuer = au.getIssuer(order1.TakerGets);
