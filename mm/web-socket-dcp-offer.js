@@ -13,7 +13,6 @@ var crypto = require('./crypto-util.js');
 var rsjs = require('./remote-service.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
 var tfmjs = require('./the-future-manager.js');
-var rippleInfo = require('./ripple-info-manager.js');
 
 var CmdUtil = require('./cmd-builder.js').CmdUtil;
 var Loop = require('./loop-util.js').Loop;
@@ -21,9 +20,7 @@ var CLogger = require('./log-util.js').CLogger;
 var AmountUtil = require('./amount-util.js').AmountUtil;
 var OfferService = require('./offer-service.js').OfferService;
 var WSBookUtil = require('./web-socket-book-util.js').WSBookUtil;
-var queryBookByOrder = require('./query-book.js').queryBookByOrder;
 var FirstOrderUtil = require('./first-order-util.js').FirstOrderUtil;
-var AccountListener = require('./listen-account-util.js').AccountListener;
 var TrustLineService = require('./trust-line-service.js').TrustLineService;
 
 var au = new AmountUtil();
@@ -94,34 +91,33 @@ function makeMultiCurrencyProfit(orders, profit) {
     var taker_gets_capacities = [];
     var length = orders.length;
 
-    //
     for (var i = 0; i < orders.length; i++) {
         var order = orders[i];
         cLogger.logOrder(order);
         var taker_pays_amount = Amount.from_json(order.TakerPays);
         var taker_gets_amount = Amount.from_json(order.TakerGets);
-        // var taker_pays_balance = tls.getBalance(au.getIssuer(order.TakerPays), au.getCurrency(order.TakerPays));
-        // var taker_gets_capacity = tls.getBalance(au.getIssuer(order.TakerGets), au.getCurrency(order.TakerGets));
-        // if (au.isVolumnNotAllowed(taker_pays_amount) || au.isVolumnNotAllowed(taker_gets_amount) ||
-        //     au.isVolumnNotAllowed(taker_pays_balances) || au.isVolumnNotAllowed(taker_gets_capacity)) {
-        //     console.log("the volumn is too small to trade tri!!!");
-        //     emitter.once('makeMultiCurrencyProfit', makeMultiCurrencyProfit);
-        //     return;
-        // }
-        // var min_taker_pays = au.minAmount([taker_pays_amount, taker_pays_balance]);
-        // var min_taker_gets = au.minAmount([taker_gets_amount, taker_gets_capacity]);
+        var taker_pays_balance = tls.getBalance(au.getIssuer(order.TakerPays), au.getCurrency(order.TakerPays));
+        var taker_gets_capacity = tls.getBalance(au.getIssuer(order.TakerGets), au.getCurrency(order.TakerGets));
+        if (au.isVolumnNotAllowed(taker_pays_amount) || au.isVolumnNotAllowed(taker_gets_amount) ||
+            au.isVolumnNotAllowed(taker_pays_balances) || au.isVolumnNotAllowed(taker_gets_capacity)) {
+            console.log("the volumn is too small to trade for multi!!!");
+            emitter.once('makeMultiCurrencyProfit', makeMultiCurrencyProfit);
+            return;
+        }
+        var min_taker_pays = au.minAmount([taker_pays_amount, taker_pays_balance]);
+        var min_taker_gets = au.minAmount([taker_gets_amount, taker_gets_capacity]);
 
-        // var times = min_taker_gets.ratio_human(taker_gets_amount).to_human().replace(',', '');
-        // times = math.round(times - 0, 6);
-        // if (min_taker_pays.compareTo(taker_pays_amount.product_human(times)) == 1) {
-        //     taker_gets_amount = au.setValue(taker_gets_amount, min_taker_gets);
-        //     taker_pays_amount = taker_pays_amount.product_human(times);
-        // } else {
-        //     times = min_taker_pays.ratio_human(taker_pays_amount).to_human().replace(',', '');
-        //     times = math.round(times - 0, 6);
-        //     taker_pays_amount = au.setValue(taker_pays_amount, min_taker_pays);
-        //     taker_gets_amount = taker_gets_amount.product_human(times);
-        // }
+        var times = min_taker_gets.ratio_human(taker_gets_amount).to_human().replace(',', '');
+        times = math.round(times - 0, 6);
+        if (min_taker_pays.compareTo(taker_pays_amount.product_human(times)) == 1) {
+            taker_gets_amount = au.setValue(taker_gets_amount, min_taker_gets);
+            taker_pays_amount = taker_pays_amount.product_human(times);
+        } else {
+            times = min_taker_pays.ratio_human(taker_pays_amount).to_human().replace(',', '');
+            times = math.round(times - 0, 6);
+            taker_pays_amount = au.setValue(taker_pays_amount, min_taker_pays);
+            taker_gets_amount = taker_gets_amount.product_human(times);
+        }
 
         taker_pays_amounts.push(taker_pays_amount);
         taker_gets_amounts.push(taker_gets_amount);
@@ -203,4 +199,49 @@ function findTakerGetsWhere(taker_gets_amounts, taker_pays_amount) {
             return i;
         }
     };
+}
+
+
+var account;
+var secret;
+console.log("step1:getAccount!")
+tfmjs.getAccount(config.marketMaker, function(result) {
+    account = result.account;
+    secret = result.secret;
+    decrypt(secret);
+});
+
+function decrypt(encrypted) {
+    console.log("step2:decrypt secret!")
+    crypto.decrypt(encrypted, function(result) {
+        secret = result;
+        tfmjs.getEnv(function(result) {
+            remoteConnect(result.env);
+        })
+    });
+}
+
+function remoteConnect(env) {
+    console.log("step3:connect to remote!")
+    rsjs.getRemote(env, function(r) {
+        remote = r;
+
+        remote.connect(function() {
+            osjs = new OfferService(remote, account, secret);
+            osjs.getOffers();
+
+            tls = new TrustLineService(remote, account);
+            tls.getLines(function() {
+                listenProfitOrder();
+            });
+
+            remote.on('error', function(error) {
+                throw new Error("remote error!");
+            });
+
+            remote.on('disconnect', function() {
+                remoteConnect(env);
+            });
+        });
+    });
 }
