@@ -1,6 +1,9 @@
 var Logger = require('./log-util.js').CLogger;
 var logger = new Logger();
 
+var AmountUtil = require('./amount-util.js').AmountUtil;
+var au = new AmountUtil();
+
 function CmdUtil() {}
 
 
@@ -30,7 +33,7 @@ CmdUtil.prototype.buildCmd = function(taker_pays, taker_gets) {
 
     req.params.push(param);
 
-    logger.logOffer(taker_gets, taker_pays);
+    // logger.logOffer(taker_gets, taker_pays);
 
     return req;
 }
@@ -57,9 +60,21 @@ CmdUtil.prototype.buildByIssuerNCurrency = function(pays_issuer, pays_currency, 
         cmd.params[gets_currency] = [gets_issuer];
     }
 
-    console.log(cmd);
+    // console.log(cmd);
 
     return cmd;
+}
+
+CmdUtil.prototype.buildByAmount = function(taker_pays, taker_gets) {
+    var taker_pays_json = taker_pays.to_json();
+    var taker_gets_json = taker_gets.to_json();
+
+    var pays_issuer = au.getIssuer(taker_pays_json);
+    var pays_currency = au.getCurrency(taker_pays_json);
+    var gets_issuer = au.getIssuer(taker_gets_json);
+    var gets_currency = au.getCurrency(taker_gets_json);
+
+    return this.buildByIssuerNCurrency(pays_issuer, pays_currency, gets_issuer, gets_currency);
 }
 
 exports.CmdUtil = CmdUtil;

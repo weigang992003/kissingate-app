@@ -10,12 +10,7 @@ var crypto = require('./crypto-util.js');
 var rsjs = require('./remote-service.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
 var tfmjs = require('./the-future-manager.js');
-
 var tfm = new tfmjs.TheFutureManager();
-var firstOrders;
-tfm.getFirstOrders(function(fos) {
-    firstOrders = fos;
-});
 
 var Loop = require('./loop-util.js').Loop;
 var ProfitUtil = require('./profit-util.js').ProfitUtil;
@@ -41,6 +36,12 @@ var first_order_currencies = config.first_order_currencies;
 var first_order_allow_issuers = config.first_order_allow_issuers;
 
 var noAvailablePair = [];
+
+var firstOrders;
+tfm.getFirstOrders(function(fos) {
+    firstOrders = fos;
+});
+
 
 function checkOrdersForSameCurrency(orders) {
     var currency = currencies[cIndexSet[0]];
@@ -108,9 +109,8 @@ function checkOrdersForDiffCurrency(orders) {
             var expect_profit = pu.getMultiProfitRate([order_type_1, order_type_2], profit_rate);
             console.log("expect profit rate:" + expect_profit);
 
-            if (real_profit < expect_profit) {
-                wsio.emit('dcp', [order_type_1, order_type_2], real_profit);
-            }
+            wsio.emit('dcp', [order_type_1, order_type_2], real_profit);
+            if (real_profit < expect_profit) {}
 
             return real_profit < 1;
         });
@@ -275,7 +275,7 @@ function goNext() {
 var account;
 var secret;
 console.log("step1:getAccount!")
-tfmjs.getAccount(config.marketMaker, function(result) {
+tfm.getAccount(config.marketMaker, function(result) {
     account = result.account;
     secret = result.secret;
     decrypt(secret);
@@ -285,7 +285,7 @@ function decrypt(encrypted) {
     console.log("step2:decrypt secret!")
     crypto.decrypt(encrypted, function(result) {
         secret = result;
-        tfmjs.getEnv(function(result) {
+        tfm.getEnv(function(result) {
             connectWS(result.wspm);
             remoteConnect(result.env);
         })

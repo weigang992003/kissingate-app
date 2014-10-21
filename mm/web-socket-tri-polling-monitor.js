@@ -9,9 +9,9 @@ var ripple = require('../src/js/ripple');
 var crypto = require('./crypto-util.js');
 var rsjs = require('./remote-service.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
-var tfmjs = require('./the-future-manager.js');
 
-var tfm = new tfmjs.TheFutureManager();
+var TheFutureManager = require('./the-future-manager.js').TheFutureManager;
+var tfm = new TheFutureManager();
 var firstOrders;
 tfm.getFirstOrders(function(fos) {
     firstOrders = fos;
@@ -312,7 +312,7 @@ function buildParams(currency1, currency2) {
     return params;
 }
 
-tfmjs.getEnv(function(result) {
+tfm.getEnv(function(result) {
     console.log("get currencies!!");
     aim.getCurrencyInfos(function(results) {
         buildIssuerMap(results);

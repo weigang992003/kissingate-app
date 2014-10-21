@@ -123,10 +123,42 @@ AmountUtil.prototype.ratio = function(src_amount, dst_amount) {
     }
 }
 
-AmountUtil.prototype.zoom = function(old_one, new_one, zoom_object) {
-    var times = this.ratio(old_one, new_old);
-    return this.product(zoom_object, times);
+AmountUtil.prototype.zoom = function(oldAmount, newAmount, zoomObject) {
+    var au = this;
+    if (newAmount.compareTo(oldAmount) == 1) {
+        var times = au.getTimes(newAmount, oldAmount);
+        times = math.round(times - 0, 6);
+        return zoomObject.product_human(times);
+    } else {
+        var times = au.getTimes(oldAmount, newAmount);
+        times = math.round(times - 0, 6);
+
+        var jsonAmount = zoomObject.to_json();
+        var value = au.getValue(jsonAmount);
+        var newValue = value / times;
+        if (jsonAmount.value) {
+            jsonAmount.value = newValue + "";
+        } else {
+            //this mean we use drops to represent the XRP. we don't need to divide drops value
+            if ((newValue / drops + "").indexOf(".") == -1) {
+                jsonAmount = newValue + "";
+            } else {
+                //this mean we use xrp to represent the XRP.
+                jsonAmount = math.round(newValue / drops, 6) + "";
+            }
+        }
+
+        return Amount.from_json(jsonAmount);
+    }
 }
+
+
+
+AmountUtil.prototype.zoomByTimes = function(zoomObject, times) {
+    times = math.round(times - 0, 6);
+    return zoomObject.product_human(times);
+}
+
 
 AmountUtil.prototype.getTimes = function(amount, comparedAmount) {
     return amount.ratio_human(comparedAmount).to_human().replace(/,/g, '');
@@ -183,9 +215,4 @@ function getPrice(order, pays_currency, gets_currency) {
 }
 
 exports.Amount = Amount;
-exports.setValue = setValue;
-exports.getPrice = getPrice;
-exports.minAmount = minAmount;
-exports.getIssuer = getIssuer;
 exports.AmountUtil = AmountUtil;
-exports.getCurrency = getCurrency;

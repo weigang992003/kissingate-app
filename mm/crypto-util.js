@@ -1,8 +1,9 @@
 var crypto = require('crypto');
-var mongodbManager = require('./the-future-manager.js');
+var tfmjs = require('./the-future-manager.js');
+var tfm = new tfmjs.TheFutureManager();
 
 function crypt(text, callback) {
-    mongodbManager.getCryptoOption(function(result) {
+    tfm.getCryptoOption(function(result) {
         var hasher = crypto.createHash(result.hash);
         hasher.update(result.key);
         var hash = hasher.digest(result.outputEncoding);
@@ -15,7 +16,7 @@ function crypt(text, callback) {
 }
 
 function decrypt(text, callback) {
-    mongodbManager.getCryptoOption(function(result) {
+    tfm.getCryptoOption(function(result) {
         var hasher = crypto.createHash(result.hash);
         hasher.update(result.key);
         var hash = hasher.digest(result.outputEncoding);

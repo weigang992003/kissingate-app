@@ -5,14 +5,14 @@ var Remote = ripple.Remote;
 var Amount = ripple.Amount;
 
 var _ = require('underscore');
-var config = require('./config.js');
 
 var AmountUtil = require('./amount-util.js').AmountUtil;
-var AccountInfoManager = require('./account-info-manager.js').AccountInfoManager;
-
 var au = new AmountUtil();
+
+var AccountInfoManager = require('./account-info-manager.js').AccountInfoManager;
 var aim = new AccountInfoManager();
 
+var config = require('./config.js');
 var drops = config.drops;
 
 var ledger_current_index;

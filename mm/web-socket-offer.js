@@ -7,32 +7,34 @@ var math = require('mathjs');
 var WebSocket = require('ws');
 var _ = require('underscore');
 var events = require('events');
-var config = require('./config.js');
-var ripple = require('../src/js/ripple');
 var crypto = require('./crypto-util.js');
-var rsjs = require('./remote-service.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
-var tfmjs = require('./the-future-manager.js');
 
-var Loop = require('./loop-util.js').Loop;
 var CLogger = require('./log-util.js').CLogger;
-var AmountUtil = require('./amount-util.js').AmountUtil;
-var OfferService = require('./offer-service.js').OfferService;
-var WSBookUtil = require('./web-socket-book-util.js').WSBookUtil;
-var FirstOrderUtil = require('./first-order-util.js').FirstOrderUtil;
-var TrustLineService = require('./trust-line-service.js').TrustLineService;
-
-var au = new AmountUtil();
 var cLogger = new CLogger();
-var wsbu = new WSBookUtil();
-var fou = new FirstOrderUtil();
-var tfm = new tfmjs.TheFutureManager();
 
+var AmountUtil = require('./amount-util.js').AmountUtil;
+var au = new AmountUtil();
+
+var WSBookUtil = require('./web-socket-book-util.js').WSBookUtil;
+var wsbu = new WSBookUtil();
+
+var TheFutureManager = require('./the-future-manager.js').TheFutureManager;
+var tfm = new TheFutureManager();
+
+var TrustLineService = require('./trust-line-service.js').TrustLineService;
 var tls;
+
+var OfferService = require('./offer-service.js').OfferService;
 var osjs;
-var Amount = ripple.Amount;
+
+var rsjs = require('./remote-service.js');
 var remote = rsjs.getRemote();
 
+var ripple = require('../src/js/ripple');
+var Amount = ripple.Amount;
+
+var config = require('./config.js');
 var drops = config.drops;
 var transfer_rates = config.transfer_rates;
 var first_order_allow_volumns = config.first_order_allow_volumns;
@@ -41,7 +43,7 @@ var solved_too_small_volumn_currencies = config.solved_too_small_volumn_currenci
 var account;
 var secret;
 console.log("step1:getAccount!")
-tfmjs.getAccount(config.marketMaker, function(result) {
+tfm.getAccount(config.marketMaker, function(result) {
     account = result.account;
     secret = result.secret;
     decrypt(secret);
@@ -51,7 +53,7 @@ function decrypt(encrypted) {
     console.log("step2:decrypt secret!")
     crypto.decrypt(encrypted, function(result) {
         secret = result;
-        tfmjs.getEnv(function(result) {
+        tfm.getEnv(function(result) {
             remoteConnect(result.env);
         })
     });

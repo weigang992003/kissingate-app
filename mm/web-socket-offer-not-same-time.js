@@ -165,42 +165,6 @@ function hasListenerForFirstOrder() {
 
 var firstOrderMap = [];
 
-function makeFirstOrderProfit(orders, i) {
-    var order = orders[i];
-    if (osjs.canCreate(order)) {
-        order = rebuildFirstOrder(order);
-
-        var order_gets_balance = tls.getBalance(au.getIssuer(order.TakerGets), au.getCurrency(order.TakerGets));
-        if (au.isVolumnNotAllowed(order_gets_balance)) {
-            console.log("lack of money to create first order!!!", order);
-            if (orders.length == i + 1) {
-                emitter.once('makeFirstOrderProfit', makeFirstOrderProfit);
-            } else {
-                i = i + 1;
-                makeFirstOrderProfit(orders, i);
-            }
-            return;
-        }
-
-        var removeOld = true;
-
-        osjs.createFirstOffer(order.TakerPays, order.TakerGets, removeOld, buildCmd(order), wsoLogger, function(res) {
-            console.log("create first order:", res);
-
-            if (res == "success") {
-                i = i + 1;
-                if (orders.length > i) {
-                    makeFirstOrderProfit(orders, i);
-                    return;
-                } else {
-                    console.log("create first offer done! go next round!!!");
-                    emitter.once('makeFirstOrderProfit', makeFirstOrderProfit);
-                }
-            }
-        });
-    }
-}
-
 function buildCmd(order) {
     var pays_issuer = au.getIssuer(order.TakerPays);
     var pays_currency = au.getCurrency(order.TakerPays);
@@ -236,32 +200,6 @@ function buildCmdByIssuerNCurrency(pays_issuer, pays_currency, gets_issuer, gets
 
     return cmd;
 }
-
-function rebuildFirstOrder(order) {
-    var gets_currency = au.getCurrency(order.TakerGets);
-    var gets_value = first_order_allow_volumns[gets_currency];
-
-    if (order.TakerGets.value) {
-        order.TakerGets.value = gets_value;
-    } else {
-        order.TakerGets = gets_value;
-    }
-
-    if (order.TakerPays.value) {
-        order.TakerPays.value = gets_value * order.quality + "";
-    } else {
-        order.TakerPays = math.round(gets_value * order.quality, 6) + "";
-    }
-
-    if (gets_currency == "XRP") {
-        order.TakerPays.value = order.TakerPays.value / drops + "";
-    }
-
-    au.product(order.TakerGets, 1.000001);
-
-    return order;
-}
-
 
 function makeProfit(order1, order2, profit) {
     console.log("new data arrived! profit:", profit);
@@ -345,8 +283,6 @@ function makeProfit(order1, order2, profit) {
     cmds.push(buildCmd(order1));
     cmds.push(buildCmd(order2));
 
-
-
     osjs.canCreateDCPOffers(cmds, 0, function(canCreate) {
         if (canCreate) {
             var orders_taker_pays = [];
@@ -383,5 +319,4 @@ function tradeOneByOne(orders_taker_pays, orders_taker_gets, i) {
             }
         });
     });
-
 }

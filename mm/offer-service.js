@@ -1,13 +1,14 @@
-var _ = require('underscore');
 var math = require('mathjs');
-var aim = require('./account-info-manager.js');
+var _ = require('underscore');
+
 var Amount = require('./amount-util.js').Amount;
 var AmountUtil = require('./amount-util.js').AmountUtil;
-var WSBookUtil = require('./web-socket-book-util.js').WSBookUtil;
-var FirstOrderUtil = require('./first-order-util.js').FirstOrderUtil;
-
 var au = new AmountUtil();
+
+var WSBookUtil = require('./web-socket-book-util.js').WSBookUtil;
 var wsbu = new WSBookUtil();
+
+var FirstOrderUtil = require('./first-order-util.js').FirstOrderUtil;
 var fou = new FirstOrderUtil();
 
 function OfferService(r, a, s) {

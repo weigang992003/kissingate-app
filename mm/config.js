@@ -50,6 +50,10 @@ exports.currency_unit = {
     "XAU": "0.00012"
 };
 
+exports.currency_reserve = {
+
+}
+
 exports.transfer_rates = {
     'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B': 0.002,
     'r9Dr5xwkeLegBeXq6ujinjSBLQzQ1zQGjH': 0.002,
@@ -92,7 +96,8 @@ exports.profit_min_volumns = {
     "JPY": "200",
     "CNY": "20",
     "FMM": "20",
-    "EUR": "3"
+    "EUR": "3",
+    "STR": "500"
 }
 
 exports.currencies_no = {
@@ -100,7 +105,10 @@ exports.currencies_no = {
     "CNY": 3,
     "JPY": 5,
     "USD": 7,
-    "BTC": 11
+    "BTC": 11,
+    "FMM": 13,
+    "EUR": 17,
+    "STR": 19
 }
 
 exports.currency_pair_allow_trade_not_in_same_ledger = [

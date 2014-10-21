@@ -208,7 +208,7 @@ function handleResults(results, callback) {
     }
 }
 
-function getCryptoOption(callback) {
+TheFutureManager.prototype.getCryptoOption = function(callback) {
     crypto.findOne({
         key: 'kissingate'
     }, function(err, result) {
@@ -306,7 +306,7 @@ function getAllFailedTransactions(callback) {
     })
 }
 
-function getAccount(status, callback) {
+TheFutureManager.prototype.getAccount = function(status, callback) {
     raccounts.findOne({
         status: status
     }, function(err, result) {
@@ -365,20 +365,4 @@ function getEnv(callback) {
     });
 }
 
-exports.getEnv = getEnv;
-exports.getCookie = getCookie;
-exports.getAccount = getAccount;
-exports.getCryptoOption = getCryptoOption;
-exports.getNextSequence = getNextSequence;
-exports.getAccountIncome = getAccountIncome;
 exports.TheFutureManager = TheFutureManager;
-exports.saveAccountLines = saveAccountLines;
-exports.getAccountIncomes = getAccountIncomes;
-exports.saveAccountIncome = saveAccountIncome;
-exports.findAllGatewayInfo = findAllGatewayInfo;
-exports.updateOrderCurrencies = updateOrderCurrencies;
-exports.saveFailedTransaction = saveFailedTransaction;
-exports.deleteFailedTransaction = deleteFailedTransaction;
-exports.getAllFailedTransactions = getAllFailedTransactions;
-exports.deleteFailedTransactionById = deleteFailedTransactionById;
-exports.getFailedTransactionsByAccount = getFailedTransactionsByAccount;
