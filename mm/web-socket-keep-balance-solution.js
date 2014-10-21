@@ -1,25 +1,27 @@
 var math = require('mathjs');
 var _ = require('underscore');
-var events = require('events');
 
 var config = require('./config.js');
 var ripple = require('../src/js/ripple');
 var crypto = require('./crypto-util.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
 var rsjs = require('./remote-service.js');
-var tfmjs = require('./the-future-manager.js');
+var TheFutureManager = require('./the-future-manager.js').TheFutureManager;
+var tfm = new TheFutureManager();
 
+var events = require('events');
 var emitter = new events.EventEmitter();
 emitter.once('decrypt', decrypt);
 emitter.once('remoteConnect', remoteConnect);
 
 var Logger = require('./log-util.js').CLogger;
-var OfferService = require('./offer-service.js').OfferService;
-var WSBookUtil = require('./web-socket-book-util.js').WSBookUtil;
-
-var osjs;
-var wsbu = new WSBookUtil();
 var logger = new Logger();
+
+var OfferService = require('./offer-service.js').OfferService;
+var osjs = new OfferService();
+
+var WSBookUtil = require('./web-socket-book-util.js').WSBookUtil;
+var wsbu = new WSBookUtil();
 
 var transfer_rates = config.transfer_rates;
 var same_currency_keep_balances = config.same_currency_keep_balances;
@@ -52,7 +54,7 @@ var remote = new ripple.Remote(remote_options);
 var account;
 var secret;
 console.log("get account!!");
-tfmjs.getAccount(config.mother, function(result) {
+tfm.getAccount(config.mother, function(result) {
     account = result.account;
     secret = result.secret;
     emitter.emit('decrypt', secret);
@@ -61,7 +63,7 @@ tfmjs.getAccount(config.mother, function(result) {
 function decrypt(encrypted) {
     crypto.decrypt(encrypted, function(result) {
         secret = result;
-        tfmjs.getEnv(function(result) {
+        tfm.getEnv(function(result) {
             remoteConnect(result.env);
         })
     });

@@ -185,7 +185,7 @@ function goNext() {
 
 var account;
 console.log("step1:getAccount!")
-tfmjs.getAccount(config.marketMaker, function(result) {
+tfm.getAccount(config.marketMaker, function(result) {
     account = result.account;
     goNext();
 });

@@ -50,7 +50,7 @@ var currency_pair_allow_trade_not_in_same_ledger = config.currency_pair_allow_tr
 var account;
 var secret;
 console.log("step1:getAccount!")
-tfmjs.getAccount(config.marketMaker, function(result) {
+tfm.getAccount(config.marketMaker, function(result) {
     account = result.account;
     secret = result.secret;
     decrypt(secret);
@@ -60,7 +60,7 @@ function decrypt(encrypted) {
     console.log("step2:decrypt secret!")
     crypto.decrypt(encrypted, function(result) {
         secret = result;
-        tfmjs.getEnv(function(result) {
+        tfm.getEnv(function(result) {
             remoteConnect(result.env);
         })
     });
