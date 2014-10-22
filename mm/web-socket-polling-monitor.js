@@ -109,8 +109,9 @@ function checkOrdersForDiffCurrency(orders) {
             var expect_profit = pu.getMultiProfitRate([order_type_1, order_type_2], profit_rate);
             console.log("expect profit rate:" + expect_profit);
 
-            wsio.emit('dcp', [order_type_1, order_type_2], real_profit);
-            if (real_profit < expect_profit) {}
+            if (real_profit < expect_profit) {
+                wsio.emit('dcp', [order_type_1, order_type_2], real_profit);
+            }
 
             return real_profit < 1;
         });
