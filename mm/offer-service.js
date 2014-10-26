@@ -11,10 +11,11 @@ var wsbu = new WSBookUtil();
 var FirstOrderUtil = require('./first-order-util.js').FirstOrderUtil;
 var fou = new FirstOrderUtil();
 
-function OfferService(r, a, s) {
+function OfferService(r, a, s, tls) {
     this.remote = r;
     this.secret = s;
     this.accountId = a;
+    this.tls = tls;
     this.offers = [];
 }
 
@@ -95,8 +96,17 @@ OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, cr
     tx.on('proposed', function(res) {});
 
     tx.on("error", function(res) {
-        if (callback) {
-            callback(res);
+        //sometimes we will meet tecUNFUNDED_OFFER issue, so we need to sync up the balance again.
+        if (self.tls) {
+            self.tls.getLines(function() {
+                if (callback) {
+                    callback(res);
+                }
+            })
+        } else {
+            if (callback) {
+                callback(res);
+            }
         }
     });
 

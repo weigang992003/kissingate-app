@@ -306,13 +306,13 @@ function remoteConnect(env) {
         remote = r;
 
         remote.connect(function() {
-            osjs = new OfferService(remote, account, secret);
-            osjs.getOffers();
-
             tls = new TrustLineService(remote, account);
             tls.getLines(function() {
                 listenProfitOrder();
             });
+
+            osjs = new OfferService(remote, account, secret, tls);
+            osjs.getOffers();
 
             remote.on('error', function(error) {
                 throw new Error("remote error!");
