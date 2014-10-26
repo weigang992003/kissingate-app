@@ -12,7 +12,7 @@
      var pays_value = au.getValue(order.TakerPays);
      var gets_value = au.getValue(order.TakerGets);
 
-     console.log("order:" + pays_value + "/" + pays_currency + "/" + pays_issuer + ")->" + gets_value + "/" + gets_currency + "/" + gets_issuer);
+     console.log("order:" + pays_value + "/" + pays_currency + "/" + pays_issuer + "->" + gets_value + "/" + gets_currency + "/" + gets_issuer);
  }
 
  Logger.prototype.logOffer = function(pays, gets) {
@@ -23,7 +23,7 @@
      var pays_value = au.getValue(pays);
      var gets_value = au.getValue(gets);
 
-     console.log("order:" + pays_value + "/" + pays_currency + "/" + pays_issuer + ")->" + gets_value + "/" + gets_currency + "/" + gets_issuer);
+     console.log("order:" + pays_value + "/" + pays_currency + "/" + pays_issuer + "->" + gets_value + "/" + gets_currency + "/" + gets_issuer);
  }
 
  exports.CLogger = Logger;
