@@ -1,47 +1,49 @@
-var Logger = require('./new-logger.js').Logger;
-var wsoLogger;
-var wsoLogger = new Logger('web-socket-offer');
-
 var io = require('socket.io-client');
 var pows = io.connect('http://localhost:3003/ws');
 
 var math = require('mathjs');
 var WebSocket = require('ws');
 var _ = require('underscore');
-var events = require('events');
-var config = require('./config.js');
-var ripple = require('../src/js/ripple');
 var crypto = require('./crypto-util.js');
-var rsjs = require('./remote-service.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
-var tfmjs = require('./the-future-manager.js');
-var rippleInfo = require('./ripple-info-manager.js');
 
-var CmdUtil = require('./cmd-builder.js').CmdUtil;
-var Loop = require('./loop-util.js').Loop;
-var CLogger = require('./log-util.js').CLogger;
-var AmountUtil = require('./amount-util.js').AmountUtil;
-var OfferService = require('./offer-service.js').OfferService;
-var WSBookUtil = require('./web-socket-book-util.js').WSBookUtil;
-var queryBookByOrder = require('./query-book.js').queryBookByOrder;
-var FirstOrderUtil = require('./first-order-util.js').FirstOrderUtil;
-var AccountListener = require('./listen-account-util.js').AccountListener;
-var TrustLineService = require('./trust-line-service.js').TrustLineService;
+var events = require('events');
+var emitter = new events.EventEmitter();
 
-var au = new AmountUtil();
-var cu = new CmdUtil();
-var cLogger = new CLogger();
-var wsbu = new WSBookUtil();
-var fou = new FirstOrderUtil();
-var tfm = new tfmjs.TheFutureManager();
-
-var tls;
-var osjs;
+var ripple = require('../src/js/ripple');
 var Amount = ripple.Amount;
+
+var rsjs = require('./remote-service.js');
 var remote = rsjs.getRemote();
 
+var tfmjs = require('./the-future-manager.js');
+var tfm = new tfmjs.TheFutureManager();
+
+var CmdUtil = require('./cmd-builder.js').CmdUtil;
+var cmdU = new CmdUtil();
+
+var AmountUtil = require('./amount-util.js').AmountUtil;
+var au = new AmountUtil();
+
+var CLogger = require('./log-util.js').CLogger;
+var cLogger = new CLogger();
+
+var WSBookUtil = require('./web-socket-book-util.js').WSBookUtil;
+var wsbu = new WSBookUtil();
+
+var FirstOrderUtil = require('./first-order-util.js').FirstOrderUtil;
+var fou = new FirstOrderUtil();
+
+var OfferService = require('./offer-service.js').OfferService;
+var osjs = new OfferService();
+
+var TrustLineService = require('./trust-line-service.js').TrustLineService;
+var tls = new TrustLineService();
+
+var config = require('./config.js');
 var drops = config.drops;
 var transfer_rates = config.transfer_rates;
+var currency_allow_empty = config.currency_allow_empty;
 var first_order_allow_volumns = config.first_order_allow_volumns;
 var solved_too_small_volumn_currencies = config.solved_too_small_volumn_currencies;
 
@@ -56,12 +58,12 @@ tfm.getAccount(config.marketMaker, function(result) {
 
 function decrypt(encrypted) {
     console.log("step2:decrypt secret!")
-    crypto.decrypt(encrypted, function(result) {
-        secret = result;
-        tfm.getEnv(function(result) {
-            remoteConnect(result.env);
-        })
-    });
+    // crypto.decrypt(encrypted, function(result) {
+    //     secret = result;
+    //     tfm.getEnv(function(result) {
+    //         remoteConnect(result.env);
+    //     })
+    // });
 }
 
 function remoteConnect(env) {
@@ -103,7 +105,7 @@ function buildCmd(order) {
     var gets_issuer = au.getIssuer(order.TakerGets);
     var gets_currency = au.getCurrency(order.TakerGets);
 
-    return cu.buildCmdByIssuerNCurrency(pays_issuer, pays_currency, gets_issuer, gets_currency);
+    return cmdU.buildByIssuerNCurrency(pays_issuer, pays_currency, gets_issuer, gets_currency);
 }
 
 function makeSameCurrencyProfit(order) {
@@ -114,8 +116,6 @@ function makeSameCurrencyProfit(order) {
 
     var order_pays_balance = tls.getBalance(au.getIssuer(order.TakerPays), au.getCurrency(order.TakerPays));
     var order_gets_capacity = tls.getCapacity(au.getIssuer(order.TakerGets), au.getCurrency(order.TakerGets));
-    console.log("order_taker_pays for same currency:", order_taker_pays.to_text_full());
-    console.log("order_gets_capacity for same currency:", order_gets_capacity.to_text_full());
 
     var min_taker_pays = au.minAmount([order_taker_pays, order_pays_balance]);
     var min_taker_gets = au.minAmount([order_taker_gets, order_gets_capacity]);
@@ -126,24 +126,13 @@ function makeSameCurrencyProfit(order) {
         return;
     }
 
+    console.log(order_taker_pays.to_text_full(), "->", order_taker_gets.to_text_full());
+
+
     var cmd = buildCmd(order);
 
-    osjs.createSCPOffer(order_taker_gets.to_json(), order_taker_pays.to_json(), cmd, wsoLogger, function(status) {
+    osjs.createSCPOffer(order_taker_gets.to_json(), order_taker_pays.to_json(), cmd, null, function(status) {
         console.log("same currency tx:", status);
         emitter.once('makeSameCurrencyProfit', makeSameCurrencyProfit);
     });
-}
-
-var emitter = new events.EventEmitter();
-emitter.once('makeSameCurrencyProfit', makeSameCurrencyProfit);
-
-setTimeout(prepareRestart, 1000 * 60 * 60);
-
-function prepareRestart() {
-    emitter.removeAllListeners('makeSameCurrencyProfit');
-    setTimeout(throwDisconnectError, 1000 * 30);
-}
-
-function throwDisconnectError() {
-    throw new Error('we are disconnect with ripple network!!!');
 }
