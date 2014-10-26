@@ -6,6 +6,7 @@ var abio = io.connect('http://localhost:3004/ab');
 
 var config = require('./config.js');
 var xrpIssuer = config.xrpIssuer;
+var profit_min_volumns = config.profit_min_volumns;
 
 function TrustLineService(r, a) {
     this.remote = r;
@@ -65,7 +66,38 @@ TrustLineService.prototype.getLines = function(callback) {
     });
 };
 
+function randomInt(low, high) {
+    return Math.floor(Math.random() * (high - low) + low);
+}
+
 TrustLineService.prototype.getBalance = function(issuer, currency) {
+    //this is for debug purpose
+    if (!this.remote && !this.accountId) {
+        var value = profit_min_volumns[currency];
+
+        if (currency == "XRP") {
+            return randomInt(0, 2) == 0 ? Amount.from_json(value) : Amount.from_json("" + value / 2);
+        } else {
+            if (value) {
+                return randomInt(0, 2) == 0 ? Amount.from_json({
+                    'issuer': issuer,
+                    'currency': currency,
+                    'value': value
+                }) : Amount.from_json({
+                    'issuer': issuer,
+                    'currency': currency,
+                    'value': "" + value / 2
+                });
+            } else {
+                return Amount.from_json({
+                    'issuer': issuer,
+                    'currency': currency,
+                    'value': "1000000"
+                });
+            }
+        }
+    }
+
     var value = this.account_balances[issuer + currency];
     if (value && currency == "XRP") {
         return Amount.from_json(value + "");
@@ -111,8 +143,19 @@ TrustLineService.prototype.overLimit = function(issuer, currency) {
 };
 
 TrustLineService.prototype.getCapacity = function(issuer, currency) {
+    //this is for debug purpose
     if (currency == "XRP") {
-        return Amount.from_json("1000000000000000000000");
+        return Amount.from_json("100000000000000");
+    }
+
+    if (!this.remote && !this.accountId) {
+        if (currency != "XRP") {
+            return Amount.from_json({
+                'issuer': issuer,
+                'currency': currency,
+                'value': "1000000000000000"
+            });
+        }
     }
 
     var limit = this.account_limits[issuer + currency];

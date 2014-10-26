@@ -63,19 +63,27 @@ function listenProfitOrder() {
 emitter.once('makeMultiCurrencyProfit', makeMultiCurrencyProfit);
 
 function makeMultiCurrencyProfit(orders, profit) {
-    console.log(orders);
     profit = math.round(profit, 6);
     console.log("tri data arrived! profit:", profit);
-    var tradeSameTime = true;
+
+    var onlyCurrency = true;
 
     var taker_pays_amounts = [];
     var taker_gets_amounts = [];
     var taker_pays_balances = [];
     var taker_gets_capacities = [];
+
+    var pays_list_from_balance = [];
+    var gets_list_from_balance = [];
+    var pays_list_from_offer = [];
+    var gets_list_from_offer = [];
     var length = orders.length;
 
+    //we need all gets because we want to check if we get pays from offer, does the currency we got has same issuer.
+    var takerGetsJsonList = [];
     _.each(_.range(orders.length), function(i) {
         cLogger.logOrder(orders[i]);
+        takerGetsJsonList.push(orders[i].TakerGets);
     });
 
     for (var i = 0; i < orders.length; i++) {
@@ -85,9 +93,13 @@ function makeMultiCurrencyProfit(orders, profit) {
         var taker_pays_balance = tls.getBalance(au.getIssuer(order.TakerPays), au.getCurrency(order.TakerPays));
         var taker_gets_capacity = tls.getCapacity(au.getIssuer(order.TakerGets), au.getCurrency(order.TakerGets));
 
-        if (_.contains(currency_allow_empty, au.getCurrency(order.TakerPays))) {
-            taker_pays_balance = taker_pays_amount;
-            tradeSameTime = false;
+        //normally pays comes from balance, but if someday we lack of this type currency, we may get it from profit offer.
+        var pays_from_balance = true;
+        if (au.isVolumnNotAllowed(taker_pays_balance) && au.isVolumnAllowed(taker_pays_amount)) {
+            if (au.findAmountJsonWhere(takerGetsJsonList, order.TakerPays) != -1) {
+                pays_from_balance = false;
+                taker_pays_balance = taker_pays_amount;
+            }
         }
 
         if (au.isVolumnNotAllowed(taker_pays_amount) || au.isVolumnNotAllowed(taker_gets_amount) ||
@@ -100,6 +112,7 @@ function makeMultiCurrencyProfit(orders, profit) {
         var min_taker_pays = au.minAmount([taker_pays_amount, taker_pays_balance]);
         var min_taker_gets = au.minAmount([taker_gets_amount, taker_gets_capacity]);
 
+        //this step help us to decide if we start from gets or pays.
         var new_taker_pays_amount = au.zoom(taker_gets_amount, min_taker_gets, taker_pays_amount);
         var new_taker_gets_amount = au.zoom(taker_pays_amount, min_taker_pays, taker_gets_amount);
         if (min_taker_pays.compareTo(new_taker_pays_amount) == 1) {
@@ -112,8 +125,18 @@ function makeMultiCurrencyProfit(orders, profit) {
 
         taker_pays_amounts.push(taker_pays_amount);
         taker_gets_amounts.push(taker_gets_amount);
+
+        if (pays_from_balance) {
+            pays_list_from_balance.push(taker_pays_amount);
+        } else {
+            pays_list_from_offer.push(taker_pays_amount);
+        }
     };
 
+    if (pays_list_from_balance.length == 0) {
+        emitter.once('makeMultiCurrencyProfit', makeMultiCurrencyProfit);
+        return;
+    }
 
     //we pick one currency we want to make profit.
     //it means that we invest the money as much as taker_pays_amount.
@@ -121,21 +144,26 @@ function makeMultiCurrencyProfit(orders, profit) {
     //taker_gets_amount means that how much money the market has.
     //if final_taker_gets_amount bigger than taker_gets_amount. we need to reduce our invest.
     //we cal how much moneny we need to invest, that's the start_taker_pays_amount means.
-    var taker_pays_amount = taker_pays_amounts[0];
+    var taker_pays_amount = pays_list_from_balance[0];
+    var start_where = au.findAmountWhere(taker_pays_amounts, taker_pays_amount, onlyCurrency);
     var final_taker_gets_amount = au.zoomByTimes(taker_pays_amount, 1 / profit);
-    var where = findTakerGetsWhere(taker_gets_amounts, taker_pays_amount);
+
+    //need enhance this when include more than one pays or gets with same currency. 
+    var where = au.findAmountWhere(taker_gets_amounts, taker_pays_amount, onlyCurrency);
     var taker_gets_amount = taker_gets_amounts[where];
     if (final_taker_gets_amount.compareTo(taker_gets_amount) == 1) {
         var start_taker_pays_amount = taker_gets_amount.product_human(profit);
-        taker_pays_amounts[0] = au.setValue(taker_pays_amount, start_taker_pays_amount);
-        taker_gets_amounts[0] = au.zoom(taker_pays_amount, start_taker_pays_amount, taker_gets_amounts[0]);
+        taker_pays_amounts[start_where] = au.setValue(taker_pays_amount, start_taker_pays_amount);
+        taker_gets_amounts[start_where] = au.zoom(taker_pays_amount, start_taker_pays_amount, taker_gets_amounts[0]);
     }
 
     //we build the order based on start_taker_pays_amount. cal the result for each stop to final profit
-    for (var i = 0, j = 0; j < length - 1; j++) {
+    //we adjust pays and gets of each step to make sure only start step and final step is different.
+    //here we build taker_pays_amounts and taker_gets_amounts
+    for (var i = start_where, j = 0; j < length - 1; j++) {
         var pre_taker_gets_amount = taker_gets_amounts[i];
 
-        var next_i = findTakerPaysWhere(taker_pays_amounts, pre_taker_gets_amount);
+        var next_i = au.findAmountWhere(taker_pays_amounts, pre_taker_gets_amount, onlyCurrency);
         var next_taker_pays_amount = taker_pays_amounts[next_i];
         var next_taker_gets_amount = taker_gets_amounts[next_i];
 
@@ -146,85 +174,110 @@ function makeMultiCurrencyProfit(orders, profit) {
 
     var pays_list_in_order = [];
     var gets_list_in_order = [];
-    for (var i = 0, j = 0; j < length; j++) {
-        pays_list_in_order.push(taker_pays_amounts[i]);
-        gets_list_in_order.push(taker_gets_amounts[i]);
-        i = findTakerPaysWhere(taker_pays_amounts, taker_gets_amounts[i]);
+    if (pays_list_from_balance.length < length) {
+        for (var i = 0; i < pays_list_from_balance.length; i++) {
+            var where = au.findAmountWhere(taker_pays_amounts, pays_list_from_balance[i]);
+            pays_list_from_balance[i] = taker_pays_amounts[where];
+            gets_list_from_balance[i] = taker_gets_amounts[where];
+        }
+
+        pays_list_in_order.push(pays_list_from_balance);
+        gets_list_in_order.push(gets_list_from_balance);
+
+        var pays_from_offer_size = pays_list_from_offer.length;
+        var pre_step_gets_list = gets_list_from_balance;
+        while (pays_from_offer_size > 0) {
+            var cur_step_pays_list = [];
+            var cur_step_gets_list = [];
+            var left_pays_list = [];
+
+            for (var i = 0; i < pays_from_offer_size; i++) {
+                if (au.findAmountWhere(pre_step_gets_list, pays_list_from_offer[i]) == -1) {
+                    left_pays_list.push(pays_list_from_offer[i]);
+                } else {
+                    var where = au.findAmountWhere(taker_pays_amounts, pays_list_from_offer[i]);
+                    cur_step_pays_list.push(taker_pays_amounts[where]);
+                    cur_step_gets_list.push(taker_gets_amounts[where]);
+                }
+            }
+
+            //this mean we can't get pays from previous offer's gets
+            if (cur_step_pays_list.length == 0) {
+                for (var i = 0; i < left_pays_list.length; i++) {
+                    var where = au.findAmountWhere(taker_pays_amounts, pays_list_from_offer[i]);
+                    cur_step_pays_list.push(taker_pays_amounts[where]);
+                    cur_step_gets_list.push(taker_gets_amounts[where]);
+                }
+                left_pays_list = [];
+            }
+
+            if (cur_step_pays_list.length > 0) {
+                pays_list_in_order.push(cur_step_pays_list);
+                gets_list_in_order.push(cur_step_gets_list);
+            }
+
+            pays_list_from_offer = left_pays_list;
+            pre_step_gets_list = cur_step_gets_list;
+            pays_from_offer_size = pays_list_from_offer.length;
+        }
+    } else {
+        pays_list_in_order.push(taker_pays_amounts);
+        gets_list_in_order.push(taker_gets_amounts);
     }
 
+    //set higher pays to make sure we can trade success.
     var cmds = [];
-    var exchanges = {};
-    _.each(_.range(length), function(i) {
-        cmds.push(cmdU.buildByAmount(pays_list_in_order[i], gets_list_in_order[i]));
-        exchanges[i + ""] = pays_list_in_order[i].to_text_full() + "->" + gets_list_in_order[i].to_text_full();
-        console.log(pays_list_in_order[i].to_text_full(), "->", gets_list_in_order[i].to_text_full());
-    });
+    _.each(pays_list_in_order, function(pays_list, i) {
+        _.each(pays_list, function(pays, j) {
+            cmds.push(cmdU.buildByAmount(pays_list_in_order[i][j], gets_list_in_order[i][j]));
 
-    // wsdoLogger.log(true, exchanges);
+            pays_list_in_order[i][j] = pays.product_human("1.00001");
+            console.log(i + "", j + "", pays_list_in_order[i][j].to_text_full(), "->", gets_list_in_order[i][j].to_text_full());
+        });
+    });
 
     osjs.canCreateDCPOffers(cmds, 0, function(canCreate) {
         if (canCreate) {
-            if (tradeSameTime) {
-                // tradeTogether(gets_list_in_order, pays_list_in_order);
-            } else {
-                // tradeOneByOne(gets_list_in_order, pays_list_in_order, 0);
-            }
-            //TODO need to remove this line after test done!!!
-            emitter.once('makeMultiCurrencyProfit', makeMultiCurrencyProfit);
+            tradeOneByOneGroup(gets_list_in_order, pays_list_in_order, 0);
         } else {
             emitter.once('makeMultiCurrencyProfit', makeMultiCurrencyProfit);
         }
     });
 }
 
-function tradeTogether(orders_taker_pays, orders_taker_gets) {
+function tradeTogether(orders_taker_pays, orders_taker_gets, callback) {
     var length = orders_taker_pays.length;
     _.each(_.range(length), function(i) {
-        var taker_pays_json = taker_pays_amounts[i].to_json();
-        var taker_gets_json = taker_pays_amounts[i].to_json();
+        var taker_pays_json = orders_taker_pays[i].to_json();
+        var taker_gets_json = orders_taker_gets[i].to_json();
         osjs.createOffer(taker_pays_json, taker_gets_json, null, false, function(status) {
             console.log("tx", status);
-            if (i == length - 1) {
-                tls.getLines(function() {
-                    console.log("re-listen tri profit order!!!");
-                    emitter.once('makeMultiCurrencyProfit', makeMultiCurrencyProfit);
-                })
-            }
+            tls.getLines(function() {
+                if (i == length - 1) {
+                    if (callback) {
+                        callback();
+                    }
+                }
+            });
         });
     });
 }
 
-function tradeOneByOne(orders_taker_pays, orders_taker_gets, i) {
-    var length = orders_taker_pays.length;
-    var taker_pays_json = taker_pays_amounts[i].to_json();
-    var taker_gets_json = taker_pays_amounts[i].to_json();
-    osjs.createOffer(taker_pays_json, taker_gets_json, null, false, function(status) {
-        console.log("tx" + i, status);
-        tls.getLines(function() {
-            if (length == i + 1) {
-                console.log("re-listen profit order!!!");
+function tradeOneByOneGroup(pays_set_list, gets_set_list, i) {
+    var length = pays_set_list.length;
+    if (i < length) {
+        var pays_set = pays_set_list[i];
+        var gets_set = pays_set_list[i];
+        tradeTogether(pays_set, gets_set, function() {
+            i = i + 1;
+            if (length == i) {
+                console.log("re-listen profit order");
                 emitter.once('makeMultiCurrencyProfit', makeMultiCurrencyProfit);
             } else {
-                tradeOneByOne(orders_taker_pays, orders_taker_gets, i++);
+                tradeOneByOneGroup(pays_set_list, gets_set_list, i);
             }
         });
-    });
-}
-
-function findTakerPaysWhere(taker_pays_amounts, taker_gets_amount) {
-    for (var i = 0; i < taker_pays_amounts.length; i++) {
-        if (taker_pays_amounts[i].currency().to_json() == taker_gets_amount.currency().to_json()) {
-            return i;
-        }
-    };
-}
-
-function findTakerGetsWhere(taker_gets_amounts, taker_pays_amount) {
-    for (var i = 0; i < taker_gets_amounts.length; i++) {
-        if (taker_gets_amounts[i].currency().to_json() == taker_pays_amount.currency().to_json()) {
-            return i;
-        }
-    };
+    }
 }
 
 

@@ -1,9 +1,10 @@
 var math = require('mathjs');
 var _ = require('underscore');
-var drops = require('./config.js').drops;
 var Amount = require('../src/js/ripple').Amount;
-var profit_min_volumns = require('./config.js').profit_min_volumns;
 
+var config = require('./config.js');
+var drops = config.drops;
+var profit_min_volumns = config.profit_min_volumns;
 
 function AmountUtil() {}
 
@@ -40,12 +41,12 @@ AmountUtil.prototype.isVolumnAllowed = function(amount) {
     var isAllow;
     if (min_volumn) {
         if (currency == "XRP") {
-            isAllow = min_volumn - amount < 0;
+            isAllow = min_volumn - amount <= 0;
             if (!isAllow) {
                 console.log(currency + " min_volumn:" + min_volumn, "real volumn:" + amount)
             }
         } else {
-            isAllow = min_volumn - amount.value < 0;
+            isAllow = min_volumn - amount.value <= 0;
             if (!isAllow) {
                 console.log(currency + " min_volumn:" + min_volumn, "real volumn:" + amount.value);
             }
@@ -58,11 +59,25 @@ AmountUtil.prototype.isVolumnAllowed = function(amount) {
 }
 
 AmountUtil.prototype.minAmount = function(amounts) {
-    return minAmount(amounts);
+    if (!amounts || amounts.length == 0) {
+        return;
+    }
+    if (amounts.length == 1) {
+        return amounts[0];
+    }
+    var minAmount = amounts[0];
+
+    _.each(amounts, function(amount) {
+        if (minAmount.compareTo(amount) == 1) {
+            minAmount = amount;
+        }
+    })
+
+    return minAmount;
 }
 
 AmountUtil.prototype.getIssuer = function(amountJson) {
-    return getIssuer(amountJson);
+    return typeof amountJson == "string" ? "rrrrrrrrrrrrrrrrrrrrrhoLvTp" : amountJson.issuer;
 };
 
 AmountUtil.prototype.getPrice = function(order, pays_currency, gets_currency) {
@@ -82,7 +97,16 @@ AmountUtil.prototype.getValue = function(amountJson) {
 }
 
 AmountUtil.prototype.setValue = function(src_amount, dst_amount) {
-    return setValue(src_amount, dst_amount);
+    if (src_amount.currency().to_json() == "XRP") {
+        return dst_amount;
+    }
+
+    var src_amount_json = src_amount.to_json();
+    var dst_amount_json = dst_amount.to_json();
+
+    src_amount_json.value = dst_amount_json.value;
+
+    return Amount.from_json(src_amount_json);
 }
 
 AmountUtil.prototype.product = function(amount, factor) {
@@ -152,8 +176,6 @@ AmountUtil.prototype.zoom = function(oldAmount, newAmount, zoomObject) {
     }
 }
 
-
-
 AmountUtil.prototype.zoomByTimes = function(zoomObject, times) {
     times = math.round(times - 0, 6);
     return zoomObject.product_human(times);
@@ -164,44 +186,48 @@ AmountUtil.prototype.getTimes = function(amount, comparedAmount) {
     return amount.ratio_human(comparedAmount).to_human().replace(/,/g, '');
 };
 
-
-function minAmount(amounts) {
-    if (!amounts || amounts.length == 0) {
-        return;
-    }
-    if (amounts.length == 1) {
-        return amounts[0];
-    }
-    var minAmount = amounts[0];
-
-    _.each(amounts, function(amount) {
-        if (minAmount.compareTo(amount) == 1) {
-            minAmount = amount;
+AmountUtil.prototype.findAmountWhere = function(amounts, amount, onlyCurrency) {
+    var aJson;
+    var amountJson = amount.to_json();
+    for (var i = 0; i < amounts.length; i++) {
+        aJson = amounts[i].to_json();
+        if (aJson.currency == amountJson.currency && aJson.issuer == amountJson.issuer) {
+            return i;
         }
-    })
+    }
 
-    return minAmount;
+    if (onlyCurrency) {
+        return findCurrencyWhere(amounts, amount);
+    }
+
+    return -1;
 }
 
-function getIssuer(amountJson) {
-    return typeof amountJson == "string" ? "rrrrrrrrrrrrrrrrrrrrrhoLvTp" : amountJson.issuer;
+AmountUtil.prototype.findAmountJsonWhere = function(amountsJson, amountJson) {
+    for (var i = 0; i < amountsJson.length; i++) {
+        var aJson = amountsJson[i];
+        if (aJson.currency == amountJson.currency && aJson.issuer == amountJson.issuer) {
+            return i;
+        }
+    };
+    return -1;
+}
+
+function findCurrencyWhere(amounts, amount) {
+    var aJson;
+    var amountJson = amount.to_json();
+    for (var i = 0; i < amounts.length; i++) {
+        aJson = amounts[i].to_json();
+        if (aJson.currency == amountJson.currency) {
+            return i;
+        }
+    }
+
+    return -1;
 }
 
 function getCurrency(amountJson) {
     return typeof amountJson == "string" ? "XRP" : amountJson.currency;
-}
-
-function setValue(src_amount, dst_amount) {
-    if (src_amount.currency().to_json() == "XRP") {
-        return dst_amount;
-    }
-
-    var src_amount_json = src_amount.to_json();
-    var dst_amount_json = dst_amount.to_json();
-
-    src_amount_json.value = dst_amount_json.value;
-
-    return Amount.from_json(src_amount_json);
 }
 
 function getPrice(order, pays_currency, gets_currency) {
