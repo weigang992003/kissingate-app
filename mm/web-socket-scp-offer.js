@@ -9,6 +9,7 @@ var jsbn = require('../src/js/jsbn/jsbn.js');
 
 var events = require('events');
 var emitter = new events.EventEmitter();
+emitter.once('makeSameCurrencyProfit', makeSameCurrencyProfit);
 
 var ripple = require('../src/js/ripple');
 var Amount = ripple.Amount;
@@ -58,12 +59,12 @@ tfm.getAccount(config.marketMaker, function(result) {
 
 function decrypt(encrypted) {
     console.log("step2:decrypt secret!")
-    // crypto.decrypt(encrypted, function(result) {
-    //     secret = result;
-    //     tfm.getEnv(function(result) {
-    //         remoteConnect(result.env);
-    //     })
-    // });
+    crypto.decrypt(encrypted, function(result) {
+        secret = result;
+        tfm.getEnv(function(result) {
+            remoteConnect(result.env);
+        })
+    });
 }
 
 function remoteConnect(env) {
