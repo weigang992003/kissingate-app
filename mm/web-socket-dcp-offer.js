@@ -267,7 +267,7 @@ function tradeOneByOneGroup(pays_set_list, gets_set_list, i) {
     var length = pays_set_list.length;
     if (i < length) {
         var pays_set = pays_set_list[i];
-        var gets_set = pays_set_list[i];
+        var gets_set = gets_set_list[i];
         tradeTogether(pays_set, gets_set, function() {
             i = i + 1;
             if (length == i) {
