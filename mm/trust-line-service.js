@@ -72,7 +72,7 @@ function randomInt(low, high) {
 
 TrustLineService.prototype.getBalance = function(issuer, currency) {
     //this is for debug purpose
-    if (!this.remote && !this.accountId) {
+    if (!this.remote || !this.accountId) {
         var value = profit_min_volumns[currency];
 
         if (currency == "XRP") {
@@ -148,7 +148,7 @@ TrustLineService.prototype.getCapacity = function(issuer, currency) {
         return Amount.from_json("100000000000000");
     }
 
-    if (!this.remote && !this.accountId) {
+    if (!this.remote || !this.accountId) {
         if (currency != "XRP") {
             return Amount.from_json({
                 'issuer': issuer,

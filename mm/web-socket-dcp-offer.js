@@ -272,7 +272,9 @@ function tradeOneByOneGroup(pays_set_list, gets_set_list, i) {
             i = i + 1;
             if (length == i) {
                 console.log("re-listen profit order");
-                emitter.once('makeMultiCurrencyProfit', makeMultiCurrencyProfit);
+                tls.getLines(function() {
+                    emitter.once('makeMultiCurrencyProfit', makeMultiCurrencyProfit);
+                });
             } else {
                 tradeOneByOneGroup(pays_set_list, gets_set_list, i);
             }

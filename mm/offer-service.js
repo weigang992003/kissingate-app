@@ -97,16 +97,8 @@ OfferService.prototype.createOffer = function(taker_pays, taker_gets, logger, cr
 
     tx.on("error", function(res) {
         //sometimes we will meet tecUNFUNDED_OFFER issue, so we need to sync up the balance again.
-        if (self.tls) {
-            self.tls.getLines(function() {
-                if (callback) {
-                    callback(res);
-                }
-            })
-        } else {
-            if (callback) {
-                callback(res);
-            }
+        if (callback) {
+            callback(res);
         }
     });
 
