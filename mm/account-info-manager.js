@@ -37,6 +37,23 @@ var txHistorySchema = mongoose.Schema({
     collection: 'txHisotry'
 });
 
+var cancelOrderHistorySchema = mongoose.Schema({
+    hash: String,
+    account: String,
+    TakerPays: {
+        issuer: String,
+        currency: String,
+        value: String
+    },
+    TakerGets: {
+        issuer: String,
+        currency: String,
+        value: String
+    }
+}, {
+    collection: 'cancelOrderHistory'
+});
+
 var ledgerIndexStartSchema = mongoose.Schema({
     action: String,
     account: String,
@@ -56,8 +73,34 @@ var txHisotry = ai.model('txHisotry', txHistorySchema);
 var currencyInfo = ai.model('currencyInfo', currencyInfoSchema);
 var balanceHistory = ai.model('balanceHistory', balanceHistorySchema);
 var ledgerIndexStart = ai.model('ledgerIndexStart', ledgerIndexStartSchema);
+var cancelOrderHistory = ai.model('cancelOrderHistory', cancelOrderHistorySchema);
 
 function AccountInfoManager() {}
+
+function saveRow(row, callback) {
+    row.save(function(err) {
+        if (err) {
+            throw new Error(err);
+        } else if (callback) {
+            callback();
+        }
+    });
+}
+
+AccountInfoManager.prototype.saveCOH = function(record, callback) {
+    cancelOrderHistory.findOne({
+        account: record.account,
+        hash: record.hash
+    }, function(err, result) {
+        if (result) {
+            result.TakerPays = record.TakerPays;
+            result.TakerGets = record.TakerGets;
+        } else {
+            result = new cancelOrderHistory(record);
+        }
+        saveRow(result, callback);
+    });
+}
 
 AccountInfoManager.prototype.saveTH = function(record, callback) {
     txHisotry.findOne({
