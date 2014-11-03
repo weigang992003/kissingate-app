@@ -4,28 +4,34 @@ var wsio = io.of('/ws');
 var math = require('mathjs');
 var WebSocket = require('ws');
 var _ = require('underscore');
-var config = require('./config.js');
 var ripple = require('../src/js/ripple');
 var crypto = require('./crypto-util.js');
 var rsjs = require('./remote-service.js');
 var jsbn = require('../src/js/jsbn/jsbn.js');
+
+var Prime = require('./prime-generate.js').Prime;
+var prime = new Prime();
+
 var tfmjs = require('./the-future-manager.js');
 var tfm = new tfmjs.TheFutureManager();
 
 var Loop = require('./loop-util.js').Loop;
 var ProfitUtil = require('./profit-util.js').ProfitUtil;
-var AmountUtil = require('./amount-util.js').AmountUtil;
 var OfferService = require('./offer-service.js').OfferService;
-var WSBookUtil = require('./web-socket-book-util.js').WSBookUtil;
-var TrustLineService = require('./trust-line-service.js').TrustLineService;
 
+var AmountUtil = require('./amount-util.js').AmountUtil;
 var au = new AmountUtil();
+
+var WSBookUtil = require('./web-socket-book-util.js').WSBookUtil;
 var wsbu = new WSBookUtil();
 
+var TrustLineService = require('./trust-line-service.js').TrustLineService;
 var tls;
+
 var osjs;
 var pu = new ProfitUtil();
 
+var config = require('./config.js');
 var drops = config.drops;
 var profit_rate = config.profitRate;
 var transfer_rates = config.transfer_rates;
@@ -35,6 +41,7 @@ var same_currency_issuers = config.same_currency_issuers;
 var first_order_currencies = config.first_order_currencies;
 var first_order_allow_issuers = config.first_order_allow_issuers;
 
+var currencies_keys = {};
 var noAvailablePair = [];
 
 var firstOrders;
@@ -84,8 +91,7 @@ function checkOrdersForDiffCurrency(orders) {
     });
 
     if (orders_type_1.length == 0 || orders_type_2.length == 0) {
-        noAvailablePair.push(currency1 + currency2);
-        noAvailablePair.push(currency2 + currency1);
+        noAvailablePair.push(currencies_keys[currency1] * currencies_keys[currency2]);
         return;
     }
 
@@ -206,6 +212,12 @@ function prepareCurrencies(lines) {
     currencies = _.pluck(lines, 'currency');
     currencies = _.uniq(currencies);
     currencies.push("XRP");
+    _.each(currencies, function(currency) {
+        if (!_.contains(currencies_keys[currency])) {
+            currencies_keys[currency] = prime.nextPrime();
+        }
+    });
+
     currencySize = currencies.length;
     return currencies;
 }
@@ -237,7 +249,19 @@ function goNext() {
     var cur1_issuers = tls.getIssuers(currency1);
     var cur2_issuers = tls.getIssuers(currency2);
 
-    if (_.contains(noAvailablePair, currency1 + currency2)) {
+    if (_.contains(noAvailablePair, currencies_keys[currency1] * currencies_keys[currency2])) {
+        cIndexSet = cLoop.next(cIndexSet, currencySize);
+        goNext();
+        return;
+    }
+
+    if (cur1_issuers.length <= 1 && cur2_issuers.length <= 1 && currency1 != currency2) {
+        cIndexSet = cLoop.next(cIndexSet, currencySize);
+        goNext();
+        return;
+    }
+
+    if (currency1 == currency2 && cur1_issuers.length <= 1) {
         cIndexSet = cLoop.next(cIndexSet, currencySize);
         goNext();
         return;

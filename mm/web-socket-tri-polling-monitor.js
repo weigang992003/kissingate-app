@@ -35,6 +35,7 @@ var pu = new ProfitUtil();
 
 var drops = config.drops;
 var profit_rate = config.profitRate;
+var currencies_no = config.currencies_no;
 var transfer_rates = config.transfer_rates;
 var profit_min_volumns = config.profit_min_volumns;
 var same_currency_profit = config.same_currency_profit;
@@ -42,6 +43,7 @@ var same_currency_issuers = config.same_currency_issuers;
 var first_order_currencies = config.first_order_currencies;
 var first_order_allow_issuers = config.first_order_allow_issuers;
 
+var checkedList = [];
 var noAvailablePair = [];
 
 function checkOrdersForDiffCurrency(orders) {
@@ -188,6 +190,17 @@ function prepareCurrencies(results) {
     currencies = _.pluck(results, 'currency');
     currencies = _.uniq(currencies);
     currencies.push("XRP");
+
+    currencies = _.map(currencies, function(currency) {
+        if (currencies_no[currency]) {
+            return currency;
+        } else {
+            return "";
+        }
+    });
+
+    currencies = _.compact(currencies);
+
     currencySize = currencies.length;
     cLoop = new Loop([0, 0, 0], currencySize, true);
     console.log(currencies);
@@ -202,6 +215,7 @@ function goNext() {
     }
 
     if (cLoop.isCycle()) {
+        checkedList = [];
         console.log("query done!");
         cLoop = new Loop([0, 0, 0], currencySize, true);
         console.log("next round would be start in 5 seconds!");
@@ -214,6 +228,15 @@ function goNext() {
     var currency1 = currencies[cIndexSet[0]];
     var currency2 = currencies[cIndexSet[1]];
     var currency3 = currencies[cIndexSet[2]];
+
+    var key = currencies_no[currency1] * currencies_no[currency2] * currencies_no[currency3];
+    if (_.contains(checkedList, key)) {
+        cLoop.next();
+        goNext();
+        return;
+    } else {
+        checkedList.push(key);
+    }
 
     if (currency1 == currency2 && currency2 == currency3 && currency3 == currency1) {
         cLoop.next();
