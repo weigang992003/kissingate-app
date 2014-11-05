@@ -68,7 +68,12 @@ function findSameBookOffer(offers, pays, gets) {
     }
 
     var result = _.filter(offers, function(offer) {
-        return offer.taker_pays.currency == pays.currency && offer.taker_pays.issuer == pays.issuer && offer.taker_gets.currency == gets.currency && offer.taker_gets.issuer == gets.issuer;
+        return offer.taker_pays.currency == pays.currency &&
+            offer.taker_pays.issuer == pays.issuer &&
+            offer.taker_gets.currency == gets.currency &&
+            offer.taker_gets.issuer == gets.issuer &&
+            au.getValue(offer.taker_pays) == au.getValue(pays) &&
+            au.getValue(offer.taker_gets) == au.getValue(gets);
     });
 
     return result;
