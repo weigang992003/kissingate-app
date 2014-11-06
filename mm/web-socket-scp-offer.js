@@ -134,6 +134,8 @@ function makeSameCurrencyProfit(order) {
 
     osjs.createSCPOffer(order_taker_gets.to_json(), order_taker_pays.to_json(), cmd, null, function(status) {
         console.log("same currency tx:", status);
-        emitter.once('makeSameCurrencyProfit', makeSameCurrencyProfit);
+        tls.getLines(function() {
+            emitter.once('makeSameCurrencyProfit', makeSameCurrencyProfit);
+        });
     });
 }
