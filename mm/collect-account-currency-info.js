@@ -6,7 +6,6 @@ var Amount = ripple.Amount;
 
 var _ = require('underscore');
 var config = require('./config.js');
-var tfmjs = require('./the-future-manager.js');
 
 var AmountUtil = require('./amount-util.js').AmountUtil;
 var TrustLineService = require('./trust-line-service.js').TrustLineService;
@@ -14,6 +13,9 @@ var AccountInfoManager = require('./account-info-manager.js').AccountInfoManager
 
 var au = new AmountUtil();
 var aim = new AccountInfoManager();
+
+var tfmjs = require('./the-future-manager.js');
+var tfm = new tfmjs.TheFutureManager();
 
 var remote = new Remote({
     // see the API Reference for available options
@@ -38,33 +40,40 @@ function remoteConnect() {
     remote.connect(function() {
         tls = new TrustLineService(remote, account);
         tls.getLines(function(lines) {
-            console.log(lines);
-            lines = _.filter(lines, function(line) {
-                return line.limit != 0;
-            });
+            aim.removeCurrencyInfos(function() {
+                console.log("get lines from remote");
+                lines = _.filter(lines, function(line) {
+                    return line.limit != 0;
+                });
 
-            lines = _.map(lines, function(line) {
-                return {
-                    currency: line.currency,
-                    issuer: line.account
-                }
-            });
+                lines = _.map(lines, function(line) {
+                    return {
+                        currency: line.currency,
+                        issuer: line.account
+                    }
+                });
 
-            lines = _.groupBy(lines, function(line) {
-                return line.currency;
-            });
+                lines = _.groupBy(lines, function(line) {
+                    return line.currency;
+                });
 
-            currencyInfos = _.map(_.pairs(lines), function(pair) {
-                return {
-                    currency: pair[0],
-                    issuers: _.pluck(pair[1], 'issuer')
-                }
-            });
+                currencyInfos = _.map(_.pairs(lines), function(pair) {
+                    return {
+                        currency: pair[0],
+                        issuers: _.pluck(pair[1], 'issuer')
+                    }
+                });
 
-            console.log(currencyInfos);
+                console.log("start to save currencyInfo");
 
-            _.each(currencyInfos, function(currencyInfo) {
-                aim.saveCurrencyInfo(currencyInfo);
+                var length = currencyInfos.length;
+                _.each(currencyInfos, function(currencyInfo, i) {
+                    aim.saveCurrencyInfo(currencyInfo, function() {
+                        if (i == length - 1) {
+                            throw new Error('we are done!!!!');
+                        }
+                    });
+                });
             })
         });
 

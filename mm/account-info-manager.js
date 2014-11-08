@@ -234,12 +234,12 @@ AccountInfoManager.prototype.saveCurrencyInfo = function(record, callback) {
         if (result) {
             result.issuers = record.issuers;
             result.save(function(err) {
-                if (!err && callback) {
-                    callback();
-                }
+                afterSave(err, callback);
             });
         } else {
-            row.save();
+            row.save(function(err) {
+                afterSave(err, callback);
+            });
         }
     })
 }
@@ -252,6 +252,28 @@ AccountInfoManager.prototype.getCurrencyInfos = function(callback) {
             }
         }
     })
+}
+
+AccountInfoManager.prototype.removeCurrencyInfos = function(callback) {
+    currencyInfo.remove({}, function(err) {
+        if (err) {
+            throw new Error(err);
+        }
+
+        if (callback) {
+            callback();
+        }
+    });
+}
+
+function afterSave(err, callback) {
+    if (err) {
+        throw new Error(err);
+    }
+
+    if (callback) {
+        callback();
+    }
 }
 
 function saveBH(record, minus) {
