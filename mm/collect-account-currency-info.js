@@ -68,11 +68,7 @@ function remoteConnect() {
 
                 var length = currencyInfos.length;
                 _.each(currencyInfos, function(currencyInfo, i) {
-                    aim.saveCurrencyInfo(currencyInfo, function() {
-                        if (i == length - 1) {
-                            throw new Error('we are done!!!!');
-                        }
-                    });
+                    aim.saveCurrencyInfo(currencyInfo);
                 });
             })
         });
@@ -93,3 +89,9 @@ tfm.getAccount(config.marketMaker, function(result) {
     account = result.account;
     remoteConnect();
 });
+
+setTimeout(throwDisconnectError, 1000 * 30);
+
+function throwDisconnectError() {
+    throw new Error('we are disconnect with ripple network!!!');
+}
