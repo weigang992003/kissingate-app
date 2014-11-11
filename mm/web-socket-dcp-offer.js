@@ -154,7 +154,7 @@ function makeMultiCurrencyProfit(orders, profit) {
     if (final_taker_gets_amount.compareTo(taker_gets_amount) == 1) {
         var start_taker_pays_amount = taker_gets_amount.product_human(profit);
         taker_pays_amounts[start_where] = au.setValue(taker_pays_amount, start_taker_pays_amount);
-        taker_gets_amounts[start_where] = au.zoom(taker_pays_amount, start_taker_pays_amount, taker_gets_amounts[0]);
+        taker_gets_amounts[start_where] = au.zoom(taker_pays_amount, start_taker_pays_amount, taker_gets_amounts[start_where]);
     }
 
     //we build the order based on start_taker_pays_amount. cal the result for each stop to final profit

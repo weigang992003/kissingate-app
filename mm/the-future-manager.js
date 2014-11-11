@@ -106,6 +106,31 @@ var firstOrderSchema = mongoose.Schema({
     collection: 'firstOrder'
 });
 
+var profitOfferSchema = mongoose.Schema({
+    taker_pays_1: {
+        currency: String,
+        issuer: String,
+        value: String
+    },
+    taker_gets_1: {
+        currency: String,
+        issuer: String,
+        value: String
+    },
+    taker_pays_2: {
+        currency: String,
+        issuer: String,
+        value: String
+    },
+    taker_gets_2: {
+        currency: String,
+        issuer: String,
+        value: String
+    }
+}, {
+    collection: 'profitOffer'
+});
+
 var env = tf.model('env', envSchema);
 var crypto = tf.model('crypto', cryptoSchema);
 var counters = tf.model('counters', countersSchema);
@@ -113,12 +138,54 @@ var raccounts = tf.model('raccounts', raccountsSchema);
 var siteCookie = tf.model('siteCookie', siteCookieSchema);
 var orderToXrp = tf.model('orderToXrp', orderToXrpSchema);
 var firstOrder = tf.model('firstOrder', firstOrderSchema);
+var profitOffer = tf.model('profitOffer', profitOfferSchema);
 var gatewayInfo = tf.model('gatewayInfo', gatewayInfoSchema);
 var accountIncome = tf.model('accountIncome', accountIncomeSchema);
 var failedTransaction = tf.model('failedTransaction', failedTransactionSchema);
 var accountLinesHistory = tf.model('accountLinesHistory', accountLinesHistorySchema);
 
 function TheFutureManager() {}
+
+TheFutureManager.prototype.saveProfitOffer = function(offer_1, offer_2, callback) {
+    profitOffer.findOne({
+        $or: [{
+            "taker_pays_1": offer_1.TakerPays,
+            "taker_gets_1": offer_1.TakerGets,
+            "taker_pays_2": offer_2.TakerPays,
+            "taker_gets_2": offer_2.TakerGets
+        }, {
+            "taker_pays_1": offer_2.TakerPays,
+            "taker_gets_1": offer_2.TakerGets,
+            "taker_pays_2": offer_1.TakerPays,
+            "taker_gets_2": offer_1.TakerGets
+        }]
+    }, function(err, result) {
+        if (err) {
+            throw new Error(err);
+        }
+
+        if (!result) {
+            var row = new profitOffer({
+                "taker_pays_1": offer_1.TakerPays,
+                "taker_gets_1": offer_1.TakerGets,
+                "taker_pays_2": offer_2.TakerPays,
+                "taker_gets_2": offer_2.TakerGets
+            });
+
+            row.save(function(err) {
+                if (err) {
+                    throw new Error(err);
+                } else if (callback) {
+                    callback();
+                }
+            });
+        } else {
+            if (callback) {
+                callback();
+            }
+        }
+    });
+};
 
 TheFutureManager.prototype.getFirstOrders = function(account, callback) {
     firstOrder.find({
