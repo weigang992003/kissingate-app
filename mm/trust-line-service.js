@@ -17,7 +17,42 @@ function TrustLineService(r, a) {
     this.issuerMap = {};
 
     this.listenBalanceUpdate();
+    this.listenAccount();
 }
+
+TrustLineService.prototype.listenAccount = function() {
+    var remote = this.remote;
+    var accountId = this.accountId;
+
+    var account = remote.addAccount(accountId);
+
+    account.on('transaction', function(tx) {
+        _.each(tx.meta.AffectedNodes, function(affectedNode) {
+            var modifiedNode = affectedNode.ModifiedNode;
+            if (!modifiedNode) {
+                return;
+            }
+
+            if (modifiedNode.LedgerEntryType == "AccountRoot") {
+                var finalFields = modifiedNode.FinalFields;
+                if (finalFields && finalFields.Account == accountId) {
+                    account_balances[xrpIssuer + "XRP"] = finalFields.Balance;
+                }
+            }
+
+            if (modifiedNode.LedgerEntryType == "RippleState") {
+                var finalFields = modifiedNode.FinalFields;
+                if (finalFields && finalFields.HighLimit.issuer == accountId) {
+                    account_balances[finalFields.LowLimit.issuer + finalFields.Balance.currency] = 0 - finalFields.Balance.value + "";
+                }
+
+                if (finalFields && finalFields.LowLimit.issuer == accountId) {
+                    account_balances[finalFields.HighLimit.issuer + finalFields.Balance.currency] = finalFields.Balance.value;
+                }
+            }
+        });
+    });
+};
 
 TrustLineService.prototype.getLines = function(callback) {
     var self = this;
