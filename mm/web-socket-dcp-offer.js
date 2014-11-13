@@ -229,7 +229,7 @@ function makeMultiCurrencyProfit(orders, profit) {
     var cmds = [];
     _.each(pays_list_in_order, function(pays_list, i) {
         _.each(pays_list, function(pays, j) {
-            cmds.push(cmdU.buildByAmount(pays_list_in_order[i][j], gets_list_in_order[i][j]));
+            cmds.push(cmdU.buildByAmount(gets_list_in_order[i][j], pays_list_in_order[i][j]));
 
             pays_list_in_order[i][j] = pays.product_human("1.00001");
             console.log(i + "", j + "", pays_list_in_order[i][j].to_text_full(), "->", gets_list_in_order[i][j].to_text_full());

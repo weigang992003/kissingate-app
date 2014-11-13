@@ -24,10 +24,10 @@ TrustLineService.prototype.listenAccount = function() {
     var self = this;
     var remote = self.remote;
     if (remote) {
-        var accountToListen = self.accountId;
+        var accountId = self.accountId;
+        var account_balances = self.account_balances;
 
-        var account = remote.addAccount(accountToListen);
-
+        var account = remote.addAccount(accountId);
         account.on('transaction', function(tx) {
             _.each(tx.meta.AffectedNodes, function(affectedNode) {
                 var modifiedNode = affectedNode.ModifiedNode;
