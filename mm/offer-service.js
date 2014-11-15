@@ -55,7 +55,7 @@ OfferService.prototype.ifOfferExist = function(pays, gets) {
     return false;
 }
 
-function findSameBookOffer(offers, pays, gets) {
+function findSameBookOffer(offers, pays, gets, firstOrder) {
     if (offers.length == 0) {
         return [];
     }
@@ -67,14 +67,24 @@ function findSameBookOffer(offers, pays, gets) {
         gets = gets.to_json();
     }
 
-    var result = _.filter(offers, function(offer) {
-        return offer.taker_pays.currency == pays.currency &&
-            offer.taker_pays.issuer == pays.issuer &&
-            offer.taker_gets.currency == gets.currency &&
-            offer.taker_gets.issuer == gets.issuer &&
-            au.getValue(offer.taker_pays) == au.getValue(pays) &&
-            au.getValue(offer.taker_gets) == au.getValue(gets);
-    });
+    var result;
+    if (firstOrder) {
+        result = _.filter(offers, function(offer) {
+            return offer.taker_pays.currency == pays.currency &&
+                offer.taker_pays.issuer == pays.issuer &&
+                offer.taker_gets.currency == gets.currency &&
+                offer.taker_gets.issuer == gets.issuer;
+        });
+    } else {
+        result = _.filter(offers, function(offer) {
+            return offer.taker_pays.currency == pays.currency &&
+                offer.taker_pays.issuer == pays.issuer &&
+                offer.taker_gets.currency == gets.currency &&
+                offer.taker_gets.issuer == gets.issuer &&
+                au.getValue(offer.taker_pays) == au.getValue(pays) &&
+                au.getValue(offer.taker_gets) == au.getValue(gets);
+        });
+    }
 
     return result;
 }
@@ -191,7 +201,7 @@ OfferService.prototype.createFirstOffer = function(taker_pays, taker_gets, remov
 
             if (cmdResult[0].Account != self.accountId) {
                 console.log("first order owner:", cmdResult[0].Account);
-                var results = findSameBookOffer(self.offers, taker_pays, taker_gets);
+                var results = findSameBookOffer(self.offers, taker_pays, taker_gets, true);
                 if (results && results.length > 0) {
                     console.log("find same book offers:", results.length);
                     self.cancelOffers(results, 0, function() {
