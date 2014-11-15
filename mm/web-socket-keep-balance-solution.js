@@ -192,6 +192,9 @@ function goNext(payList, getList, i, j, average, callback) {
         };
 
         var transfer_rate = transfer_rates[taker_gets.issuer];
+        if (!transfer_rate) {
+            transfer_rate = 0;
+        }
 
         var req = buildCmd(taker_pays, taker_gets);
         wsbu.exeCmd(req, function(res) {
