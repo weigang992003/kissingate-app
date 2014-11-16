@@ -169,6 +169,10 @@ function makeMultiCurrencyProfit(orders, profit) {
         taker_pays_amount = pays_list_from_balance[0];
     }
 
+    if (!taker_pays_amount) {
+        taker_pays_amount = pays_list_from_balance[0];
+    }
+
     var start_where = au.findAmountWhere(taker_pays_amounts, taker_pays_amount, onlyCurrency);
     var final_taker_gets_amount = au.zoomByTimes(taker_pays_amount, 1 / profit);
 
