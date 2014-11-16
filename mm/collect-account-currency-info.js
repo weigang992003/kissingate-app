@@ -64,6 +64,11 @@ function remoteConnect() {
                     }
                 });
 
+                currencyInfos.push({
+                    currency: "XRP",
+                    issuers: ["rrrrrrrrrrrrrrrrrrrrrhoLvTp"]
+                })
+
                 console.log("start to save currencyInfo");
 
                 var length = currencyInfos.length;
