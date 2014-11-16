@@ -226,6 +226,20 @@ AccountInfoManager.prototype.getTHByAccount = function(account, callback) {
     })
 }
 
+AccountInfoManager.prototype.getTHSelectedColumn = function(account, callback) {
+    txHisotry.find({
+        account: account
+    }, 'i_pays_currency i_gets_currency i_pays_value i_gets_value', function(err, results) {
+        if (err) {
+            throw new Error(err);
+        }
+
+        if (results && callback) {
+            callback(results);
+        }
+    });
+}
+
 AccountInfoManager.prototype.saveCurrencyInfo = function(record, callback) {
     var row = new currencyInfo(record);
     currencyInfo.findOne({

@@ -42,8 +42,12 @@ var osjs = new OfferService();
 var TrustLineService = require('./trust-line-service.js').TrustLineService;
 var tls = new TrustLineService();
 
+var AccountInfoManager = require('./account-info-manager.js').AccountInfoManager;
+var aim = new AccountInfoManager();
+
 var config = require('./config.js');
 var drops = config.drops;
+var currencies_no = config.currencies_no;
 var transfer_rates = config.transfer_rates;
 var currency_allow_empty = config.currency_allow_empty;
 var first_order_allow_volumns = config.first_order_allow_volumns;
@@ -77,6 +81,7 @@ function makeMultiCurrencyProfit(orders, profit) {
     var gets_list_from_balance = [];
     var pays_list_from_offer = [];
     var gets_list_from_offer = [];
+    var currencies_include = [];
     var length = orders.length;
 
     //we need all gets because we want to check if we get pays from offer, does the currency we got has same issuer.
@@ -88,6 +93,12 @@ function makeMultiCurrencyProfit(orders, profit) {
 
     for (var i = 0; i < orders.length; i++) {
         var order = orders[i];
+        if (!_.contains(currencies_include, order.TakerPays.currency)) {
+            currencies_include.push(order.TakerPays.currency);
+        }
+        if (!_.contains(currencies_include, order.TakerGets.currency)) {
+            currencies_include.push(order.TakerGets.currency);
+        }
         var taker_pays_amount = Amount.from_json(order.TakerPays);
         var taker_gets_amount = Amount.from_json(order.TakerGets);
         var taker_pays_balance = tls.getBalance(au.getIssuer(order.TakerPays), au.getCurrency(order.TakerPays));
@@ -144,7 +155,20 @@ function makeMultiCurrencyProfit(orders, profit) {
     //taker_gets_amount means that how much money the market has.
     //if final_taker_gets_amount bigger than taker_gets_amount. we need to reduce our invest.
     //we cal how much moneny we need to invest, that's the start_taker_pays_amount means.
-    var taker_pays_amount = pays_list_from_balance[0];
+    var profitCurrency;
+    if (currencies_include.length == 2) {
+        profitCurrency = preferedCurrency[currencies_no[currencies_include[0]] * currencies_no[currencies_include[1]]];
+    }
+
+    var taker_pays_amount;
+    if (profitCurrency) {
+        taker_pays_amount = _.find(pays_list_from_balance, function(e) {
+            return profitCurrency == e.currency;
+        });
+    } else {
+        taker_pays_amount = pays_list_from_balance[0];
+    }
+
     var start_where = au.findAmountWhere(taker_pays_amounts, taker_pays_amount, onlyCurrency);
     var final_taker_gets_amount = au.zoomByTimes(taker_pays_amount, 1 / profit);
 
@@ -292,6 +316,28 @@ tfm.getAccount(config.marketMaker, function(result) {
     decrypt(secret);
 });
 
+var preferedCurrency = {};
+
+function getPreferedCurrency(ths) {
+    _.each(ths, function(th) {
+        if (th.i_pays_currency != th.i_gets_currency) {
+            var key = currencies_no[th.i_pays_currency] * currencies_no[th.i_gets_currency]
+
+            var matchTh = _.find(ths, function(e) {
+                return th.i_pays_currency == e.i_gets_currency && th.i_gets_currency == e.i_pays_currency;
+            });
+
+            if (matchTh) {
+                if (th.i_pays_value - 0 > matchTh.i_gets_value - 0) {
+                    preferedCurrency[key] = matchTh.i_gets_currency;
+                } else {
+                    preferedCurrency[key] = matchTh.i_pays_currency;
+                }
+            }
+        }
+    });
+}
+
 function decrypt(encrypted) {
     console.log("step2:decrypt secret!")
     crypto.decrypt(encrypted, function(result) {
@@ -303,7 +349,11 @@ function decrypt(encrypted) {
 }
 
 function remoteConnect(env) {
-    console.log("step3:connect to remote!")
+    aim.getTHSelectedColumn(account, function(ths) {
+        getPreferedCurrency(ths);
+    });
+
+    console.log("step3:connect to remote!");
     rsjs.getRemote(env, function(r) {
         remote = r;
 

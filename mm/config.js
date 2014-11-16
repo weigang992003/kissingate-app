@@ -108,9 +108,9 @@ exports.currencies_no = {
     "BTC": 11,
     "FMM": 13,
     "EUR": 17,
-    "STR": 19
-    // "NZD": 23,
-    // "CAD": 29
+    "STR": 19,
+    "NZD": 23,
+    "CAD": 29
 }
 
 exports.currency_pair_allow_trade_not_in_same_ledger = [
