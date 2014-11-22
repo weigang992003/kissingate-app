@@ -7,16 +7,21 @@ var au = new AmountUtil();
 function CmdUtil() {}
 
 
-CmdUtil.prototype.buildCmd = function(taker_pays, taker_gets) {
+CmdUtil.prototype.buildCmd = function(taker_pays, taker_gets, initParam) {
     var req = {
         cmd: 'book',
         params: []
     }
 
-    var param = {
-        limit: 1,
-        filter: 1,
-        cache: 0,
+    var param;
+    if (!initParam) {
+        param = {
+            limit: 1,
+            filter: 1,
+            cache: 0,
+        }
+    } else {
+        param = initParam;
     }
 
     param[taker_pays.currency] = [taker_pays.issuer];

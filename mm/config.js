@@ -120,6 +120,7 @@ exports.currency_pair_allow_trade_not_in_same_ledger = [
 exports.currency_allow_empty = ['JPY'];
 
 exports.same_currency_keep_balances = ['CNY', 'BTC', 'USD', 'JPY'];
+exports.same_currency_profit_maker = ['CNY', 'BTC', 'USD', 'JPY', 'EUR'];
 exports.solved_too_small_volumn_currencies = ['CNY', 'BTC', 'USD'];
 
 exports.mother = -1;
