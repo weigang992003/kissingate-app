@@ -32,7 +32,7 @@ var CmdUtil = require('./cmd-builder.js').CmdUtil;
 var cmdU = new CmdUtil();
 
 var AmountUtil = require('./amount-util.js').AmountUtil;
-var au =new AmountUtil();
+var au = new AmountUtil();
 
 var remote_options = remote_options = {
     // see the API Reference for available options
@@ -203,9 +203,10 @@ function goNext(payList, getList, loop, callback) {
             console.log("taker_pays", taker_pays);
             console.log("taker_gets", taker_gets);
 
-            loop.next();
-            goNext(payList, getList, loop, callback);
-            // osjs.createFirstOffer(taker_pays, taker_gets, true, req, null, function() {});
+            osjs.createFirstOffer(taker_pays, taker_gets, true, req, null, function() {
+                loop.next();
+                goNext(payList, getList, loop, callback);
+            });
         } else {
             console.log("the first order is profit offer.");
             loop.next();
