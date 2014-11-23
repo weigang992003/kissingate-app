@@ -31,6 +31,9 @@ var Loop = require('./new-loop-util.js').Loop;
 var CmdUtil = require('./cmd-builder.js').CmdUtil;
 var cmdU = new CmdUtil();
 
+var AmountUtil = require('./amount-util.js').AmountUtil;
+var au =new AmountUtil();
+
 var remote_options = remote_options = {
     // see the API Reference for available options
     // trace: true,
@@ -169,21 +172,22 @@ function goNext(payList, getList, loop, callback) {
     var pay = payList[i];
     var get = getList[j];
 
-    if (pay.balance == '0') {
-        loop.next();
-        goNext(payList, getList, loop, callback);
-        return;
-    }
-
     var taker_gets = {
         'currency': pay.currency,
         'issuer': pay.account,
-        'value': '0'
+        'value': pay.balance
     };
+
     var taker_pays = {
         'currency': get.currency,
         'issuer': get.account,
         'value': pay.balance + ''
+    };
+
+    if (au.isVolumnNotAllowed(taker_gets)) {
+        loop.next();
+        goNext(payList, getList, loop, callback);
+        return;
     };
 
     var transfer_rate = transfer_rates[taker_gets.issuer];
@@ -195,14 +199,13 @@ function goNext(payList, getList, loop, callback) {
     wsbu.exeCmd(req, function(res) {
         console.log("quality:", res[0].quality);
         if (res[0].quality > 1.0005 + transfer_rate) {
-            taker_gets.value = (taker_pays.value / res[0].quality) * 1.00001 + "";
+            taker_pays.value = (taker_gets.value * res[0].quality) * 0.99999 + "";
             console.log("taker_pays", taker_pays);
             console.log("taker_gets", taker_gets);
 
-            osjs.createFirstOffer(taker_pays, taker_gets, true, req, null, function() {
-                loop.next();
-                goNext(payList, getList, loop, callback);
-            });
+            loop.next();
+            goNext(payList, getList, loop, callback);
+            // osjs.createFirstOffer(taker_pays, taker_gets, true, req, null, function() {});
         } else {
             console.log("the first order is profit offer.");
             loop.next();
