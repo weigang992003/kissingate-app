@@ -112,13 +112,7 @@ function averageBalance(lines) {
     _.each(currencies, function(currency) {
         if (lines[currency].length > 1) {
             lines[currency] = _.sortBy(lines[currency], function(line) {
-                return line.limit - 0;
-            });
-
-            var limit = _.last(lines[currency]).limit;
-
-            lines[currency] = _.filter(lines[currency], function(line) {
-                return line.limit == limit;
+                return line.limit > 0;
             });
 
             if (lines[currency].length > 1) {
@@ -172,19 +166,24 @@ function goNext(payList, getList, loop, callback) {
     var pay = payList[i];
     var get = getList[j];
 
+    var i_gets_limit = get.limit - get.balance;
+
+    var i_pays_limit = _.min([i_gets_limit, pay.balance - 0]);
+
     var taker_gets = {
         'currency': pay.currency,
         'issuer': pay.account,
-        'value': pay.balance
+        'value': i_pays_limit + ""
     };
 
     var taker_pays = {
         'currency': get.currency,
         'issuer': get.account,
-        'value': pay.balance + ''
+        'value': i_gets_limit
     };
 
-    if (au.isVolumnNotAllowed(taker_gets)) {
+
+    if (au.isVolumnNotAllowed(taker_gets) || au.isVolumnNotAllowed(taker_pays)) {
         loop.next();
         goNext(payList, getList, loop, callback);
         return;
@@ -202,6 +201,7 @@ function goNext(payList, getList, loop, callback) {
             taker_pays.value = (taker_gets.value * res[0].quality) * 0.99999 + "";
             console.log("taker_pays", taker_pays);
             console.log("taker_gets", taker_gets);
+
 
             osjs.createFirstOffer(taker_pays, taker_gets, true, req, null, function() {
                 loop.next();
